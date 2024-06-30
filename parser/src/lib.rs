@@ -1,6 +1,7 @@
+use core::panic;
 use std::iter::Peekable;
 
-use token::{Program, Token};
+use token::{Operator, Program, Token};
 
 pub mod token;
 
@@ -13,9 +14,7 @@ pub fn parse(input: &str) -> Program {
 
     while let Some(pointer) = chars.peek() {
         match pointer {
-            '0'..='9' | '.' => program
-                .program
-                .push(Token::Number(collect_number(&mut chars))),
+            '0'..='9' | '.' => program.program.push(collect_number(&mut chars)),
             '+' | '-' | '*' | '/' | '%' => {
                 let operator = match chars.next().unwrap() {
                     '+' => token::Operator::Add,
@@ -26,20 +25,86 @@ pub fn parse(input: &str) -> Program {
                     _ => panic!("This does not happen, what the fuck are you doing?"),
                 };
 
-                let a = match program
+                let token = match program
                     .program
                     .pop()
                     .expect("Expected a value before operator")
                 {
-                    a @ Token::Number(_) => a,
-                    _ => panic!("Expected a number before operator"),
+                    a @ Token::Number(_) => {
+                        let a = Box::new(a);
+
+                        discard_spaces(&mut chars);
+                        let b = Box::new(collect_number(&mut chars));
+
+                        Token::Operation { operator, a, b }
+                    }
+                    Token::Operation {
+                        operator: prev_operator,
+                        a: prev_a,
+                        b: prev_b,
+                    } => match operator {
+                        Operator::Add | Operator::Subtract => match prev_operator {
+                            Operator::Add | Operator::Subtract => Token::Operation {
+                                operator,
+                                a: Box::new(Token::Operation {
+                                    operator: prev_operator,
+                                    a: prev_a,
+                                    b: prev_b,
+                                }),
+                                b: Box::new({
+                                    discard_spaces(&mut chars);
+                                    collect_number(&mut chars)
+                                }),
+                            },
+                            Operator::Multiply | Operator::Divide | Operator::Modulo => {
+                                Token::Operation {
+                                    operator,
+                                    a: Box::new(Token::Operation {
+                                        operator: prev_operator,
+                                        a: prev_a,
+                                        b: prev_b,
+                                    }),
+                                    b: Box::new({
+                                        discard_spaces(&mut chars);
+                                        collect_number(&mut chars)
+                                    }),
+                                }
+                            }
+                        },
+                        Operator::Multiply | Operator::Divide | Operator::Modulo => {
+                            match prev_operator {
+                                Operator::Add | Operator::Subtract => Token::Operation {
+                                    operator: prev_operator,
+                                    a: prev_a,
+                                    b: Box::new(Token::Operation {
+                                        operator,
+                                        a: prev_b,
+                                        b: Box::new({
+                                            discard_spaces(&mut chars);
+                                            collect_number(&mut chars)
+                                        }),
+                                    }),
+                                },
+                                Operator::Multiply | Operator::Divide | Operator::Modulo => {
+                                    Token::Operation {
+                                        operator,
+                                        a: Box::new(Token::Operation {
+                                            operator: prev_operator,
+                                            a: prev_a,
+                                            b: prev_b,
+                                        }),
+                                        b: Box::new({
+                                            discard_spaces(&mut chars);
+                                            collect_number(&mut chars)
+                                        }),
+                                    }
+                                }
+                            }
+                        }
+                    },
                 };
-                let a = Box::new(a);
 
-                discard_spaces(&mut chars);
-                let b = Box::new(Token::Number(collect_number(&mut chars)));
-
-                program.program.push(Token::Operator { operator, a, b });
+                program.program.push(token);
             }
             ' ' => {
                 chars.next();
@@ -51,7 +116,7 @@ pub fn parse(input: &str) -> Program {
     program
 }
 
-fn collect_number(chars: &mut Peekable<std::str::Chars>) -> f64 {
+fn collect_number(chars: &mut Peekable<std::str::Chars>) -> Token {
     let mut number = String::new();
 
     while let Some(pointer) = &chars.peek() {
@@ -65,7 +130,7 @@ fn collect_number(chars: &mut Peekable<std::str::Chars>) -> f64 {
         }
     }
 
-    number.parse().expect("Failed to parse number")
+    Token::Number(number.parse().expect("Failed to parse number"))
 }
 
 fn discard_spaces(chars: &mut Peekable<std::str::Chars>) {
@@ -97,16 +162,16 @@ mod tests {
     fn parse_simple_operations() {
         assert_eq!(
             parse("6 + 9").program,
-            vec![Token::Operator {
+            vec![Token::Operation {
                 operator: Operator::Add,
                 a: Box::new(Token::Number(6.)),
                 b: Box::new(Token::Number(9.)),
-            },]
+            }]
         );
 
         assert_eq!(
             parse("5 - 7.5").program,
-            vec![Token::Operator {
+            vec![Token::Operation {
                 operator: Operator::Subtract,
                 a: Box::new(Token::Number(5.)),
                 b: Box::new(Token::Number(7.5)),
@@ -115,7 +180,7 @@ mod tests {
 
         assert_eq!(
             parse(".3 * 4").program,
-            vec![Token::Operator {
+            vec![Token::Operation {
                 operator: Operator::Multiply,
                 a: Box::new(Token::Number(0.3)),
                 b: Box::new(Token::Number(4.)),
@@ -124,10 +189,154 @@ mod tests {
 
         assert_eq!(
             parse("2. / 1").program,
-            vec![Token::Operator {
+            vec![Token::Operation {
                 operator: Operator::Divide,
                 a: Box::new(Token::Number(2.)),
                 b: Box::new(Token::Number(1.)),
+            }]
+        );
+
+        assert_eq!(
+            parse("5 % 1.5").program,
+            vec![Token::Operation {
+                operator: Operator::Modulo,
+                a: Box::new(Token::Number(5.)),
+                b: Box::new(Token::Number(1.5)),
+            }]
+        );
+    }
+
+    #[test]
+    fn parse_complex_operations() {
+        assert_eq!(
+            parse("6 + 9 + 5").program,
+            vec![Token::Operation {
+                operator: Operator::Add,
+                a: Box::new(Token::Operation {
+                    operator: Operator::Add,
+                    a: Box::new(Token::Number(6.)),
+                    b: Box::new(Token::Number(9.)),
+                }),
+                b: Box::new(Token::Number(5.)),
+            }]
+        );
+        assert_eq!(
+            parse("6 - 9 + 5").program,
+            vec![Token::Operation {
+                operator: Operator::Add,
+                a: Box::new(Token::Operation {
+                    operator: Operator::Subtract,
+                    a: Box::new(Token::Number(6.)),
+                    b: Box::new(Token::Number(9.)),
+                }),
+                b: Box::new(Token::Number(5.)),
+            }]
+        );
+        assert_eq!(
+            parse("6 + 9 - 5").program,
+            vec![Token::Operation {
+                operator: Operator::Subtract,
+                a: Box::new(Token::Operation {
+                    operator: Operator::Add,
+                    a: Box::new(Token::Number(6.)),
+                    b: Box::new(Token::Number(9.)),
+                }),
+                b: Box::new(Token::Number(5.)),
+            }]
+        );
+
+        assert_eq!(
+            parse("6 * .5 * 7").program,
+            vec![Token::Operation {
+                operator: Operator::Multiply,
+                a: Box::new(Token::Operation {
+                    operator: Operator::Multiply,
+                    a: Box::new(Token::Number(6.)),
+                    b: Box::new(Token::Number(0.5)),
+                }),
+                b: Box::new(Token::Number(7.)),
+            }]
+        );
+        assert_eq!(
+            parse("6 % 5 * .7").program,
+            vec![Token::Operation {
+                operator: Operator::Multiply,
+                a: Box::new(Token::Operation {
+                    operator: Operator::Modulo,
+                    a: Box::new(Token::Number(6.)),
+                    b: Box::new(Token::Number(5.)),
+                }),
+                b: Box::new(Token::Number(0.7)),
+            }]
+        );
+        assert_eq!(
+            parse("6 * .5 / 7").program,
+            vec![Token::Operation {
+                operator: Operator::Divide,
+                a: Box::new(Token::Operation {
+                    operator: Operator::Multiply,
+                    a: Box::new(Token::Number(6.)),
+                    b: Box::new(Token::Number(0.5)),
+                }),
+                b: Box::new(Token::Number(7.)),
+            }]
+        );
+
+        assert_eq!(
+            parse("4 + 5 * 3").program,
+            vec![Token::Operation {
+                operator: Operator::Add,
+                a: Box::new(Token::Number(4.)),
+                b: Box::new(Token::Operation {
+                    operator: Operator::Multiply,
+                    a: Box::new(Token::Number(5.)),
+                    b: Box::new(Token::Number(3.)),
+                }),
+            },]
+        );
+        assert_eq!(
+            parse(".2 * 5.5 + 8").program,
+            vec![Token::Operation {
+                operator: Operator::Add,
+                a: Box::new(Token::Operation {
+                    operator: Operator::Multiply,
+                    a: Box::new(Token::Number(0.2)),
+                    b: Box::new(Token::Number(5.5)),
+                }),
+                b: Box::new(Token::Number(8.)),
+            }]
+        );
+
+        assert_eq!(
+            parse("2 % 5 + 8.5 * .7").program,
+            vec![Token::Operation {
+                operator: Operator::Add,
+                a: Box::new(Token::Operation {
+                    operator: Operator::Modulo,
+                    a: Box::new(Token::Number(2.)),
+                    b: Box::new(Token::Number(5.)),
+                }),
+                b: Box::new(Token::Operation {
+                    operator: Operator::Multiply,
+                    a: Box::new(Token::Number(8.5)),
+                    b: Box::new(Token::Number(0.7)),
+                }),
+            }]
+        );
+        assert_eq!(
+            parse(".2 + 5.5 * 8 + .7").program,
+            vec![Token::Operation {
+                operator: Operator::Add,
+                a: Box::new(Token::Operation {
+                    operator: Operator::Add,
+                    a: Box::new(Token::Number(0.2)),
+                    b: Box::new(Token::Operation {
+                        operator: Operator::Multiply,
+                        a: Box::new(Token::Number(5.5)),
+                        b: Box::new(Token::Number(8.)),
+                    }),
+                }),
+                b: Box::new(Token::Number(0.7)),
             }]
         );
     }

@@ -6,12 +6,11 @@ pub struct Program {
 #[derive(Debug, PartialEq, Clone)]
 pub enum Token {
     Number(f64),
-    Operator {
+    Operation {
         operator: Operator,
         a: Box<Token>,
         b: Box<Token>,
     },
-    Space,
 }
 
 #[derive(Debug, PartialEq, Clone)]
