@@ -1,342 +1,776 @@
 use core::panic;
 use std::iter::Peekable;
 
-use token::{Operator, Program, Token};
+use nilang_lexer::tokens::{Token, TokenType};
+use nodes::{Node, Operator, Program};
 
-pub mod token;
+pub mod nodes;
 
-pub fn parse(input: &str) -> Program {
+const UNEXPECTED_ERROR: &str = "This does not happen, what the fuck are you doing?";
+const UNEXPECTED_END_OF_INPUT_ERROR: &str = "Unexpected end of input!";
+
+pub fn parse(tokens: &[Token]) -> Program {
     let mut program = Program {
         program: Vec::new(),
     };
 
-    let mut chars = input.chars().peekable();
+    let mut tokens = tokens.iter().peekable();
 
-    while let Some(pointer) = chars.peek() {
-        match pointer {
-            '0'..='9' | '.' => program.program.push(collect_number(&mut chars)),
-            '+' | '-' | '*' | '/' | '%' => {
-                let operator = match chars.next().unwrap() {
-                    '+' => token::Operator::Add,
-                    '-' => token::Operator::Subtract,
-                    '*' => token::Operator::Multiply,
-                    '/' => token::Operator::Divide,
-                    '%' => token::Operator::Modulo,
-                    _ => panic!("This does not happen, what the fuck are you doing?"),
-                };
-
-                let token = match program
-                    .program
-                    .pop()
-                    .expect("Expected a value before operator")
-                {
-                    a @ Token::Number(_) => {
-                        let a = Box::new(a);
-
-                        discard_spaces(&mut chars);
-                        let b = Box::new(collect_number(&mut chars));
-
-                        Token::Operation { operator, a, b }
-                    }
-                    Token::Operation {
-                        operator: prev_operator,
-                        a: prev_a,
-                        b: prev_b,
-                    } => match operator {
-                        Operator::Add | Operator::Subtract => match prev_operator {
-                            Operator::Add | Operator::Subtract => Token::Operation {
-                                operator,
-                                a: Box::new(Token::Operation {
-                                    operator: prev_operator,
-                                    a: prev_a,
-                                    b: prev_b,
-                                }),
-                                b: Box::new({
-                                    discard_spaces(&mut chars);
-                                    collect_number(&mut chars)
-                                }),
-                            },
-                            Operator::Multiply | Operator::Divide | Operator::Modulo => {
-                                Token::Operation {
-                                    operator,
-                                    a: Box::new(Token::Operation {
-                                        operator: prev_operator,
-                                        a: prev_a,
-                                        b: prev_b,
-                                    }),
-                                    b: Box::new({
-                                        discard_spaces(&mut chars);
-                                        collect_number(&mut chars)
-                                    }),
-                                }
-                            }
-                        },
-                        Operator::Multiply | Operator::Divide | Operator::Modulo => {
-                            match prev_operator {
-                                Operator::Add | Operator::Subtract => Token::Operation {
-                                    operator: prev_operator,
-                                    a: prev_a,
-                                    b: Box::new(Token::Operation {
-                                        operator,
-                                        a: prev_b,
-                                        b: Box::new({
-                                            discard_spaces(&mut chars);
-                                            collect_number(&mut chars)
-                                        }),
-                                    }),
-                                },
-                                Operator::Multiply | Operator::Divide | Operator::Modulo => {
-                                    Token::Operation {
-                                        operator,
-                                        a: Box::new(Token::Operation {
-                                            operator: prev_operator,
-                                            a: prev_a,
-                                            b: prev_b,
-                                        }),
-                                        b: Box::new({
-                                            discard_spaces(&mut chars);
-                                            collect_number(&mut chars)
-                                        }),
-                                    }
-                                }
-                            }
-                        }
-                    },
-                };
-
-                program.program.push(token);
-            }
-            ' ' => {
-                chars.next();
-            }
-            _ => panic!("Invalid character in position: {pointer}"),
-        }
+    while let Some(_) = tokens.peek() {
+        let node = convert(&mut program, &mut tokens);
+        program.program.push(node);
     }
 
     program
 }
 
-fn collect_number(chars: &mut Peekable<std::str::Chars>) -> Token {
-    let mut number = String::new();
+fn convert<'a, I>(program: &mut Program, tokens: &mut Peekable<I>) -> Node
+where
+    I: Iterator<Item = &'a Token>,
+{
+    if let Some(
+        tkn @ Token {
+            token,
+            value,
+            start,
+            end,
+        },
+    ) = tokens.next()
+    {
+        println!("{:?}", tkn);
+        return match token {
+            TokenType::Number => convert_number(tkn),
+            TokenType::Operator => {
+                let operator = match &value as &str {
+                    "+" => Operator::Add,
+                    "-" => Operator::Subtract,
+                    "*" => Operator::Multiply,
+                    "/" => Operator::Divide,
+                    "%" => Operator::Modulo,
+                    _ => panic!("{}", UNEXPECTED_ERROR),
+                };
 
-    while let Some(pointer) = &chars.peek() {
-        match pointer {
-            '0'..='9' | '.' => {
-                number.push(**pointer);
-                chars.next();
+                match program
+                    .program
+                    .pop()
+                    .expect(&format!("[{}] Expected a number or an operator", start - 1))
+                {
+                    a @ Node::Number(_) => Node::Operation {
+                        operator,
+                        a: Box::new(a),
+                        b: Box::new(convert_number(tokens.next().expect(UNEXPECTED_ERROR))),
+                    },
+                    a @ Node::Operation { .. } => {
+                        extend_operation(a, operator, convert(program, tokens))
+                    }
+                }
             }
-            ' ' | '+' | '-' | '*' | '/' | '%' => break,
-            _ => panic!("Invalid character in position: {pointer}"),
-        }
+        };
+    } else {
+        panic!("{}", UNEXPECTED_END_OF_INPUT_ERROR);
     }
-
-    Token::Number(number.parse().expect("Failed to parse number"))
 }
 
-fn discard_spaces(chars: &mut Peekable<std::str::Chars>) {
-    while let Some(pointer) = chars.peek() {
-        if pointer.is_whitespace() {
-            chars.next();
-        } else {
-            break;
+fn convert_number(
+    Token {
+        token,
+        value,
+        start,
+        end,
+    }: &Token,
+) -> Node {
+    if let TokenType::Number = token {
+        Node::Number(
+            value
+                .parse()
+                .expect(&format!("[{start}-{end}] Invalid number: \"{value}\"")),
+        )
+    } else {
+        panic!("{}", UNEXPECTED_ERROR);
+    }
+}
+
+fn extend_operation(operation: Node, operator: Operator, node: Node) -> Node {
+    if let Node::Operation {
+        operator: prev_operator,
+        a: prev_a,
+        b: prev_b,
+    } = operation
+    {
+        match operator {
+            Operator::Add | Operator::Subtract => match prev_operator {
+                Operator::Add | Operator::Subtract => Node::Operation {
+                    operator,
+                    a: Box::new(Node::Operation {
+                        operator: prev_operator,
+                        a: prev_a,
+                        b: prev_b,
+                    }),
+                    b: Box::new(node),
+                },
+                Operator::Multiply | Operator::Divide | Operator::Modulo => Node::Operation {
+                    operator,
+                    a: Box::new(Node::Operation {
+                        operator: prev_operator,
+                        a: prev_a,
+                        b: prev_b,
+                    }),
+                    b: Box::new(node),
+                },
+            },
+            Operator::Multiply | Operator::Divide | Operator::Modulo => match prev_operator {
+                Operator::Add | Operator::Subtract => Node::Operation {
+                    operator: prev_operator,
+                    a: prev_a,
+                    b: Box::new(Node::Operation {
+                        operator,
+                        a: prev_b,
+                        b: Box::new(node),
+                    }),
+                },
+                Operator::Multiply | Operator::Divide | Operator::Modulo => Node::Operation {
+                    operator,
+                    a: Box::new(Node::Operation {
+                        operator: prev_operator,
+                        a: prev_a,
+                        b: prev_b,
+                    }),
+                    b: Box::new(node),
+                },
+            },
         }
+    } else {
+        panic!("{}", UNEXPECTED_ERROR);
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use nilang_lexer::tokens::{Token, TokenType};
+
     use crate::{
+        extend_operation,
+        nodes::{Node, Operator},
         parse,
-        token::{Operator, Token},
     };
 
     #[test]
     fn parse_numbers() {
-        assert_eq!(parse("54").program, vec![Token::Number(54.)]);
-        assert_eq!(parse("8.5").program, vec![Token::Number(8.5)]);
-        assert_eq!(parse(".2").program, vec![Token::Number(0.2)]);
-        assert_eq!(parse("6.").program, vec![Token::Number(6.)]);
+        assert_eq!(
+            parse(&[Token {
+                token: TokenType::Number,
+                value: "54".to_string(),
+                start: 0,
+                end: 2,
+            }])
+            .program,
+            vec![Node::Number(54.)]
+        );
+        assert_eq!(
+            parse(&[Token {
+                token: TokenType::Number,
+                value: "6.".to_string(),
+                start: 0,
+                end: 2,
+            }])
+            .program,
+            vec![Node::Number(6.)]
+        );
+        assert_eq!(
+            parse(&[Token {
+                token: TokenType::Number,
+                value: ".2".to_string(),
+                start: 0,
+                end: 2,
+            }])
+            .program,
+            vec![Node::Number(0.2)]
+        );
+        assert_eq!(
+            parse(&[Token {
+                token: TokenType::Number,
+                value: "8.5".to_string(),
+                start: 0,
+                end: 2,
+            }])
+            .program,
+            vec![Node::Number(8.5)]
+        );
     }
 
     #[test]
     fn parse_simple_operations() {
         assert_eq!(
-            parse("6 + 9").program,
-            vec![Token::Operation {
+            parse(&[
+                Token {
+                    token: TokenType::Number,
+                    value: "6".to_string(),
+                    start: 0,
+                    end: 0,
+                },
+                Token {
+                    token: TokenType::Operator,
+                    value: "+".to_string(),
+                    start: 1,
+                    end: 1,
+                },
+                Token {
+                    token: TokenType::Number,
+                    value: "9".to_string(),
+                    start: 2,
+                    end: 2,
+                },
+            ])
+            .program,
+            vec![Node::Operation {
                 operator: Operator::Add,
-                a: Box::new(Token::Number(6.)),
-                b: Box::new(Token::Number(9.)),
+                a: Box::new(Node::Number(6.)),
+                b: Box::new(Node::Number(9.)),
             }]
         );
 
         assert_eq!(
-            parse("5 - 7.5").program,
-            vec![Token::Operation {
+            parse(&[
+                Token {
+                    token: TokenType::Number,
+                    value: "5".to_string(),
+                    start: 0,
+                    end: 0,
+                },
+                Token {
+                    token: TokenType::Operator,
+                    value: "-".to_string(),
+                    start: 1,
+                    end: 1,
+                },
+                Token {
+                    token: TokenType::Number,
+                    value: "7.5".to_string(),
+                    start: 2,
+                    end: 4,
+                },
+            ])
+            .program,
+            vec![Node::Operation {
                 operator: Operator::Subtract,
-                a: Box::new(Token::Number(5.)),
-                b: Box::new(Token::Number(7.5)),
+                a: Box::new(Node::Number(5.)),
+                b: Box::new(Node::Number(7.5)),
             }]
         );
 
         assert_eq!(
-            parse(".3 * 4").program,
-            vec![Token::Operation {
+            parse(&[
+                Token {
+                    token: TokenType::Number,
+                    value: "0.3".to_string(),
+                    start: 0,
+                    end: 2,
+                },
+                Token {
+                    token: TokenType::Operator,
+                    value: "*".to_string(),
+                    start: 3,
+                    end: 3,
+                },
+                Token {
+                    token: TokenType::Number,
+                    value: "4".to_string(),
+                    start: 4,
+                    end: 4,
+                },
+            ])
+            .program,
+            vec![Node::Operation {
                 operator: Operator::Multiply,
-                a: Box::new(Token::Number(0.3)),
-                b: Box::new(Token::Number(4.)),
+                a: Box::new(Node::Number(0.3)),
+                b: Box::new(Node::Number(4.)),
             }]
         );
 
         assert_eq!(
-            parse("2. / 1").program,
-            vec![Token::Operation {
+            parse(&[
+                Token {
+                    token: TokenType::Number,
+                    value: "2".to_string(),
+                    start: 0,
+                    end: 0,
+                },
+                Token {
+                    token: TokenType::Operator,
+                    value: "/".to_string(),
+                    start: 1,
+                    end: 1,
+                },
+                Token {
+                    token: TokenType::Number,
+                    value: "1".to_string(),
+                    start: 2,
+                    end: 2,
+                },
+            ])
+            .program,
+            vec![Node::Operation {
                 operator: Operator::Divide,
-                a: Box::new(Token::Number(2.)),
-                b: Box::new(Token::Number(1.)),
+                a: Box::new(Node::Number(2.)),
+                b: Box::new(Node::Number(1.)),
             }]
         );
 
         assert_eq!(
-            parse("5 % 1.5").program,
-            vec![Token::Operation {
+            parse(&[
+                Token {
+                    token: TokenType::Number,
+                    value: "5".to_string(),
+                    start: 0,
+                    end: 0,
+                },
+                Token {
+                    token: TokenType::Operator,
+                    value: "%".to_string(),
+                    start: 1,
+                    end: 1,
+                },
+                Token {
+                    token: TokenType::Number,
+                    value: "1.5".to_string(),
+                    start: 2,
+                    end: 4,
+                },
+            ])
+            .program,
+            vec![Node::Operation {
                 operator: Operator::Modulo,
-                a: Box::new(Token::Number(5.)),
-                b: Box::new(Token::Number(1.5)),
+                a: Box::new(Node::Number(5.)),
+                b: Box::new(Node::Number(1.5)),
             }]
+        );
+    }
+
+    #[test]
+    fn extend_complex_operation() {
+        assert_eq!(
+            extend_operation(
+                Node::Operation {
+                    operator: Operator::Add,
+                    a: Box::new(Node::Number(6.)),
+                    b: Box::new(Node::Number(8.))
+                },
+                Operator::Add,
+                Node::Number(4.)
+            ),
+            Node::Operation {
+                operator: Operator::Add,
+                a: Box::new(Node::Operation {
+                    operator: Operator::Add,
+                    a: Box::new(Node::Number(6.)),
+                    b: Box::new(Node::Number(8.))
+                }),
+                b: Box::new(Node::Number(4.))
+            }
+        );
+        assert_eq!(
+            extend_operation(
+                Node::Operation {
+                    operator: Operator::Add,
+                    a: Box::new(Node::Number(6.)),
+                    b: Box::new(Node::Number(8.))
+                },
+                Operator::Multiply,
+                Node::Number(4.)
+            ),
+            Node::Operation {
+                operator: Operator::Add,
+                a: Box::new(Node::Number(6.)),
+                b: Box::new(Node::Operation {
+                    operator: Operator::Multiply,
+                    a: Box::new(Node::Number(8.)),
+                    b: Box::new(Node::Number(4.))
+                })
+            }
+        );
+        assert_eq!(
+            extend_operation(
+                Node::Operation {
+                    operator: Operator::Multiply,
+                    a: Box::new(Node::Number(6.)),
+                    b: Box::new(Node::Number(8.))
+                },
+                Operator::Add,
+                Node::Number(4.)
+            ),
+            Node::Operation {
+                operator: Operator::Add,
+                a: Box::new(Node::Operation {
+                    operator: Operator::Multiply,
+                    a: Box::new(Node::Number(6.)),
+                    b: Box::new(Node::Number(8.))
+                }),
+                b: Box::new(Node::Number(4.))
+            }
+        );
+        assert_eq!(
+            extend_operation(
+                Node::Operation {
+                    operator: Operator::Multiply,
+                    a: Box::new(Node::Number(6.)),
+                    b: Box::new(Node::Number(8.))
+                },
+                Operator::Multiply,
+                Node::Number(4.)
+            ),
+            Node::Operation {
+                operator: Operator::Multiply,
+                a: Box::new(Node::Operation {
+                    operator: Operator::Multiply,
+                    a: Box::new(Node::Number(6.)),
+                    b: Box::new(Node::Number(8.))
+                }),
+                b: Box::new(Node::Number(4.))
+            }
         );
     }
 
     #[test]
     fn parse_complex_operations() {
         assert_eq!(
-            parse("6 + 9 + 5").program,
-            vec![Token::Operation {
+            parse(&[
+                Token {
+                    token: TokenType::Number,
+                    value: "6".to_string(),
+                    start: 0,
+                    end: 0,
+                },
+                Token {
+                    token: TokenType::Operator,
+                    value: "+".to_string(),
+                    start: 1,
+                    end: 1,
+                },
+                Token {
+                    token: TokenType::Number,
+                    value: "9".to_string(),
+                    start: 2,
+                    end: 2,
+                },
+                Token {
+                    token: TokenType::Operator,
+                    value: "+".to_string(),
+                    start: 3,
+                    end: 3,
+                },
+                Token {
+                    token: TokenType::Number,
+                    value: "5".to_string(),
+                    start: 4,
+                    end: 4,
+                }
+            ])
+            .program,
+            vec![Node::Operation {
                 operator: Operator::Add,
-                a: Box::new(Token::Operation {
+                a: Box::new(Node::Operation {
                     operator: Operator::Add,
-                    a: Box::new(Token::Number(6.)),
-                    b: Box::new(Token::Number(9.)),
+                    a: Box::new(Node::Number(6.)),
+                    b: Box::new(Node::Number(9.)),
                 }),
-                b: Box::new(Token::Number(5.)),
+                b: Box::new(Node::Number(5.)),
             }]
         );
         assert_eq!(
-            parse("6 - 9 + 5").program,
-            vec![Token::Operation {
-                operator: Operator::Add,
-                a: Box::new(Token::Operation {
-                    operator: Operator::Subtract,
-                    a: Box::new(Token::Number(6.)),
-                    b: Box::new(Token::Number(9.)),
-                }),
-                b: Box::new(Token::Number(5.)),
-            }]
-        );
-        assert_eq!(
-            parse("6 + 9 - 5").program,
-            vec![Token::Operation {
+            parse(&[
+                Token {
+                    token: TokenType::Number,
+                    value: "6".to_string(),
+                    start: 0,
+                    end: 0,
+                },
+                Token {
+                    token: TokenType::Operator,
+                    value: "+".to_string(),
+                    start: 1,
+                    end: 1,
+                },
+                Token {
+                    token: TokenType::Number,
+                    value: "9".to_string(),
+                    start: 2,
+                    end: 2,
+                },
+                Token {
+                    token: TokenType::Operator,
+                    value: "-".to_string(),
+                    start: 3,
+                    end: 3,
+                },
+                Token {
+                    token: TokenType::Number,
+                    value: "5".to_string(),
+                    start: 4,
+                    end: 4,
+                }
+            ])
+            .program,
+            vec![Node::Operation {
                 operator: Operator::Subtract,
-                a: Box::new(Token::Operation {
+                a: Box::new(Node::Operation {
                     operator: Operator::Add,
-                    a: Box::new(Token::Number(6.)),
-                    b: Box::new(Token::Number(9.)),
+                    a: Box::new(Node::Number(6.)),
+                    b: Box::new(Node::Number(9.)),
                 }),
-                b: Box::new(Token::Number(5.)),
+                b: Box::new(Node::Number(5.)),
             }]
         );
 
         assert_eq!(
-            parse("6 * .5 * 7").program,
-            vec![Token::Operation {
+            parse(&[
+                Token {
+                    token: TokenType::Number,
+                    value: "6".to_string(),
+                    start: 0,
+                    end: 0,
+                },
+                Token {
+                    token: TokenType::Operator,
+                    value: "*".to_string(),
+                    start: 1,
+                    end: 1,
+                },
+                Token {
+                    token: TokenType::Number,
+                    value: ".5".to_string(),
+                    start: 2,
+                    end: 3,
+                },
+                Token {
+                    token: TokenType::Operator,
+                    value: "*".to_string(),
+                    start: 4,
+                    end: 4,
+                },
+                Token {
+                    token: TokenType::Number,
+                    value: "7".to_string(),
+                    start: 5,
+                    end: 5,
+                }
+            ])
+            .program,
+            vec![Node::Operation {
                 operator: Operator::Multiply,
-                a: Box::new(Token::Operation {
+                a: Box::new(Node::Operation {
                     operator: Operator::Multiply,
-                    a: Box::new(Token::Number(6.)),
-                    b: Box::new(Token::Number(0.5)),
+                    a: Box::new(Node::Number(6.)),
+                    b: Box::new(Node::Number(0.5)),
                 }),
-                b: Box::new(Token::Number(7.)),
+                b: Box::new(Node::Number(7.)),
             }]
         );
         assert_eq!(
-            parse("6 % 5 * .7").program,
-            vec![Token::Operation {
-                operator: Operator::Multiply,
-                a: Box::new(Token::Operation {
-                    operator: Operator::Modulo,
-                    a: Box::new(Token::Number(6.)),
-                    b: Box::new(Token::Number(5.)),
-                }),
-                b: Box::new(Token::Number(0.7)),
-            }]
-        );
-        assert_eq!(
-            parse("6 * .5 / 7").program,
-            vec![Token::Operation {
+            parse(&[
+                Token {
+                    token: TokenType::Number,
+                    value: "6".to_string(),
+                    start: 0,
+                    end: 0,
+                },
+                Token {
+                    token: TokenType::Operator,
+                    value: "*".to_string(),
+                    start: 1,
+                    end: 1,
+                },
+                Token {
+                    token: TokenType::Number,
+                    value: ".5".to_string(),
+                    start: 2,
+                    end: 3,
+                },
+                Token {
+                    token: TokenType::Operator,
+                    value: "/".to_string(),
+                    start: 4,
+                    end: 4,
+                },
+                Token {
+                    token: TokenType::Number,
+                    value: "7".to_string(),
+                    start: 5,
+                    end: 5,
+                }
+            ])
+            .program,
+            vec![Node::Operation {
                 operator: Operator::Divide,
-                a: Box::new(Token::Operation {
+                a: Box::new(Node::Operation {
                     operator: Operator::Multiply,
-                    a: Box::new(Token::Number(6.)),
-                    b: Box::new(Token::Number(0.5)),
+                    a: Box::new(Node::Number(6.)),
+                    b: Box::new(Node::Number(0.5)),
                 }),
-                b: Box::new(Token::Number(7.)),
-            }]
-        );
-
-        assert_eq!(
-            parse("4 + 5 * 3").program,
-            vec![Token::Operation {
-                operator: Operator::Add,
-                a: Box::new(Token::Number(4.)),
-                b: Box::new(Token::Operation {
-                    operator: Operator::Multiply,
-                    a: Box::new(Token::Number(5.)),
-                    b: Box::new(Token::Number(3.)),
-                }),
-            },]
-        );
-        assert_eq!(
-            parse(".2 * 5.5 + 8").program,
-            vec![Token::Operation {
-                operator: Operator::Add,
-                a: Box::new(Token::Operation {
-                    operator: Operator::Multiply,
-                    a: Box::new(Token::Number(0.2)),
-                    b: Box::new(Token::Number(5.5)),
-                }),
-                b: Box::new(Token::Number(8.)),
-            }]
-        );
-
-        assert_eq!(
-            parse("2 % 5 + 8.5 * .7").program,
-            vec![Token::Operation {
-                operator: Operator::Add,
-                a: Box::new(Token::Operation {
-                    operator: Operator::Modulo,
-                    a: Box::new(Token::Number(2.)),
-                    b: Box::new(Token::Number(5.)),
-                }),
-                b: Box::new(Token::Operation {
-                    operator: Operator::Multiply,
-                    a: Box::new(Token::Number(8.5)),
-                    b: Box::new(Token::Number(0.7)),
-                }),
+                b: Box::new(Node::Number(7.0)),
             }]
         );
         assert_eq!(
-            parse(".2 + 5.5 * 8 + .7").program,
-            vec![Token::Operation {
+            parse(&[
+                Token {
+                    token: TokenType::Number,
+                    value: "6".to_string(),
+                    start: 0,
+                    end: 0,
+                },
+                Token {
+                    token: TokenType::Operator,
+                    value: "*".to_string(),
+                    start: 1,
+                    end: 1,
+                },
+                Token {
+                    token: TokenType::Number,
+                    value: ".5".to_string(),
+                    start: 2,
+                    end: 3,
+                },
+                Token {
+                    token: TokenType::Operator,
+                    value: "+".to_string(),
+                    start: 4,
+                    end: 4,
+                },
+                Token {
+                    token: TokenType::Number,
+                    value: "7".to_string(),
+                    start: 5,
+                    end: 5,
+                }
+            ])
+            .program,
+            vec![Node::Operation {
                 operator: Operator::Add,
-                a: Box::new(Token::Operation {
-                    operator: Operator::Add,
-                    a: Box::new(Token::Number(0.2)),
-                    b: Box::new(Token::Operation {
+                a: Box::new(Node::Operation {
+                    operator: Operator::Multiply,
+                    a: Box::new(Node::Number(6.)),
+                    b: Box::new(Node::Number(0.5)),
+                }),
+                b: Box::new(Node::Number(7.)),
+            }]
+        );
+        assert_eq!(
+            parse(&[
+                Token {
+                    token: TokenType::Number,
+                    value: "6".to_string(),
+                    start: 0,
+                    end: 0,
+                },
+                Token {
+                    token: TokenType::Operator,
+                    value: "/".to_string(),
+                    start: 1,
+                    end: 1,
+                },
+                Token {
+                    token: TokenType::Number,
+                    value: ".5".to_string(),
+                    start: 2,
+                    end: 3,
+                },
+                Token {
+                    token: TokenType::Operator,
+                    value: "+".to_string(),
+                    start: 4,
+                    end: 4,
+                },
+                Token {
+                    token: TokenType::Number,
+                    value: "7".to_string(),
+                    start: 5,
+                    end: 5,
+                },
+                Token {
+                    token: TokenType::Operator,
+                    value: "*".to_string(),
+                    start: 6,
+                    end: 6,
+                },
+                Token {
+                    token: TokenType::Number,
+                    value: "3".to_string(),
+                    start: 7,
+                    end: 7,
+                }
+            ])
+            .program,
+            vec![Node::Operation {
+                operator: Operator::Add,
+                a: Box::new(Node::Operation {
+                    operator: Operator::Divide,
+                    a: Box::new(Node::Number(6.)),
+                    b: Box::new(Node::Number(0.5)),
+                }),
+                b: Box::new(Node::Operation {
+                    operator: Operator::Multiply,
+                    a: Box::new(Node::Number(7.)),
+                    b: Box::new(Node::Number(3.)),
+                }),
+            }]
+        );
+        assert_eq!(
+            parse(&[
+                Token {
+                    token: TokenType::Number,
+                    value: ".2".to_string(),
+                    start: 0,
+                    end: 2,
+                },
+                Token {
+                    token: TokenType::Operator,
+                    value: "-".to_string(),
+                    start: 3,
+                    end: 3,
+                },
+                Token {
+                    token: TokenType::Number,
+                    value: "5.5".to_string(),
+                    start: 4,
+                    end: 6,
+                },
+                Token {
+                    token: TokenType::Operator,
+                    value: "*".to_string(),
+                    start: 7,
+                    end: 7,
+                },
+                Token {
+                    token: TokenType::Number,
+                    value: "8".to_string(),
+                    start: 8,
+                    end: 8,
+                },
+                Token {
+                    token: TokenType::Operator,
+                    value: "+".to_string(),
+                    start: 9,
+                    end: 9,
+                },
+                Token {
+                    token: TokenType::Number,
+                    value: ".7".to_string(),
+                    start: 10,
+                    end: 12,
+                }
+            ])
+            .program,
+            vec![Node::Operation {
+                operator: Operator::Add,
+                a: Box::new(Node::Operation {
+                    operator: Operator::Subtract,
+                    a: Box::new(Node::Number(0.2)),
+                    b: Box::new(Node::Operation {
                         operator: Operator::Multiply,
-                        a: Box::new(Token::Number(5.5)),
-                        b: Box::new(Token::Number(8.)),
+                        a: Box::new(Node::Number(5.5)),
+                        b: Box::new(Node::Number(8.)),
                     }),
                 }),
-                b: Box::new(Token::Number(0.7)),
+                b: Box::new(Node::Number(0.7)),
             }]
         );
     }

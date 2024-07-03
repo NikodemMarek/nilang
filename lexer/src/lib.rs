@@ -1,6 +1,6 @@
 use tokens::{Token, TokenType};
 
-mod tokens;
+pub mod tokens;
 
 pub fn convert(input: &str) -> Vec<tokens::Token> {
     let mut chars = input.chars().peekable().enumerate();

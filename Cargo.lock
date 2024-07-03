@@ -9,6 +9,9 @@ version = "0.1.0"
 [[package]]
 name = "nilang-parser"
 version = "0.1.0"
+dependencies = [
+ "nilang-lexer",
+]
 
 [[package]]
 name = "nilang-runner"
