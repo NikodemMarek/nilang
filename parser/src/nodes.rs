@@ -11,6 +11,7 @@ pub enum Node {
         a: Box<Node>,
         b: Box<Node>,
     },
+    ParenthesisTerminator,
 }
 
 #[derive(Debug, Clone, PartialEq)]
