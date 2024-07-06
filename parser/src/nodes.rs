@@ -5,13 +5,19 @@ pub struct Program {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Node {
+    Function {
+        name: String,
+        parameters: Vec<String>,
+        body: Box<Node>,
+    },
     Number(f64),
     Operation {
         operator: Operator,
         a: Box<Node>,
         b: Box<Node>,
     },
-    ParenthesisTerminator,
+    Scope(Vec<Node>),
+    Return(Box<Node>),
 }
 
 #[derive(Debug, Clone, PartialEq)]

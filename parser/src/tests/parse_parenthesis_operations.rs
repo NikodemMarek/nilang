@@ -9,7 +9,7 @@ fn parse_parenthesis_operations() {
     assert_eq!(
         parse(&[
             Token {
-                token: TokenType::LeftParenthesis,
+                token: TokenType::OpeningParenthesis,
                 value: "(".to_string(),
                 start: 0,
                 end: 0,
@@ -33,7 +33,7 @@ fn parse_parenthesis_operations() {
                 end: 3,
             },
             Token {
-                token: TokenType::RightParenthesis,
+                token: TokenType::ClosingParenthesis,
                 value: ")".to_string(),
                 start: 4,
                 end: 4,
@@ -49,7 +49,7 @@ fn parse_parenthesis_operations() {
     assert_eq!(
         parse(&[
             Token {
-                token: TokenType::LeftParenthesis,
+                token: TokenType::OpeningParenthesis,
                 value: "(".to_string(),
                 start: 0,
                 end: 0,
@@ -73,7 +73,7 @@ fn parse_parenthesis_operations() {
                 end: 3,
             },
             Token {
-                token: TokenType::RightParenthesis,
+                token: TokenType::ClosingParenthesis,
                 value: ")".to_string(),
                 start: 4,
                 end: 4,
@@ -117,7 +117,7 @@ fn parse_parenthesis_operations() {
                 end: 1,
             },
             Token {
-                token: TokenType::LeftParenthesis,
+                token: TokenType::OpeningParenthesis,
                 value: "(".to_string(),
                 start: 2,
                 end: 2,
@@ -141,7 +141,7 @@ fn parse_parenthesis_operations() {
                 end: 5,
             },
             Token {
-                token: TokenType::RightParenthesis,
+                token: TokenType::ClosingParenthesis,
                 value: ")".to_string(),
                 start: 6,
                 end: 6,
@@ -161,7 +161,7 @@ fn parse_parenthesis_operations() {
     assert_eq!(
         parse(&[
             Token {
-                token: TokenType::LeftParenthesis,
+                token: TokenType::OpeningParenthesis,
                 value: "(".to_string(),
                 start: 0,
                 end: 0,
@@ -179,7 +179,7 @@ fn parse_parenthesis_operations() {
                 end: 2,
             },
             Token {
-                token: TokenType::LeftParenthesis,
+                token: TokenType::OpeningParenthesis,
                 value: "(".to_string(),
                 start: 3,
                 end: 3,
@@ -203,13 +203,13 @@ fn parse_parenthesis_operations() {
                 end: 6,
             },
             Token {
-                token: TokenType::RightParenthesis,
+                token: TokenType::ClosingParenthesis,
                 value: ")".to_string(),
                 start: 7,
                 end: 7,
             },
             Token {
-                token: TokenType::RightParenthesis,
+                token: TokenType::ClosingParenthesis,
                 value: ")".to_string(),
                 start: 8,
                 end: 8,
@@ -241,7 +241,7 @@ fn parse_parenthesis_operations() {
                 end: 1,
             },
             Token {
-                token: TokenType::LeftParenthesis,
+                token: TokenType::OpeningParenthesis,
                 value: "(".to_string(),
                 start: 2,
                 end: 2,
@@ -265,7 +265,7 @@ fn parse_parenthesis_operations() {
                 end: 5,
             },
             Token {
-                token: TokenType::RightParenthesis,
+                token: TokenType::ClosingParenthesis,
                 value: ")".to_string(),
                 start: 6,
                 end: 6,
@@ -297,7 +297,7 @@ fn parse_parenthesis_operations() {
                 end: 1,
             },
             Token {
-                token: TokenType::LeftParenthesis,
+                token: TokenType::OpeningParenthesis,
                 value: "(".to_string(),
                 start: 2,
                 end: 2,
@@ -321,7 +321,7 @@ fn parse_parenthesis_operations() {
                 end: 5,
             },
             Token {
-                token: TokenType::RightParenthesis,
+                token: TokenType::ClosingParenthesis,
                 value: ")".to_string(),
                 start: 6,
                 end: 6,

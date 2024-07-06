@@ -3,294 +3,106 @@ use tokens::{Token, TokenType};
 pub mod tokens;
 
 pub fn convert(input: &str) -> Vec<tokens::Token> {
-    let mut chars = input.chars().peekable().enumerate();
+    let mut chars = input.chars().enumerate().peekable();
 
     let mut tokens = Vec::new();
-    let mut collector: Option<Token> = None;
 
-    while let Some((index, pointer)) = chars.next() {
-        match &pointer {
+    while let Some((index, char)) = chars.next() {
+        match &char {
             '0'..='9' | '.' => {
-                if let Some(token) = collector.as_mut() {
-                    if token.token == TokenType::Number {
-                        token.end = index;
-                        token.value.push(pointer);
-                        continue;
-                    } else {
-                        tokens.push(token.clone());
+                let mut collector: Token = Token {
+                    token: TokenType::Number,
+                    value: String::from(char),
+                    start: index,
+                    end: index,
+                };
+
+                while let Some((_, char)) = chars.peek() {
+                    match char {
+                        '0'..='9' | '.' => {
+                            let (index, char) = chars.next().unwrap();
+                            collector.end = index;
+                            collector.value.push(char);
+                        }
+                        _ => break,
                     }
                 }
 
-                collector = Some(Token {
-                    token: TokenType::Number,
-                    value: pointer.to_string(),
-                    start: index,
-                    end: index,
-                });
+                tokens.push(collector);
             }
             '+' | '-' | '*' | '/' | '%' => {
-                if let Some(token) = collector.as_mut() {
-                    if token.token == TokenType::Operator {
-                        token.end = index;
-                        token.value.push(pointer);
-                        continue;
-                    } else {
-                        tokens.push(token.clone());
-                    }
-                }
-
-                collector = Some(Token {
+                tokens.push(Token {
                     token: TokenType::Operator,
-                    value: pointer.to_string(),
+                    value: char.to_string(),
                     start: index,
                     end: index,
                 });
             }
-            '(' => {
-                if let Some(token) = collector.as_mut() {
-                    tokens.push(token.clone());
-                    collector = None;
+            'a'..='z' | 'A'..='Z' | '_' => {
+                let mut collector: Token = Token {
+                    token: TokenType::Number,
+                    value: String::from(char),
+                    start: index,
+                    end: index,
+                };
+                while let Some((_, next)) = chars.peek() {
+                    match next {
+                        'a'..='z' | 'A'..='Z' | '0'..='9' | '_' => {
+                            let (index, next) = chars.next().unwrap();
+                            collector.end = index;
+                            collector.value.push(next);
+                        }
+                        _ => break,
+                    }
                 }
 
                 tokens.push(Token {
-                    token: TokenType::LeftParenthesis,
-                    value: pointer.to_string(),
+                    token: match collector.value.as_str() {
+                        "fn" | "rt" => TokenType::Keyword,
+                        _ => TokenType::Literal,
+                    },
+                    ..collector
+                });
+            }
+            '(' => {
+                tokens.push(Token {
+                    token: TokenType::OpeningParenthesis,
+                    value: char.to_string(),
                     start: index,
                     end: index,
                 });
             }
             ')' => {
-                if let Some(token) = collector.as_mut() {
-                    tokens.push(token.clone());
-                    collector = None;
-                }
-
                 tokens.push(Token {
-                    token: TokenType::RightParenthesis,
-                    value: pointer.to_string(),
+                    token: TokenType::ClosingParenthesis,
+                    value: char.to_string(),
                     start: index,
                     end: index,
                 });
             }
-            ' ' => {
-                if let Some(token) = collector.as_ref() {
-                    tokens.push(token.clone());
-                    collector = None;
-                }
+            '{' => {
+                tokens.push(Token {
+                    token: TokenType::OpeningBrace,
+                    value: char.to_string(),
+                    start: index,
+                    end: index,
+                });
             }
-            _ => panic!("Unexpected character: {}", pointer),
+            '}' => {
+                tokens.push(Token {
+                    token: TokenType::ClosingBrace,
+                    value: char.to_string(),
+                    start: index,
+                    end: index,
+                });
+            }
+            ' ' => {}
+            _ => panic!("Unexpected character: {}", char),
         }
-    }
-
-    if let Some(token) = collector {
-        tokens.push(token);
     }
 
     tokens
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn convert_numbers() {
-        assert_eq!(
-            convert("5  "),
-            vec![Token {
-                token: TokenType::Number,
-                value: "5".to_string(),
-                start: 0,
-                end: 0,
-            }]
-        );
-        assert_eq!(
-            convert("4.  "),
-            vec![Token {
-                token: TokenType::Number,
-                value: "4.".to_string(),
-                start: 0,
-                end: 1,
-            }]
-        );
-        assert_eq!(
-            convert(".9"),
-            vec![Token {
-                token: TokenType::Number,
-                value: ".9".to_string(),
-                start: 0,
-                end: 1,
-            }]
-        );
-        assert_eq!(
-            convert("3.7"),
-            vec![Token {
-                token: TokenType::Number,
-                value: "3.7".to_string(),
-                start: 0,
-                end: 2,
-            }]
-        );
-    }
-
-    #[test]
-    fn convert_operators() {
-        assert_eq!(
-            convert("  +"),
-            vec![Token {
-                token: TokenType::Operator,
-                value: "+".to_string(),
-                start: 2,
-                end: 2,
-            }]
-        );
-        assert_eq!(
-            convert(" - "),
-            vec![Token {
-                token: TokenType::Operator,
-                value: "-".to_string(),
-                start: 1,
-                end: 1,
-            }]
-        );
-        assert_eq!(
-            convert("*"),
-            vec![Token {
-                token: TokenType::Operator,
-                value: "*".to_string(),
-                start: 0,
-                end: 0,
-            }]
-        );
-        assert_eq!(
-            convert("/"),
-            vec![Token {
-                token: TokenType::Operator,
-                value: "/".to_string(),
-                start: 0,
-                end: 0,
-            }]
-        );
-        assert_eq!(
-            convert("%"),
-            vec![Token {
-                token: TokenType::Operator,
-                value: "%".to_string(),
-                start: 0,
-                end: 0,
-            }]
-        );
-    }
-
-    #[test]
-    fn convert_operations() {
-        assert_eq!(
-            convert("5+4"),
-            vec![
-                Token {
-                    token: TokenType::Number,
-                    value: "5".to_string(),
-                    start: 0,
-                    end: 0,
-                },
-                Token {
-                    token: TokenType::Operator,
-                    value: "+".to_string(),
-                    start: 1,
-                    end: 1,
-                },
-                Token {
-                    token: TokenType::Number,
-                    value: "4".to_string(),
-                    start: 2,
-                    end: 2,
-                },
-            ]
-        );
-        assert_eq!(
-            convert("5.5 * 8"),
-            vec![
-                Token {
-                    token: TokenType::Number,
-                    value: "5.5".to_string(),
-                    start: 0,
-                    end: 2,
-                },
-                Token {
-                    token: TokenType::Operator,
-                    value: "*".to_string(),
-                    start: 4,
-                    end: 4,
-                },
-                Token {
-                    token: TokenType::Number,
-                    value: "8".to_string(),
-                    start: 6,
-                    end: 6,
-                },
-            ]
-        );
-    }
-
-    #[test]
-    fn convert_parentheses() {
-        assert_eq!(
-            convert(" (5)"),
-            vec![
-                Token {
-                    token: TokenType::LeftParenthesis,
-                    value: "(".to_string(),
-                    start: 1,
-                    end: 1,
-                },
-                Token {
-                    token: TokenType::Number,
-                    value: "5".to_string(),
-                    start: 2,
-                    end: 2,
-                },
-                Token {
-                    token: TokenType::RightParenthesis,
-                    value: ")".to_string(),
-                    start: 3,
-                    end: 3,
-                },
-            ]
-        );
-        assert_eq!(
-            convert("(5 + 4)"),
-            vec![
-                Token {
-                    token: TokenType::LeftParenthesis,
-                    value: "(".to_string(),
-                    start: 0,
-                    end: 0,
-                },
-                Token {
-                    token: TokenType::Number,
-                    value: "5".to_string(),
-                    start: 1,
-                    end: 1,
-                },
-                Token {
-                    token: TokenType::Operator,
-                    value: "+".to_string(),
-                    start: 3,
-                    end: 3,
-                },
-                Token {
-                    token: TokenType::Number,
-                    value: "4".to_string(),
-                    start: 5,
-                    end: 5,
-                },
-                Token {
-                    token: TokenType::RightParenthesis,
-                    value: ")".to_string(),
-                    start: 6,
-                    end: 6,
-                },
-            ]
-        );
-    }
-}
+mod tests;
