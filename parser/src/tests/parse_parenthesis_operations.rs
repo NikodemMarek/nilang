@@ -38,8 +38,7 @@ fn parse_parenthesis_operations() {
                 start: 4,
                 end: 4,
             },
-        ])
-        .program,
+        ]),
         vec![Node::Operation {
             operator: Operator::Add,
             a: Box::new(Node::Number(6.)),
@@ -90,8 +89,7 @@ fn parse_parenthesis_operations() {
                 start: 6,
                 end: 6,
             },
-        ])
-        .program,
+        ]),
         vec![Node::Operation {
             operator: Operator::Add,
             a: Box::new(Node::Operation {
@@ -146,8 +144,7 @@ fn parse_parenthesis_operations() {
                 start: 6,
                 end: 6,
             },
-        ])
-        .program,
+        ]),
         vec![Node::Operation {
             operator: Operator::Add,
             a: Box::new(Node::Number(6.)),
@@ -214,8 +211,7 @@ fn parse_parenthesis_operations() {
                 start: 8,
                 end: 8,
             },
-        ])
-        .program,
+        ]),
         vec![Node::Operation {
             operator: Operator::Add,
             a: Box::new(Node::Number(6.)),
@@ -270,8 +266,7 @@ fn parse_parenthesis_operations() {
                 start: 6,
                 end: 6,
             },
-        ])
-        .program,
+        ]),
         vec![Node::Operation {
             operator: Operator::Multiply,
             a: Box::new(Node::Number(6.)),
@@ -338,8 +333,7 @@ fn parse_parenthesis_operations() {
                 start: 8,
                 end: 8,
             },
-        ])
-        .program,
+        ]),
         vec![Node::Operation {
             operator: Operator::Multiply,
             a: Box::new(Node::Operation {

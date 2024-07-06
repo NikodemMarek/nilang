@@ -2,23 +2,20 @@ use core::panic;
 use std::iter::Peekable;
 
 use nilang_lexer::tokens::{Token, TokenType};
-use nodes::{Node, Operator, Program};
+use nodes::{Node, Operator};
 
 pub mod nodes;
 
 const UNEXPECTED_ERROR: &str = "This does not happen, what the fuck are you doing?";
 const UNEXPECTED_END_OF_INPUT_ERROR: &str = "Unexpected end of input!";
 
-pub fn parse(tokens: &[Token]) -> Program {
-    let mut program = Program {
-        program: Vec::new(),
-    };
-
+pub fn parse(tokens: &[Token]) -> Vec<Node> {
     let mut tokens = tokens.iter().peekable();
 
+    let mut program = Vec::new();
     while let Some(_) = tokens.peek() {
-        let node = convert(&mut program.program, &mut tokens);
-        program.program.push(node);
+        let node = convert(&mut program, &mut tokens);
+        program.push(node);
     }
 
     program

@@ -38,8 +38,7 @@ fn parse_complex_operations() {
                 start: 4,
                 end: 4,
             }
-        ])
-        .program,
+        ]),
         vec![Node::Operation {
             operator: Operator::Add,
             a: Box::new(Node::Operation {
@@ -82,8 +81,7 @@ fn parse_complex_operations() {
                 start: 4,
                 end: 4,
             }
-        ])
-        .program,
+        ]),
         vec![Node::Operation {
             operator: Operator::Subtract,
             a: Box::new(Node::Operation {
@@ -127,8 +125,7 @@ fn parse_complex_operations() {
                 start: 5,
                 end: 5,
             }
-        ])
-        .program,
+        ]),
         vec![Node::Operation {
             operator: Operator::Multiply,
             a: Box::new(Node::Operation {
@@ -171,8 +168,7 @@ fn parse_complex_operations() {
                 start: 5,
                 end: 5,
             }
-        ])
-        .program,
+        ]),
         vec![Node::Operation {
             operator: Operator::Divide,
             a: Box::new(Node::Operation {
@@ -215,8 +211,7 @@ fn parse_complex_operations() {
                 start: 5,
                 end: 5,
             }
-        ])
-        .program,
+        ]),
         vec![Node::Operation {
             operator: Operator::Add,
             a: Box::new(Node::Operation {
@@ -271,8 +266,7 @@ fn parse_complex_operations() {
                 start: 7,
                 end: 7,
             }
-        ])
-        .program,
+        ]),
         vec![Node::Operation {
             operator: Operator::Add,
             a: Box::new(Node::Operation {
@@ -331,8 +325,7 @@ fn parse_complex_operations() {
                 start: 9,
                 end: 11,
             }
-        ])
-        .program,
+        ]),
         vec![Node::Operation {
             operator: Operator::Add,
             a: Box::new(Node::Operation {
@@ -397,8 +390,7 @@ fn parse_complex_operations() {
                 start: 8,
                 end: 8,
             }
-        ])
-        .program,
+        ]),
         vec![Node::Operation {
             operator: Operator::Add,
             a: Box::new(Node::Scope(vec![Node::Return(Box::new(Node::Operation {
@@ -459,8 +451,7 @@ fn parse_complex_operations() {
                 start: 8,
                 end: 8,
             }
-        ])
-        .program,
+        ]),
         vec![Node::Operation {
             operator: Operator::Add,
             a: Box::new(Node::Number(5.)),

@@ -26,8 +26,7 @@ fn parse_simple_operations() {
                 start: 2,
                 end: 2,
             },
-        ])
-        .program,
+        ]),
         vec![Node::Operation {
             operator: Operator::Add,
             a: Box::new(Node::Number(6.)),
@@ -55,8 +54,7 @@ fn parse_simple_operations() {
                 start: 2,
                 end: 4,
             },
-        ])
-        .program,
+        ]),
         vec![Node::Operation {
             operator: Operator::Subtract,
             a: Box::new(Node::Number(5.)),
@@ -84,8 +82,7 @@ fn parse_simple_operations() {
                 start: 4,
                 end: 4,
             },
-        ])
-        .program,
+        ]),
         vec![Node::Operation {
             operator: Operator::Multiply,
             a: Box::new(Node::Number(0.3)),
@@ -113,8 +110,7 @@ fn parse_simple_operations() {
                 start: 2,
                 end: 2,
             },
-        ])
-        .program,
+        ]),
         vec![Node::Operation {
             operator: Operator::Divide,
             a: Box::new(Node::Number(2.)),
@@ -142,8 +138,7 @@ fn parse_simple_operations() {
                 start: 2,
                 end: 4,
             },
-        ])
-        .program,
+        ]),
         vec![Node::Operation {
             operator: Operator::Modulo,
             a: Box::new(Node::Number(5.)),

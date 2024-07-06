@@ -20,8 +20,7 @@ fn parse_return_statement() {
                 start: 3,
                 end: 3,
             },
-        ])
-        .program,
+        ]),
         vec![Node::Return(Box::new(Node::Number(6.)))]
     );
     assert_eq!(
@@ -62,8 +61,7 @@ fn parse_return_statement() {
                 start: 7,
                 end: 7,
             },
-        ])
-        .program,
+        ]),
         vec![Node::Return(Box::new(Node::Operation {
             operator: Operator::Add,
             a: Box::new(Node::Number(6.)),
@@ -96,8 +94,7 @@ fn parse_return_statement() {
                 start: 5,
                 end: 5,
             },
-        ])
-        .program,
+        ]),
         vec![Node::Return(Box::new(Node::Operation {
             operator: Operator::Add,
             a: Box::new(Node::Number(6.)),
@@ -142,8 +139,7 @@ fn parse_return_statement() {
                 start: 7,
                 end: 7,
             },
-        ])
-        .program,
+        ]),
         vec![Node::Return(Box::new(Node::Operation {
             operator: Operator::Add,
             a: Box::new(Node::Operation {
@@ -192,8 +188,7 @@ fn parse_return_statement() {
                 start: 7,
                 end: 7,
             },
-        ])
-        .program,
+        ]),
         vec![Node::Return(Box::new(Node::Operation {
             operator: Operator::Add,
             a: Box::new(Node::Number(6.)),
@@ -248,8 +243,7 @@ fn parse_return_statement() {
                 start: 10,
                 end: 10,
             }
-        ])
-        .program,
+        ]),
         vec![Node::Return(Box::new(Node::Scope(vec![Node::Return(
             Box::new(Node::Operation {
                 operator: Operator::Add,

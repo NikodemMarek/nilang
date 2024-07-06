@@ -9,8 +9,7 @@ fn parse_numbers() {
             value: "54".to_string(),
             start: 0,
             end: 2,
-        }])
-        .program,
+        }]),
         vec![Node::Number(54.)]
     );
     assert_eq!(
@@ -19,8 +18,7 @@ fn parse_numbers() {
             value: "6.".to_string(),
             start: 0,
             end: 2,
-        }])
-        .program,
+        }]),
         vec![Node::Number(6.)]
     );
     assert_eq!(
@@ -29,8 +27,7 @@ fn parse_numbers() {
             value: ".2".to_string(),
             start: 0,
             end: 2,
-        }])
-        .program,
+        }]),
         vec![Node::Number(0.2)]
     );
     assert_eq!(
@@ -39,8 +36,7 @@ fn parse_numbers() {
             value: "8.5".to_string(),
             start: 0,
             end: 2,
-        }])
-        .program,
+        }]),
         vec![Node::Number(8.5)]
     );
 }

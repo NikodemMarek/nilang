@@ -1,9 +1,4 @@
 #[derive(Debug, Clone, PartialEq)]
-pub struct Program {
-    pub program: Vec<Node>,
-}
-
-#[derive(Debug, Clone, PartialEq)]
 pub enum Node {
     Function {
         name: String,

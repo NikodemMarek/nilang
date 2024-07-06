@@ -53,8 +53,7 @@ fn parse_function() {
                 start: 15,
                 end: 15,
             },
-        ])
-        .program,
+        ]),
         vec![Node::Function {
             name: "main".to_string(),
             parameters: Vec::new(),
