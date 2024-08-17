@@ -1,16 +1,13 @@
-use std::path::Path;
-
-use nilang_generator::compile;
+use std::fs::{read_to_string, write};
 
 fn main() {
-    let hw = compile(
-        r#"
-    fn main() {
-        rt 5 + 2
-    }
-    "#,
-    );
+    let code = read_to_string("test.ni").unwrap();
 
-    let path = Path::new("test.asm");
-    std::fs::write(path, hw).unwrap();
+    let hw = compile(&code);
+
+    write("test.asm", hw).unwrap();
+}
+
+fn compile(input: &str) -> String {
+    nilang_generator::generate(nilang_parser::parse(&nilang_lexer::convert(input)))
 }

@@ -1,24 +1,18 @@
 mod transformers;
 mod utils;
 
-use nilang_parser::{nodes::Node, parse};
+use nilang_parser::nodes::Node;
 use transformers::transform;
 use utils::generate_function;
 
-pub fn compile(input: &str) -> String {
-    let program = parse(input);
-    generate(program)
-}
-
-fn generate(program: Vec<Node>) -> String {
-    let mut data = Vec::with_capacity(1024);
-    let mut code = Vec::with_capacity(1024);
-
-    for node in program {
-        let (d, c) = transform(&node);
-        data = [data, d].concat();
-        code = [code, c].concat();
-    }
+pub fn generate<I: IntoIterator<Item = Node>>(program: I) -> String {
+    let (data, code) = program.into_iter().fold(
+        (Vec::with_capacity(256), Vec::with_capacity(4096)),
+        |(data, code), node| {
+            let (d, c) = transform(&node);
+            ([data, d].concat(), [code, c].concat())
+        },
+    );
 
     generate_program(&data, &code)
 }
@@ -29,7 +23,7 @@ fn generate_program(data: &[String], code: &[String]) -> String {
         &[
             String::from("call _main"),
             String::from("movl $1, %eax"),
-            String::from("movl $0, %ebx"),
+            // String::from("movl $0, %ebx"),
             String::from("int $0x80"),
         ],
     );

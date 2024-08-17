@@ -9,11 +9,7 @@ pub mod nodes;
 const UNEXPECTED_ERROR: &str = "This does not happen, what the fuck are you doing?";
 const UNEXPECTED_END_OF_INPUT_ERROR: &str = "Unexpected end of input!";
 
-pub fn parse(input: &str) -> Vec<Node> {
-    parse_tokens(&nilang_lexer::convert(input))
-}
-
-fn parse_tokens(tokens: &[Token]) -> Vec<Node> {
+pub fn parse(tokens: &[Token]) -> Vec<Node> {
     let mut tokens = tokens.iter().peekable();
 
     let mut program = Vec::new();

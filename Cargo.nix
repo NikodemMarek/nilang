@@ -27,7 +27,7 @@ args@{
   ignoreLockHash,
 }:
 let
-  nixifiedLockHash = "73696832989714e48ccd9de3966c5b2011945ee1b02a2fc75862c4820f627980";
+  nixifiedLockHash = "ce7806ed93dec02d422f995ba3c129135a69fc8f23cdf0929725eec7d4090254";
   workspaceSrc = if args.workspaceSrc == null then ./. else args.workspaceSrc;
   currentLockHash = builtins.hashFile "sha256" (workspaceSrc + /Cargo.lock);
   lockHashIgnored = if ignoreLockHash
@@ -88,6 +88,8 @@ in
     src = fetchCrateLocal workspaceSrc;
     dependencies = {
       nilang_generator = (rustPackages."unknown".nilang-generator."0.1.0" { inherit profileName; }).out;
+      nilang_lexer = (rustPackages."unknown".nilang-lexer."0.1.0" { inherit profileName; }).out;
+      nilang_parser = (rustPackages."unknown".nilang-parser."0.1.0" { inherit profileName; }).out;
     };
   });
   

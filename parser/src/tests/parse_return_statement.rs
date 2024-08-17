@@ -1,13 +1,13 @@
 use crate::{
     nodes::{Node, Operator},
-    parse_tokens,
+    parse,
 };
 use nilang_lexer::tokens::{Token, TokenType};
 
 #[test]
 fn parse_return_statement() {
     assert_eq!(
-        parse_tokens(&[
+        parse(&[
             Token {
                 token: TokenType::Keyword,
                 value: "rt".to_string(),
@@ -24,7 +24,7 @@ fn parse_return_statement() {
         vec![Node::Return(Box::new(Node::Number(6.)))]
     );
     assert_eq!(
-        parse_tokens(&[
+        parse(&[
             Token {
                 token: TokenType::Keyword,
                 value: "rt".to_string(),
@@ -69,7 +69,7 @@ fn parse_return_statement() {
         }))]
     );
     assert_eq!(
-        parse_tokens(&[
+        parse(&[
             Token {
                 token: TokenType::Keyword,
                 value: "rt".to_string(),
@@ -102,7 +102,7 @@ fn parse_return_statement() {
         }))]
     );
     assert_eq!(
-        parse_tokens(&[
+        parse(&[
             Token {
                 token: TokenType::Keyword,
                 value: "rt".to_string(),
@@ -151,7 +151,7 @@ fn parse_return_statement() {
         }))]
     );
     assert_eq!(
-        parse_tokens(&[
+        parse(&[
             Token {
                 token: TokenType::Keyword,
                 value: "rt".to_string(),
@@ -200,7 +200,7 @@ fn parse_return_statement() {
         }))]
     );
     assert_eq!(
-        parse_tokens(&[
+        parse(&[
             Token {
                 token: TokenType::Keyword,
                 value: "rt".to_string(),

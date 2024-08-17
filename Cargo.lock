@@ -25,4 +25,6 @@ name = "nilang-runner"
 version = "0.1.0"
 dependencies = [
  "nilang-generator",
+ "nilang-lexer",
+ "nilang-parser",
 ]

@@ -1,13 +1,13 @@
 use crate::{
     nodes::{Node, Operator},
-    parse_tokens,
+    parse,
 };
 use nilang_lexer::tokens::{Token, TokenType};
 
 #[test]
 fn parse_simple_operations() {
     assert_eq!(
-        parse_tokens(&[
+        parse(&[
             Token {
                 token: TokenType::Number,
                 value: "6".to_string(),
@@ -35,7 +35,7 @@ fn parse_simple_operations() {
     );
 
     assert_eq!(
-        parse_tokens(&[
+        parse(&[
             Token {
                 token: TokenType::Number,
                 value: "5".to_string(),
@@ -63,7 +63,7 @@ fn parse_simple_operations() {
     );
 
     assert_eq!(
-        parse_tokens(&[
+        parse(&[
             Token {
                 token: TokenType::Number,
                 value: "0.3".to_string(),
@@ -91,7 +91,7 @@ fn parse_simple_operations() {
     );
 
     assert_eq!(
-        parse_tokens(&[
+        parse(&[
             Token {
                 token: TokenType::Number,
                 value: "2".to_string(),
@@ -119,7 +119,7 @@ fn parse_simple_operations() {
     );
 
     assert_eq!(
-        parse_tokens(&[
+        parse(&[
             Token {
                 token: TokenType::Number,
                 value: "5".to_string(),
