@@ -96,7 +96,7 @@ pub fn convert(input: &str) -> Vec<tokens::Token> {
                     end: index,
                 });
             }
-            ' ' => {}
+            ' ' | '\n' | '\t' => {}
             _ => panic!("Unexpected character: {}", char),
         }
     }

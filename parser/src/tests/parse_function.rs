@@ -1,10 +1,10 @@
-use crate::{nodes::Node, parse};
+use crate::{nodes::Node, parse_tokens};
 use nilang_lexer::tokens::{Token, TokenType};
 
 #[test]
 fn parse_function() {
     assert_eq!(
-        parse(&[
+        parse_tokens(&[
             Token {
                 token: TokenType::Keyword,
                 value: "fn".to_string(),

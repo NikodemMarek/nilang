@@ -4,7 +4,9 @@
 args@{
   release ? true,
   rootFeatures ? [
+    "nilang-generator/default"
     "nilang-parser/default"
+    "nilang-lexer/default"
     "nilang-runner/default"
   ],
   rustPackages,
@@ -25,7 +27,7 @@ args@{
   ignoreLockHash,
 }:
 let
-  nixifiedLockHash = "a8ce9eb490c8703735ca65d9b5b8bc83b5a80fc54cdce9d975e7a500574a06cb";
+  nixifiedLockHash = "73696832989714e48ccd9de3966c5b2011945ee1b02a2fc75862c4820f627980";
   workspaceSrc = if args.workspaceSrc == null then ./. else args.workspaceSrc;
   currentLockHash = builtins.hashFile "sha256" (workspaceSrc + /Cargo.lock);
   lockHashIgnored = if ignoreLockHash
@@ -47,14 +49,36 @@ in
 {
   cargo2nixVersion = "0.11.0";
   workspace = {
+    nilang-generator = rustPackages.unknown.nilang-generator."0.1.0";
     nilang-parser = rustPackages.unknown.nilang-parser."0.1.0";
+    nilang-lexer = rustPackages.unknown.nilang-lexer."0.1.0";
     nilang-runner = rustPackages.unknown.nilang-runner."0.1.0";
   };
+  "unknown".nilang-generator."0.1.0" = overridableMkRustCrate (profileName: rec {
+    name = "nilang-generator";
+    version = "0.1.0";
+    registry = "unknown";
+    src = fetchCrateLocal workspaceSrc;
+    dependencies = {
+      nilang_parser = (rustPackages."unknown".nilang-parser."0.1.0" { inherit profileName; }).out;
+    };
+  });
+  
+  "unknown".nilang-lexer."0.1.0" = overridableMkRustCrate (profileName: rec {
+    name = "nilang-lexer";
+    version = "0.1.0";
+    registry = "unknown";
+    src = fetchCrateLocal workspaceSrc;
+  });
+  
   "unknown".nilang-parser."0.1.0" = overridableMkRustCrate (profileName: rec {
     name = "nilang-parser";
     version = "0.1.0";
     registry = "unknown";
     src = fetchCrateLocal workspaceSrc;
+    dependencies = {
+      nilang_lexer = (rustPackages."unknown".nilang-lexer."0.1.0" { inherit profileName; }).out;
+    };
   });
   
   "unknown".nilang-runner."0.1.0" = overridableMkRustCrate (profileName: rec {
@@ -62,6 +86,9 @@ in
     version = "0.1.0";
     registry = "unknown";
     src = fetchCrateLocal workspaceSrc;
+    dependencies = {
+      nilang_generator = (rustPackages."unknown".nilang-generator."0.1.0" { inherit profileName; }).out;
+    };
   });
   
 }

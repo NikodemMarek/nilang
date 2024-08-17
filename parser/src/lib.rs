@@ -9,11 +9,15 @@ pub mod nodes;
 const UNEXPECTED_ERROR: &str = "This does not happen, what the fuck are you doing?";
 const UNEXPECTED_END_OF_INPUT_ERROR: &str = "Unexpected end of input!";
 
-pub fn parse(tokens: &[Token]) -> Vec<Node> {
+pub fn parse(input: &str) -> Vec<Node> {
+    parse_tokens(&nilang_lexer::convert(input))
+}
+
+fn parse_tokens(tokens: &[Token]) -> Vec<Node> {
     let mut tokens = tokens.iter().peekable();
 
     let mut program = Vec::new();
-    while let Some(_) = tokens.peek() {
+    while tokens.peek().is_some() {
         let node = convert(&mut program, &mut tokens);
         program.push(node);
     }
@@ -123,7 +127,7 @@ where
 
     match program
         .pop()
-        .expect(&format!("[{}] Expected a number or an operator", start - 1))
+        .unwrap_or_else(|| panic!("[{}] Expected a number or an operator", start - 1))
     {
         a @ Node::Number(_) => Node::Operation {
             operator,
@@ -220,7 +224,7 @@ fn convert_number(
         Node::Number(
             value
                 .parse()
-                .expect(&format!("[{start}-{end}] Invalid number: \"{value}\"")),
+                .unwrap_or_else(|_| panic!("[{start}-{end}] Invalid number: \"{value}\"")),
         )
     } else {
         panic!("{}", UNEXPECTED_ERROR);
