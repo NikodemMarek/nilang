@@ -1,12 +1,12 @@
 use crate::{
-    convert,
+    lex,
     tokens::{Token, TokenType},
 };
 
 #[test]
 fn convert_numbers() {
     assert_eq!(
-        convert("5  "),
+        lex("5  "),
         vec![Token {
             token: TokenType::Number,
             value: "5".to_string(),
@@ -15,7 +15,7 @@ fn convert_numbers() {
         }]
     );
     assert_eq!(
-        convert("4.  "),
+        lex("4.  "),
         vec![Token {
             token: TokenType::Number,
             value: "4.".to_string(),
@@ -24,7 +24,7 @@ fn convert_numbers() {
         }]
     );
     assert_eq!(
-        convert(".9"),
+        lex(".9"),
         vec![Token {
             token: TokenType::Number,
             value: ".9".to_string(),
@@ -33,7 +33,7 @@ fn convert_numbers() {
         }]
     );
     assert_eq!(
-        convert("3.7"),
+        lex("3.7"),
         vec![Token {
             token: TokenType::Number,
             value: "3.7".to_string(),

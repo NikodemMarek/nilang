@@ -2,7 +2,7 @@ use tokens::{Token, TokenType};
 
 pub mod tokens;
 
-pub fn convert(input: &str) -> Vec<tokens::Token> {
+pub fn lex(input: &str) -> Vec<tokens::Token> {
     let mut chars = input.chars().enumerate().peekable();
 
     let mut tokens = Vec::new();

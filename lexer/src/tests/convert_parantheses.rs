@@ -1,12 +1,12 @@
 use crate::{
-    convert,
+    lex,
     tokens::{Token, TokenType},
 };
 
 #[test]
 fn convert_parentheses() {
     assert_eq!(
-        convert(" (5)"),
+        lex(" (5)"),
         vec![
             Token {
                 token: TokenType::OpeningParenthesis,
@@ -29,7 +29,7 @@ fn convert_parentheses() {
         ]
     );
     assert_eq!(
-        convert("(5 + 4)"),
+        lex("(5 + 4)"),
         vec![
             Token {
                 token: TokenType::OpeningParenthesis,

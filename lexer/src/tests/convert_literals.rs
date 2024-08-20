@@ -1,12 +1,12 @@
 use crate::{
-    convert,
+    lex,
     tokens::{Token, TokenType},
 };
 
 #[test]
 fn convert_keywords() {
     assert_eq!(
-        convert("main"),
+        lex("main"),
         vec![Token {
             token: TokenType::Literal,
             value: "main".to_string(),
@@ -15,7 +15,7 @@ fn convert_keywords() {
         }]
     );
     assert_eq!(
-        convert("fn8"),
+        lex("fn8"),
         vec![Token {
             token: TokenType::Literal,
             value: "fn8".to_string(),
@@ -24,7 +24,7 @@ fn convert_keywords() {
         }]
     );
     assert_eq!(
-        convert("_rt"),
+        lex("_rt"),
         vec![Token {
             token: TokenType::Literal,
             value: "_rt".to_string(),
@@ -33,7 +33,7 @@ fn convert_keywords() {
         }]
     );
     assert_eq!(
-        convert("v33ry__C0mpL3x"),
+        lex("v33ry__C0mpL3x"),
         vec![Token {
             token: TokenType::Literal,
             value: "v33ry__C0mpL3x".to_string(),
@@ -42,7 +42,7 @@ fn convert_keywords() {
         }]
     );
     assert_eq!(
-        convert("ClassName"),
+        lex("ClassName"),
         vec![Token {
             token: TokenType::Literal,
             value: "ClassName".to_string(),
