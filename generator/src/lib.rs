@@ -10,15 +10,13 @@ use utils::generate_function;
 pub fn generate<I: IntoIterator<Item = Node>>(program: I) -> String {
     let mut scope = Scope::default();
 
-    let (data, code) = program.into_iter().fold(
-        (Vec::with_capacity(256), Vec::with_capacity(4096)),
-        |(data, code), node| {
-            let (d, c) = transform(&node, &mut scope);
-            ([data, d].concat(), [code, c].concat())
-        },
-    );
+    let code = program
+        .into_iter()
+        .fold(Vec::with_capacity(4096), |code, node| {
+            [code, transform(&node, &mut scope)].concat()
+        });
 
-    generate_program(&data, &code)
+    generate_program(&[], &code)
 }
 
 fn generate_program(data: &[String], code: &[String]) -> String {

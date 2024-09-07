@@ -4,15 +4,14 @@ use crate::{transformers::transform, utils::generate_function};
 
 use super::scope::Scope;
 
-pub fn transform_function(a: &Node, scope: &mut Scope) -> (Vec<String>, Vec<String>) {
+pub fn transform_function(a: &Node, scope: &mut Scope) -> Vec<String> {
     if let Node::FunctionDeclaration {
         name,
         parameters: _,
         body,
     } = a
     {
-        let this = transform(body, scope);
-        (this.0, generate_function(name, &this.1))
+        generate_function(name, &transform(body, scope))
     } else {
         panic!("Unexpected node: {:?}", a)
     }
@@ -32,9 +31,8 @@ mod tests {
                 Node::Number(6.),
             ))]))),
         };
-        let (data, code) = transform_function(&node, &mut Scope::default());
+        let code = transform_function(&node, &mut Scope::default());
 
-        assert_eq!(data, Vec::<String>::new());
         assert_eq!(
             code,
             Vec::from([

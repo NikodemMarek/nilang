@@ -2,25 +2,18 @@ use nilang_parser::nodes::{Node, Operator};
 
 use super::scope::Scope;
 
-pub fn transform_operation(
-    node: &Node,
-    scope: &mut Scope,
-    result_register: &str,
-) -> (Vec<String>, Vec<String>) {
+pub fn transform_operation(node: &Node, scope: &mut Scope, result_register: &str) -> Vec<String> {
     if let Node::Operation { operator, a, b } = node {
-        let (data, code, second_operator) = match (*a.clone(), *b.clone()) {
+        let (code, second_operator) = match (*a.clone(), *b.clone()) {
             (Node::Number(value_a), Node::Number(value_b)) => (
-                Vec::new(),
                 Vec::from([format!("movq ${}, {}", value_a, result_register)]),
                 format!("${}", value_b),
             ),
             (Node::Number(value_a), Node::VariableReference(name_b)) => (
-                Vec::new(),
                 Vec::from([format!("movq ${}, {}", value_a, result_register)]),
                 format!("{}(%rbp)", scope.get(&name_b)),
             ),
             (Node::VariableReference(name_a), Node::Number(value_b)) => (
-                Vec::new(),
                 Vec::from([format!(
                     "movq {}(%rbp), {}",
                     scope.get(&name_a),
@@ -29,7 +22,6 @@ pub fn transform_operation(
                 format!("${}", value_b),
             ),
             (Node::VariableReference(name_a), Node::VariableReference(name_b)) => (
-                Vec::new(),
                 Vec::from([format!(
                     "movq {}(%rbp), {}",
                     scope.get(&name_a),
@@ -37,21 +29,19 @@ pub fn transform_operation(
                 )]),
                 format!("{}(%rbp)", scope.get(&name_b)),
             ),
-            (operation_a @ Node::Operation { .. }, Node::Number(value_b)) => {
-                let (data_a, code_a) = transform_operation(&operation_a, scope, result_register);
-                (data_a, code_a, format!("${}", value_b))
-            }
-            (operation_a @ Node::Operation { .. }, Node::VariableReference(name_b)) => {
-                let (data_a, code_a) = transform_operation(&operation_a, scope, result_register);
-                (data_a, code_a, format!("{}(%rbp)", scope.get(&name_b)))
-            }
+            (operation_a @ Node::Operation { .. }, Node::Number(value_b)) => (
+                transform_operation(&operation_a, scope, result_register),
+                format!("${}", value_b),
+            ),
+            (operation_a @ Node::Operation { .. }, Node::VariableReference(name_b)) => (
+                transform_operation(&operation_a, scope, result_register),
+                format!("{}(%rbp)", scope.get(&name_b)),
+            ),
             (Node::Number(value_a), operation_b @ Node::Operation { .. }) => {
-                let (data_b, code_b) = transform_operation(&operation_b, scope, result_register);
                 let result_pointer_offset_b = scope.insert_unnamed();
                 (
-                    data_b,
                     [
-                        code_b,
+                        transform_operation(&operation_b, scope, result_register),
                         Vec::from([
                             format!(
                                 "movq {}, {}(%rbp)",
@@ -65,12 +55,10 @@ pub fn transform_operation(
                 )
             }
             (Node::VariableReference(name_a), operation_b @ Node::Operation { .. }) => {
-                let (data_b, code_b) = transform_operation(&operation_b, scope, result_register);
                 let result_pointer_offset_b = scope.insert_unnamed();
                 (
-                    data_b,
                     [
-                        code_b,
+                        transform_operation(&operation_b, scope, result_register),
                         Vec::from([
                             format!(
                                 "movq {}, {}(%rbp)",
@@ -84,18 +72,15 @@ pub fn transform_operation(
                 )
             }
             (a @ Node::Operation { .. }, b @ Node::Operation { .. }) => {
-                let (data_a, code_a) = transform_operation(&a, scope, result_register);
-                let (data_b, code_b) = transform_operation(&b, scope, result_register);
                 let result_pointer_offset_a = scope.insert_unnamed();
                 (
-                    [data_a, data_b].concat(),
                     [
-                        code_a,
+                        transform_operation(&a, scope, result_register),
                         Vec::from([format!(
                             "movq {}, {}(%rbp)",
                             result_register, result_pointer_offset_a
                         )]),
-                        code_b,
+                        transform_operation(&b, scope, result_register),
                         Vec::from([format!(
                             "movq {}(%rbp), {}",
                             result_pointer_offset_a, result_register
@@ -108,36 +93,33 @@ pub fn transform_operation(
             _ => panic!("Invalid node type"),
         };
 
-        (
-            data,
-            [
-                code,
-                match operator {
-                    Operator::Add => {
-                        Vec::from([format!("add {}, {}", second_operator, result_register)])
-                    }
-                    Operator::Subtract => {
-                        Vec::from([format!("sub {}, {}", second_operator, result_register)])
-                    }
-                    Operator::Multiply => {
-                        Vec::from([format!("imul {}, {}", second_operator, result_register)])
-                    }
-                    Operator::Divide => Vec::from([
-                        format!("movq {}, %rbx", second_operator),
-                        String::from("cqto"),
-                        String::from("idiv %rbx"),
-                        format!("movq %rax, {}", result_register),
-                    ]),
-                    Operator::Modulo => Vec::from([
-                        format!("movq {}, %rbx", second_operator),
-                        String::from("cqto"),
-                        String::from("idiv %rbx"),
-                        format!("movq %rdx, {}", result_register),
-                    ]),
-                },
-            ]
-            .concat(),
-        )
+        [
+            code,
+            match operator {
+                Operator::Add => {
+                    Vec::from([format!("add {}, {}", second_operator, result_register)])
+                }
+                Operator::Subtract => {
+                    Vec::from([format!("sub {}, {}", second_operator, result_register)])
+                }
+                Operator::Multiply => {
+                    Vec::from([format!("imul {}, {}", second_operator, result_register)])
+                }
+                Operator::Divide => Vec::from([
+                    format!("movq {}, %rbx", second_operator),
+                    String::from("cqto"),
+                    String::from("idiv %rbx"),
+                    format!("movq %rax, {}", result_register),
+                ]),
+                Operator::Modulo => Vec::from([
+                    format!("movq {}, %rbx", second_operator),
+                    String::from("cqto"),
+                    String::from("idiv %rbx"),
+                    format!("movq %rdx, {}", result_register),
+                ]),
+            },
+        ]
+        .concat()
     } else {
         panic!("Invalid node type");
     }
@@ -155,9 +137,8 @@ mod tests {
             a: Box::new(Node::Number(1.)),
             b: Box::new(Node::Number(2.)),
         };
-        let (data, code) = transform_operation(&node, &mut Scope::default(), "%rax");
+        let code = transform_operation(&node, &mut Scope::default(), "%rax");
 
-        assert_eq!(data, Vec::<String>::new());
         assert_eq!(
             code,
             Vec::from([String::from("movq $1, %rax"), String::from("add $2, %rax"),])
@@ -171,9 +152,8 @@ mod tests {
             a: Box::new(Node::Number(1.)),
             b: Box::new(Node::Number(2.)),
         };
-        let (data, code) = transform_operation(&node, &mut Scope::default(), "%rax");
+        let code = transform_operation(&node, &mut Scope::default(), "%rax");
 
-        assert_eq!(data, Vec::<String>::new());
         assert_eq!(
             code,
             Vec::from([String::from("movq $1, %rax"), String::from("sub $2, %rax"),])
@@ -187,9 +167,8 @@ mod tests {
             a: Box::new(Node::Number(1.)),
             b: Box::new(Node::Number(2.)),
         };
-        let (data, code) = transform_operation(&node, &mut Scope::default(), "%rax");
+        let code = transform_operation(&node, &mut Scope::default(), "%rax");
 
-        assert_eq!(data, Vec::<String>::new());
         assert_eq!(
             code,
             Vec::from([String::from("movq $1, %rax"), String::from("imul $2, %rax"),])
@@ -203,9 +182,8 @@ mod tests {
             a: Box::new(Node::Number(1.)),
             b: Box::new(Node::Number(2.)),
         };
-        let (data, code) = transform_operation(&node, &mut Scope::default(), "%rax");
+        let code = transform_operation(&node, &mut Scope::default(), "%rax");
 
-        assert_eq!(data, Vec::<String>::new());
         assert_eq!(
             code,
             Vec::from([
@@ -225,9 +203,8 @@ mod tests {
             a: Box::new(Node::Number(1.)),
             b: Box::new(Node::Number(2.)),
         };
-        let (data, code) = transform_operation(&node, &mut Scope::default(), "%rax");
+        let code = transform_operation(&node, &mut Scope::default(), "%rax");
 
-        assert_eq!(data, Vec::<String>::new());
         assert_eq!(
             code,
             Vec::from([
@@ -249,9 +226,8 @@ mod tests {
         };
         let mut scope = Scope::default();
         scope.insert("a");
-        let (data, code) = transform_operation(&node, &mut scope, "%rax");
+        let code = transform_operation(&node, &mut scope, "%rax");
 
-        assert_eq!(data, Vec::<String>::new());
         assert_eq!(
             code,
             Vec::from([
@@ -270,9 +246,8 @@ mod tests {
         };
         let mut scope = Scope::default();
         scope.insert("a");
-        let (data, code) = transform_operation(&node, &mut scope, "%rax");
+        let code = transform_operation(&node, &mut scope, "%rax");
 
-        assert_eq!(data, Vec::<String>::new());
         assert_eq!(
             code,
             Vec::from([
@@ -292,9 +267,8 @@ mod tests {
         let mut scope = Scope::default();
         scope.insert("a");
         scope.insert("b");
-        let (data, code) = transform_operation(&node, &mut scope, "%rax");
+        let code = transform_operation(&node, &mut scope, "%rax");
 
-        assert_eq!(data, Vec::<String>::new());
         assert_eq!(
             code,
             Vec::from([
@@ -315,9 +289,8 @@ mod tests {
             }),
             b: Box::new(Node::Number(3.)),
         };
-        let (data, code) = transform_operation(&node, &mut Scope::default(), "%rax");
+        let code = transform_operation(&node, &mut Scope::default(), "%rax");
 
-        assert_eq!(data, Vec::<String>::new());
         assert_eq!(
             code,
             Vec::from([
@@ -341,9 +314,8 @@ mod tests {
         };
         let mut scope = Scope::default();
         scope.insert("a");
-        let (data, code) = transform_operation(&node, &mut scope, "%rax");
+        let code = transform_operation(&node, &mut scope, "%rax");
 
-        assert_eq!(data, Vec::<String>::new());
         assert_eq!(
             code,
             Vec::from([
@@ -367,9 +339,8 @@ mod tests {
                 b: Box::new(Node::Number(3.)),
             }),
         };
-        let (data, code) = transform_operation(&node, &mut Scope::default(), "%rax");
+        let code = transform_operation(&node, &mut Scope::default(), "%rax");
 
-        assert_eq!(data, Vec::<String>::new());
         assert_eq!(
             code,
             Vec::from([
@@ -395,9 +366,8 @@ mod tests {
         };
         let mut scope = Scope::default();
         scope.insert("a");
-        let (data, code) = transform_operation(&node, &mut scope, "%rax");
+        let code = transform_operation(&node, &mut scope, "%rax");
 
-        assert_eq!(data, Vec::<String>::new());
         assert_eq!(
             code,
             Vec::from([
@@ -423,9 +393,8 @@ mod tests {
                 b: Box::new(Node::Number(4.)),
             }),
         };
-        let (data, code) = transform_operation(&node, &mut Scope::default(), "%rax");
+        let code = transform_operation(&node, &mut Scope::default(), "%rax");
 
-        assert_eq!(data, Vec::<String>::new());
         assert_eq!(
             code,
             Vec::from([

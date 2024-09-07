@@ -44,27 +44,22 @@ impl Scope {
     }
 }
 
-pub fn transform_scope(a: &Node, scope: &mut Scope) -> (Vec<String>, Vec<String>) {
+pub fn transform_scope(a: &Node, scope: &mut Scope) -> Vec<String> {
     if let Node::Scope(inner) = a {
         let mut scope = Scope::inherit(scope);
 
-        let (data, code) = inner
+        let code = inner
             .iter()
-            .map(|node| {
-                let this = transform(node, &mut scope);
-                (this.0, this.1)
-            })
-            .reduce(|a, b| ([a.0, b.0].concat(), [a.1, b.1].concat()))
+            .map(|node| transform(node, &mut scope))
+            .reduce(|a, b| [a, b].concat())
             .unwrap();
-        (
-            data,
-            [
-                Vec::from([String::from("pushq %rbp"), String::from("movq %rsp, %rbp")]),
-                code,
-                Vec::from([String::from("leave")]),
-            ]
-            .concat(),
-        )
+
+        [
+            Vec::from([String::from("pushq %rbp"), String::from("movq %rsp, %rbp")]),
+            code,
+            Vec::from([String::from("leave")]),
+        ]
+        .concat()
     } else {
         panic!("Unexpected node: {:?}", a)
     }
@@ -78,9 +73,8 @@ mod tests {
     #[test]
     fn scope_with_return() {
         let node = Node::Scope(vec![Node::Return(Box::new(Node::Number(42.)))]);
-        let (data, code) = transform_scope(&node, &mut super::Scope::default());
+        let code = transform_scope(&node, &mut super::Scope::default());
 
-        assert_eq!(data, Vec::<String>::new());
         assert_eq!(
             &code,
             &[

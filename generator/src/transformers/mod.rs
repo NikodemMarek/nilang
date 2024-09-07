@@ -13,7 +13,7 @@ use crate::transformers::{
     scope::transform_scope,
 };
 
-pub fn transform(node: &Node, scope: &mut Scope) -> (Vec<String>, Vec<String>) {
+pub fn transform(node: &Node, scope: &mut Scope) -> Vec<String> {
     match node {
         Node::Return(_) => transform_return(node, scope),
         Node::FunctionDeclaration { .. } => transform_function(node, scope),
@@ -44,9 +44,8 @@ mod tests {
                 },
             ))]))),
         };
-        let (data, code) = transform(&node, &mut super::Scope::default());
+        let code = transform(&node, &mut super::Scope::default());
 
-        assert_eq!(data, Vec::<String>::new());
         assert_eq!(
             code,
             Vec::from([
