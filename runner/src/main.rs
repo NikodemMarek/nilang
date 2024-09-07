@@ -9,5 +9,8 @@ fn main() {
 }
 
 fn compile(input: &str) -> String {
-    nilang_generator::generate(nilang_parser::parse(&nilang_lexer::lex(input)))
+    let lexed = nilang_lexer::lex(input);
+    let parsed = nilang_parser::parse(&lexed);
+    dbg!(&parsed);
+    nilang_generator::generate(parsed)
 }

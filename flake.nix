@@ -23,7 +23,7 @@
           workspaceShell = let
             alias-run = pkgs.writeShellScriptBin "r" ''cargo run'';
             alias-dev = pkgs.writeShellScriptBin "d" ''${pkgs.cargo-watch}/bin/cargo-watch -C runner -x run -c'';
-            alias-test = pkgs.writeShellScriptBin "t" ''${pkgs.cargo-watch}/bin/cargo-watch -C runner -x test -c'';
+            alias-test = pkgs.writeShellScriptBin "t" ''${pkgs.cargo-watch}/bin/cargo-watch -C generator -x test -c'';
 
             alias-assemble = pkgs.writeShellScriptBin "ae" ''as test.asm -o test.o'';
             alias-link = pkgs.writeShellScriptBin "lk" ''ld test.o -o test'';

@@ -7,7 +7,7 @@ use nilang_lexer::tokens::{Token, TokenType};
 #[test]
 fn parse_parenthesis_operations() {
     assert_eq!(
-        parse(&[
+        &parse(&[
             Token {
                 token: TokenType::OpeningParenthesis,
                 value: "(".to_string(),
@@ -39,14 +39,14 @@ fn parse_parenthesis_operations() {
                 end: 4,
             },
         ]),
-        vec![Node::Operation {
+        &[Node::Operation {
             operator: Operator::Add,
             a: Box::new(Node::Number(6.)),
             b: Box::new(Node::Number(9.)),
         }]
     );
     assert_eq!(
-        parse(&[
+        &parse(&[
             Token {
                 token: TokenType::OpeningParenthesis,
                 value: "(".to_string(),
@@ -90,7 +90,7 @@ fn parse_parenthesis_operations() {
                 end: 6,
             },
         ]),
-        vec![Node::Operation {
+        &[Node::Operation {
             operator: Operator::Add,
             a: Box::new(Node::Operation {
                 operator: Operator::Add,
@@ -101,7 +101,7 @@ fn parse_parenthesis_operations() {
         }]
     );
     assert_eq!(
-        parse(&[
+        &parse(&[
             Token {
                 token: TokenType::Number,
                 value: "6".to_string(),
@@ -145,7 +145,7 @@ fn parse_parenthesis_operations() {
                 end: 6,
             },
         ]),
-        vec![Node::Operation {
+        &[Node::Operation {
             operator: Operator::Add,
             a: Box::new(Node::Number(6.)),
             b: Box::new(Node::Operation {
@@ -156,7 +156,7 @@ fn parse_parenthesis_operations() {
         }]
     );
     assert_eq!(
-        parse(&[
+        &parse(&[
             Token {
                 token: TokenType::OpeningParenthesis,
                 value: "(".to_string(),
@@ -212,7 +212,7 @@ fn parse_parenthesis_operations() {
                 end: 8,
             },
         ]),
-        vec![Node::Operation {
+        &[Node::Operation {
             operator: Operator::Add,
             a: Box::new(Node::Number(6.)),
             b: Box::new(Node::Operation {
@@ -223,7 +223,7 @@ fn parse_parenthesis_operations() {
         }]
     );
     assert_eq!(
-        parse(&[
+        &parse(&[
             Token {
                 token: TokenType::Number,
                 value: "6".to_string(),
@@ -267,7 +267,7 @@ fn parse_parenthesis_operations() {
                 end: 6,
             },
         ]),
-        vec![Node::Operation {
+        &[Node::Operation {
             operator: Operator::Multiply,
             a: Box::new(Node::Number(6.)),
             b: Box::new(Node::Operation {
@@ -278,7 +278,7 @@ fn parse_parenthesis_operations() {
         }]
     );
     assert_eq!(
-        parse(&[
+        &parse(&[
             Token {
                 token: TokenType::Number,
                 value: "6".to_string(),
@@ -334,7 +334,7 @@ fn parse_parenthesis_operations() {
                 end: 8,
             },
         ]),
-        vec![Node::Operation {
+        &[Node::Operation {
             operator: Operator::Multiply,
             a: Box::new(Node::Operation {
                 operator: Operator::Multiply,

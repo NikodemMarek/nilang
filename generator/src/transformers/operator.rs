@@ -1,83 +1,151 @@
 use nilang_parser::nodes::{Node, Operator};
 
-use crate::transformers::transform;
+use super::scope::Scope;
 
-pub fn transform_operation(a: &Node) -> (Vec<String>, Vec<String>) {
-    if let Node::Operation { operator, a, b } = a {
-        let (a_data, a_code) = transform(a);
-        let (b_data, b_code) = transform(b);
-        let (a_code, b_code) = (a_code.as_slice(), b_code.as_slice());
+pub fn transform_operation(
+    node: &Node,
+    scope: &mut Scope,
+    result_register: &str,
+) -> (Vec<String>, Vec<String>) {
+    if let Node::Operation { operator, a, b } = node {
+        let (data, code, second_operator) = match (*a.clone(), *b.clone()) {
+            (Node::Number(value_a), Node::Number(value_b)) => (
+                Vec::new(),
+                Vec::from([format!("movq ${}, {}", value_a, result_register)]),
+                format!("${}", value_b),
+            ),
+            (Node::Number(value_a), Node::VariableReference(name_b)) => (
+                Vec::new(),
+                Vec::from([format!("movq ${}, {}", value_a, result_register)]),
+                format!("{}(%rbp)", scope.get(&name_b)),
+            ),
+            (Node::VariableReference(name_a), Node::Number(value_b)) => (
+                Vec::new(),
+                Vec::from([format!(
+                    "movq {}(%rbp), {}",
+                    scope.get(&name_a),
+                    result_register
+                )]),
+                format!("${}", value_b),
+            ),
+            (Node::VariableReference(name_a), Node::VariableReference(name_b)) => (
+                Vec::new(),
+                Vec::from([format!(
+                    "movq {}(%rbp), {}",
+                    scope.get(&name_a),
+                    result_register
+                )]),
+                format!("{}(%rbp)", scope.get(&name_b)),
+            ),
+            (operation_a @ Node::Operation { .. }, Node::Number(value_b)) => {
+                let (data_a, code_a) = transform_operation(&operation_a, scope, result_register);
+                (data_a, code_a, format!("${}", value_b))
+            }
+            (operation_a @ Node::Operation { .. }, Node::VariableReference(name_b)) => {
+                let (data_a, code_a) = transform_operation(&operation_a, scope, result_register);
+                (data_a, code_a, format!("{}(%rbp)", scope.get(&name_b)))
+            }
+            (Node::Number(value_a), operation_b @ Node::Operation { .. }) => {
+                let (data_b, code_b) = transform_operation(&operation_b, scope, result_register);
+                let result_pointer_offset_b = scope.insert_unnamed();
+                (
+                    data_b,
+                    [
+                        code_b,
+                        Vec::from([
+                            format!(
+                                "movq {}, {}(%rbp)",
+                                result_register, result_pointer_offset_b
+                            ),
+                            format!("movq ${}, {}", value_a, result_register),
+                        ]),
+                    ]
+                    .concat(),
+                    format!("{}(%rbp)", result_pointer_offset_b),
+                )
+            }
+            (Node::VariableReference(name_a), operation_b @ Node::Operation { .. }) => {
+                let (data_b, code_b) = transform_operation(&operation_b, scope, result_register);
+                let result_pointer_offset_b = scope.insert_unnamed();
+                (
+                    data_b,
+                    [
+                        code_b,
+                        Vec::from([
+                            format!(
+                                "movq {}, {}(%rbp)",
+                                result_register, result_pointer_offset_b
+                            ),
+                            format!("movq {}(%rbp), {}", scope.get(&name_a), result_register),
+                        ]),
+                    ]
+                    .concat(),
+                    format!("{}(%rbp)", result_pointer_offset_b),
+                )
+            }
+            (a @ Node::Operation { .. }, b @ Node::Operation { .. }) => {
+                let (data_a, code_a) = transform_operation(&a, scope, result_register);
+                let (data_b, code_b) = transform_operation(&b, scope, result_register);
+                let result_pointer_offset_a = scope.insert_unnamed();
+                (
+                    [data_a, data_b].concat(),
+                    [
+                        code_a,
+                        Vec::from([format!(
+                            "movq {}, {}(%rbp)",
+                            result_register, result_pointer_offset_a
+                        )]),
+                        code_b,
+                        Vec::from([format!(
+                            "movq {}(%rbp), {}",
+                            result_pointer_offset_a, result_register
+                        )]),
+                    ]
+                    .concat(),
+                    String::from("%rbx"),
+                )
+            }
+            _ => panic!("Invalid node type"),
+        };
 
         (
-            [a_data, b_data].concat(),
-            match operator {
-                Operator::Add => [
-                    a_code,
-                    b_code,
-                    &[
-                        String::from("pop %rbx"),
-                        String::from("pop %rax"),
-                        String::from("add %rbx, %rax"),
-                        String::from("push %rax"),
-                    ],
-                ]
-                .concat(),
-                Operator::Subtract => [
-                    a_code,
-                    b_code,
-                    &[
-                        String::from("pop %rbx"),
-                        String::from("pop %rax"),
-                        String::from("sub %rbx, %rax"),
-                        String::from("push %rax"),
-                    ],
-                ]
-                .concat(),
-                Operator::Multiply => [
-                    a_code,
-                    b_code,
-                    &[
-                        String::from("pop %rbx"),
-                        String::from("pop %rax"),
-                        String::from("imul %rbx, %rax"),
-                        String::from("push %rax"),
-                    ],
-                ]
-                .concat(),
-                Operator::Divide => [
-                    a_code,
-                    b_code,
-                    &[
-                        String::from("pop %rbx"),
-                        String::from("pop %rax"),
-                        String::from("cltd"),
+            data,
+            [
+                code,
+                match operator {
+                    Operator::Add => {
+                        Vec::from([format!("add {}, {}", second_operator, result_register)])
+                    }
+                    Operator::Subtract => {
+                        Vec::from([format!("sub {}, {}", second_operator, result_register)])
+                    }
+                    Operator::Multiply => {
+                        Vec::from([format!("imul {}, {}", second_operator, result_register)])
+                    }
+                    Operator::Divide => Vec::from([
+                        format!("movq {}, %rbx", second_operator),
+                        String::from("cqto"),
                         String::from("idiv %rbx"),
-                        String::from("push %rax"),
-                    ],
-                ]
-                .concat(),
-                Operator::Modulo => [
-                    a_code,
-                    b_code,
-                    &[
-                        String::from("pop %rbx"),
-                        String::from("pop %rax"),
-                        String::from("cltd"),
+                        format!("movq %rax, {}", result_register),
+                    ]),
+                    Operator::Modulo => Vec::from([
+                        format!("movq {}, %rbx", second_operator),
+                        String::from("cqto"),
                         String::from("idiv %rbx"),
-                        String::from("push %rax"),
-                    ],
-                ]
-                .concat(),
-            },
+                        format!("movq %rdx, {}", result_register),
+                    ]),
+                },
+            ]
+            .concat(),
         )
     } else {
-        panic!("Unexpected node: {:?}", a)
+        panic!("Invalid node type");
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::transformers::operator::transform_operation;
+    use crate::transformers::{operator::transform_operation, scope::Scope};
     use nilang_parser::nodes::{Node, Operator};
 
     #[test]
@@ -87,19 +155,12 @@ mod tests {
             a: Box::new(Node::Number(1.)),
             b: Box::new(Node::Number(2.)),
         };
-        let (data, code) = transform_operation(&node);
+        let (data, code) = transform_operation(&node, &mut Scope::default(), "%rax");
 
         assert_eq!(data, Vec::<String>::new());
         assert_eq!(
             code,
-            Vec::from([
-                String::from("push $1"),
-                String::from("push $2"),
-                String::from("pop %rbx"),
-                String::from("pop %rax"),
-                String::from("add %rbx, %rax"),
-                String::from("push %rax")
-            ])
+            Vec::from([String::from("movq $1, %rax"), String::from("add $2, %rax"),])
         );
     }
 
@@ -110,19 +171,12 @@ mod tests {
             a: Box::new(Node::Number(1.)),
             b: Box::new(Node::Number(2.)),
         };
-        let (data, code) = transform_operation(&node);
+        let (data, code) = transform_operation(&node, &mut Scope::default(), "%rax");
 
         assert_eq!(data, Vec::<String>::new());
         assert_eq!(
             code,
-            Vec::from([
-                String::from("push $1"),
-                String::from("push $2"),
-                String::from("pop %rbx"),
-                String::from("pop %rax"),
-                String::from("sub %rbx, %rax"),
-                String::from("push %rax")
-            ])
+            Vec::from([String::from("movq $1, %rax"), String::from("sub $2, %rax"),])
         );
     }
 
@@ -133,19 +187,12 @@ mod tests {
             a: Box::new(Node::Number(1.)),
             b: Box::new(Node::Number(2.)),
         };
-        let (data, code) = transform_operation(&node);
+        let (data, code) = transform_operation(&node, &mut Scope::default(), "%rax");
 
         assert_eq!(data, Vec::<String>::new());
         assert_eq!(
             code,
-            Vec::from([
-                String::from("push $1"),
-                String::from("push $2"),
-                String::from("pop %rbx"),
-                String::from("pop %rax"),
-                String::from("imul %rbx, %rax"),
-                String::from("push %rax")
-            ])
+            Vec::from([String::from("movq $1, %rax"), String::from("imul $2, %rax"),])
         );
     }
 
@@ -156,19 +203,17 @@ mod tests {
             a: Box::new(Node::Number(1.)),
             b: Box::new(Node::Number(2.)),
         };
-        let (data, code) = transform_operation(&node);
+        let (data, code) = transform_operation(&node, &mut Scope::default(), "%rax");
 
         assert_eq!(data, Vec::<String>::new());
         assert_eq!(
             code,
             Vec::from([
-                String::from("push $1"),
-                String::from("push $2"),
-                String::from("pop %rbx"),
-                String::from("pop %rax"),
-                String::from("cltd"),
+                String::from("movq $1, %rax"),
+                String::from("movq $2, %rbx"),
+                String::from("cqto"),
                 String::from("idiv %rbx"),
-                String::from("push %rax")
+                String::from("movq %rax, %rax")
             ])
         );
     }
@@ -180,91 +225,89 @@ mod tests {
             a: Box::new(Node::Number(1.)),
             b: Box::new(Node::Number(2.)),
         };
-        let (data, code) = transform_operation(&node);
+        let (data, code) = transform_operation(&node, &mut Scope::default(), "%rax");
 
         assert_eq!(data, Vec::<String>::new());
         assert_eq!(
             code,
             Vec::from([
-                String::from("push $1"),
-                String::from("push $2"),
-                String::from("pop %rbx"),
-                String::from("pop %rax"),
-                String::from("cltd"),
+                String::from("movq $1, %rax"),
+                String::from("movq $2, %rbx"),
+                String::from("cqto"),
                 String::from("idiv %rbx"),
-                String::from("push %rax")
+                String::from("movq %rdx, %rax"),
             ])
         );
     }
 
     #[test]
-    fn add_operation() {
+    fn number_variable_reference() {
         let node = Node::Operation {
             operator: Operator::Add,
-            a: Box::new(Node::Operation {
-                operator: Operator::Add,
-                a: Box::new(Node::Number(1.)),
-                b: Box::new(Node::Number(2.)),
-            }),
-            b: Box::new(Node::Number(3.)),
+            a: Box::new(Node::Number(1.)),
+            b: Box::new(Node::VariableReference(String::from("a"))),
         };
-        let (data, code) = transform_operation(&node);
+        let mut scope = Scope::default();
+        scope.insert("a");
+        let (data, code) = transform_operation(&node, &mut scope, "%rax");
 
         assert_eq!(data, Vec::<String>::new());
         assert_eq!(
             code,
             Vec::from([
-                String::from("push $1"),
-                String::from("push $2"),
-                String::from("pop %rbx"),
-                String::from("pop %rax"),
-                String::from("add %rbx, %rax"),
-                String::from("push %rax"),
-                String::from("push $3"),
-                String::from("pop %rbx"),
-                String::from("pop %rax"),
-                String::from("add %rbx, %rax"),
-                String::from("push %rax")
+                String::from("movq $1, %rax"),
+                String::from("add -8(%rbp), %rax"),
             ])
         );
     }
 
     #[test]
-    fn subtract_operation() {
+    fn variable_reference_number() {
         let node = Node::Operation {
-            operator: Operator::Subtract,
-            a: Box::new(Node::Operation {
-                operator: Operator::Subtract,
-                a: Box::new(Node::Number(1.)),
-                b: Box::new(Node::Number(2.)),
-            }),
-            b: Box::new(Node::Number(3.)),
+            operator: Operator::Add,
+            a: Box::new(Node::VariableReference(String::from("a"))),
+            b: Box::new(Node::Number(2.)),
         };
-        let (data, code) = transform_operation(&node);
+        let mut scope = Scope::default();
+        scope.insert("a");
+        let (data, code) = transform_operation(&node, &mut scope, "%rax");
 
         assert_eq!(data, Vec::<String>::new());
         assert_eq!(
             code,
             Vec::from([
-                String::from("push $1"),
-                String::from("push $2"),
-                String::from("pop %rbx"),
-                String::from("pop %rax"),
-                String::from("sub %rbx, %rax"),
-                String::from("push %rax"),
-                String::from("push $3"),
-                String::from("pop %rbx"),
-                String::from("pop %rax"),
-                String::from("sub %rbx, %rax"),
-                String::from("push %rax")
+                String::from("movq -8(%rbp), %rax"),
+                String::from("add $2, %rax"),
             ])
         );
     }
 
     #[test]
-    fn multiply_operation() {
+    fn variable_reference_variable_reference() {
         let node = Node::Operation {
-            operator: Operator::Multiply,
+            operator: Operator::Add,
+            a: Box::new(Node::VariableReference(String::from("a"))),
+            b: Box::new(Node::VariableReference(String::from("b"))),
+        };
+        let mut scope = Scope::default();
+        scope.insert("a");
+        scope.insert("b");
+        let (data, code) = transform_operation(&node, &mut scope, "%rax");
+
+        assert_eq!(data, Vec::<String>::new());
+        assert_eq!(
+            code,
+            Vec::from([
+                String::from("movq -8(%rbp), %rax"),
+                String::from("add -16(%rbp), %rax"),
+            ])
+        );
+    }
+
+    #[test]
+    fn number_operation() {
+        let node = Node::Operation {
+            operator: Operator::Add,
             a: Box::new(Node::Operation {
                 operator: Operator::Multiply,
                 a: Box::new(Node::Number(1.)),
@@ -272,91 +315,127 @@ mod tests {
             }),
             b: Box::new(Node::Number(3.)),
         };
-        let (data, code) = transform_operation(&node);
+        let (data, code) = transform_operation(&node, &mut Scope::default(), "%rax");
 
         assert_eq!(data, Vec::<String>::new());
         assert_eq!(
             code,
             Vec::from([
-                String::from("push $1"),
-                String::from("push $2"),
-                String::from("pop %rbx"),
-                String::from("pop %rax"),
-                String::from("imul %rbx, %rax"),
-                String::from("push %rax"),
-                String::from("push $3"),
-                String::from("pop %rbx"),
-                String::from("pop %rax"),
-                String::from("imul %rbx, %rax"),
-                String::from("push %rax")
+                String::from("movq $1, %rax"),
+                String::from("imul $2, %rax"),
+                String::from("add $3, %rax"),
             ])
         );
     }
 
     #[test]
-    fn divide_operation() {
+    fn variable_reference_operation() {
         let node = Node::Operation {
-            operator: Operator::Divide,
-            a: Box::new(Node::Operation {
-                operator: Operator::Divide,
-                a: Box::new(Node::Number(1.)),
-                b: Box::new(Node::Number(2.)),
+            operator: Operator::Add,
+            a: Box::new(Node::VariableReference(String::from("a"))),
+            b: Box::new(Node::Operation {
+                operator: Operator::Multiply,
+                a: Box::new(Node::Number(2.)),
+                b: Box::new(Node::Number(3.)),
             }),
-            b: Box::new(Node::Number(3.)),
         };
-        let (data, code) = transform_operation(&node);
+        let mut scope = Scope::default();
+        scope.insert("a");
+        let (data, code) = transform_operation(&node, &mut scope, "%rax");
 
         assert_eq!(data, Vec::<String>::new());
         assert_eq!(
             code,
             Vec::from([
-                String::from("push $1"),
-                String::from("push $2"),
-                String::from("pop %rbx"),
-                String::from("pop %rax"),
-                String::from("cltd"),
-                String::from("idiv %rbx"),
-                String::from("push %rax"),
-                String::from("push $3"),
-                String::from("pop %rbx"),
-                String::from("pop %rax"),
-                String::from("cltd"),
-                String::from("idiv %rbx"),
-                String::from("push %rax")
+                String::from("movq $2, %rax"),
+                String::from("imul $3, %rax"),
+                String::from("movq %rax, -16(%rbp)"),
+                String::from("movq -8(%rbp), %rax"),
+                String::from("add -16(%rbp), %rax"),
             ])
         );
     }
 
     #[test]
-    fn modulo_operation() {
+    fn operation_number() {
         let node = Node::Operation {
-            operator: Operator::Modulo,
-            a: Box::new(Node::Operation {
-                operator: Operator::Modulo,
-                a: Box::new(Node::Number(1.)),
-                b: Box::new(Node::Number(2.)),
+            operator: Operator::Add,
+            a: Box::new(Node::Number(1.)),
+            b: Box::new(Node::Operation {
+                operator: Operator::Multiply,
+                a: Box::new(Node::Number(2.)),
+                b: Box::new(Node::Number(3.)),
             }),
-            b: Box::new(Node::Number(3.)),
         };
-        let (data, code) = transform_operation(&node);
+        let (data, code) = transform_operation(&node, &mut Scope::default(), "%rax");
 
         assert_eq!(data, Vec::<String>::new());
         assert_eq!(
             code,
             Vec::from([
-                String::from("push $1"),
-                String::from("push $2"),
-                String::from("pop %rbx"),
-                String::from("pop %rax"),
-                String::from("cltd"),
-                String::from("idiv %rbx"),
-                String::from("push %rax"),
-                String::from("push $3"),
-                String::from("pop %rbx"),
-                String::from("pop %rax"),
-                String::from("cltd"),
-                String::from("idiv %rbx"),
-                String::from("push %rax")
+                String::from("movq $2, %rax"),
+                String::from("imul $3, %rax"),
+                String::from("movq %rax, -8(%rbp)"),
+                String::from("movq $1, %rax"),
+                String::from("add -8(%rbp), %rax"),
+            ])
+        );
+    }
+
+    #[test]
+    fn operation_variable_reference() {
+        let node = Node::Operation {
+            operator: Operator::Add,
+            a: Box::new(Node::Operation {
+                operator: Operator::Multiply,
+                a: Box::new(Node::Number(1.)),
+                b: Box::new(Node::Number(2.)),
+            }),
+            b: Box::new(Node::VariableReference(String::from("a"))),
+        };
+        let mut scope = Scope::default();
+        scope.insert("a");
+        let (data, code) = transform_operation(&node, &mut scope, "%rax");
+
+        assert_eq!(data, Vec::<String>::new());
+        assert_eq!(
+            code,
+            Vec::from([
+                String::from("movq $1, %rax"),
+                String::from("imul $2, %rax"),
+                String::from("add -8(%rbp), %rax"),
+            ])
+        );
+    }
+
+    #[test]
+    fn operation_operation() {
+        let node = Node::Operation {
+            operator: Operator::Add,
+            a: Box::new(Node::Operation {
+                operator: Operator::Multiply,
+                a: Box::new(Node::Number(1.)),
+                b: Box::new(Node::Number(2.)),
+            }),
+            b: Box::new(Node::Operation {
+                operator: Operator::Subtract,
+                a: Box::new(Node::Number(3.)),
+                b: Box::new(Node::Number(4.)),
+            }),
+        };
+        let (data, code) = transform_operation(&node, &mut Scope::default(), "%rax");
+
+        assert_eq!(data, Vec::<String>::new());
+        assert_eq!(
+            code,
+            Vec::from([
+                String::from("movq $1, %rax"),
+                String::from("imul $2, %rax"),
+                String::from("movq %rax, -8(%rbp)"),
+                String::from("movq $3, %rax"),
+                String::from("sub $4, %rax"),
+                String::from("movq -8(%rbp), %rax"),
+                String::from("add %rbx, %rax"),
             ])
         );
     }

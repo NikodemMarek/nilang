@@ -1,17 +1,70 @@
+use std::collections::HashMap;
+
 use nilang_parser::nodes::Node;
 
 use crate::transformers::transform;
 
-pub fn transform_scope(a: &Node) -> (Vec<String>, Vec<String>) {
+#[derive(Default)]
+pub struct Scope {
+    variables: HashMap<String, i8>,
+    allocated: i8,
+}
+
+static SINGLE_ALLOCATION_SIZE: i8 = 8;
+
+impl Scope {
+    pub fn inherit(scope: &Scope) -> Self {
+        Scope {
+            variables: scope.variables.clone(),
+            allocated: scope.allocated,
+        }
+    }
+
+    pub fn insert(&mut self, name: &str) -> i8 {
+        let name = name.to_owned();
+        if self.variables.contains_key(&name) {
+            panic!("Variable {} already exists", name);
+        }
+
+        self.allocated += 1;
+
+        let pointer_offset = -self.allocated * SINGLE_ALLOCATION_SIZE;
+        self.variables.insert(name, pointer_offset);
+        pointer_offset
+    }
+    pub fn insert_unnamed(&mut self) -> i8 {
+        self.allocated += 1;
+        -self.allocated * SINGLE_ALLOCATION_SIZE
+    }
+    pub fn get(&self, name: &str) -> i8 {
+        *self
+            .variables
+            .get(name)
+            .unwrap_or_else(|| panic!("Variable `{}` not declared", name))
+    }
+}
+
+pub fn transform_scope(a: &Node, scope: &mut Scope) -> (Vec<String>, Vec<String>) {
     if let Node::Scope(inner) = a {
-        inner
+        let mut scope = Scope::inherit(scope);
+
+        let (data, code) = inner
             .iter()
             .map(|node| {
-                let this = transform(node);
+                let this = transform(node, &mut scope);
                 (this.0, this.1)
             })
             .reduce(|a, b| ([a.0, b.0].concat(), [a.1, b.1].concat()))
-            .unwrap()
+            .unwrap();
+        (
+            data,
+            [
+                Vec::from([String::from("pushq %rbp"), String::from("movq %rsp, %rbp")]),
+                code,
+                Vec::from([String::from("leave")]),
+            ]
+            .concat(),
+        )
     } else {
         panic!("Unexpected node: {:?}", a)
     }
@@ -19,21 +72,23 @@ pub fn transform_scope(a: &Node) -> (Vec<String>, Vec<String>) {
 
 #[cfg(test)]
 mod tests {
+    use crate::transformers::scope::transform_scope;
+    use nilang_parser::nodes::Node;
+
     #[test]
     fn scope_with_return() {
-        use crate::transformers::scope::transform_scope;
-        use nilang_parser::nodes::Node;
         let node = Node::Scope(vec![Node::Return(Box::new(Node::Number(42.)))]);
-        let (data, code) = transform_scope(&node);
+        let (data, code) = transform_scope(&node, &mut super::Scope::default());
 
         assert_eq!(data, Vec::<String>::new());
         assert_eq!(
-            code,
-            Vec::from([
-                String::from("push $42"),
-                String::from("pop %rax"),
-                String::from("movl %eax, %ebx")
-            ])
+            &code,
+            &[
+                String::from("pushq %rbp"),
+                String::from("movq %rsp, %rbp"),
+                String::from("movq $42, %rbx"),
+                String::from("leave")
+            ]
         );
     }
 }

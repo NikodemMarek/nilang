@@ -58,7 +58,7 @@ pub fn lex(input: &str) -> Vec<tokens::Token> {
 
                 tokens.push(Token {
                     token: match collector.value.as_str() {
-                        "fn" | "rt" => TokenType::Keyword,
+                        "fn" | "rt" | "vr" => TokenType::Keyword,
                         _ => TokenType::Literal,
                     },
                     ..collector
@@ -91,6 +91,22 @@ pub fn lex(input: &str) -> Vec<tokens::Token> {
             '}' => {
                 tokens.push(Token {
                     token: TokenType::ClosingBrace,
+                    value: char.to_string(),
+                    start: index,
+                    end: index,
+                });
+            }
+            '=' => {
+                tokens.push(Token {
+                    token: TokenType::Equals,
+                    value: char.to_string(),
+                    start: index,
+                    end: index,
+                });
+            }
+            ';' => {
+                tokens.push(Token {
+                    token: TokenType::Semicolon,
                     value: char.to_string(),
                     start: index,
                     end: index,

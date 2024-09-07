@@ -4,10 +4,10 @@ use crate::{
 };
 
 #[test]
-fn convert_operations() {
+fn lex_operations() {
     assert_eq!(
-        lex("5+4"),
-        vec![
+        &lex("5+4"),
+        &[
             Token {
                 token: TokenType::Number,
                 value: "5".to_string(),
@@ -29,8 +29,8 @@ fn convert_operations() {
         ]
     );
     assert_eq!(
-        lex("5.5 * 8"),
-        vec![
+        &lex("5.5 * 8"),
+        &[
             Token {
                 token: TokenType::Number,
                 value: "5.5".to_string(),

@@ -16,4 +16,6 @@ pub enum TokenType {
     ClosingParenthesis,
     OpeningBrace,
     ClosingBrace,
+    Equals,
+    Semicolon,
 }

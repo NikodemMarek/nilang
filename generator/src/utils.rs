@@ -2,7 +2,7 @@ pub fn generate_function(name: &str, code: &[String]) -> Vec<String> {
     let a = [format!(".globl _{name}"), format!("_{name}:")];
     let b = pad_lines(
         code.iter()
-            .chain([String::from("ret"), String::new()].iter()),
+            .chain(space_bottom(&[String::from("ret")]).iter()),
         4,
     );
 
@@ -20,6 +20,10 @@ pub fn pad_lines<'a, I: IntoIterator<Item = &'a String>>(lines: I, padding: usiz
             }
         })
         .collect()
+}
+
+pub fn space_bottom(lines: &[String]) -> Vec<String> {
+    [lines, &[String::new()]].concat()
 }
 
 #[cfg(test)]
@@ -59,7 +63,22 @@ mod tests {
                 String::from("    push %rax"),
                 String::from("        pop %rax"),
                 String::new(),
-                String::from("        ")
+                String::from("        "),
+            ])
+        );
+    }
+
+    #[test]
+    fn space_bottom() {
+        let lines = Vec::from([String::from("push %rax"), String::from("pop %rax")]);
+        let result = super::space_bottom(&lines);
+
+        assert_eq!(
+            result,
+            Vec::from([
+                String::from("push %rax"),
+                String::from("pop %rax"),
+                String::new(),
             ])
         );
     }

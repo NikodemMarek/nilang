@@ -7,7 +7,7 @@ use nilang_lexer::tokens::{Token, TokenType};
 #[test]
 fn parse_return_statement() {
     assert_eq!(
-        parse(&[
+        &parse(&[
             Token {
                 token: TokenType::Keyword,
                 value: "rt".to_string(),
@@ -21,10 +21,10 @@ fn parse_return_statement() {
                 end: 3,
             },
         ]),
-        vec![Node::Return(Box::new(Node::Number(6.)))]
+        &[Node::Return(Box::new(Node::Number(6.)))]
     );
     assert_eq!(
-        parse(&[
+        &parse(&[
             Token {
                 token: TokenType::Keyword,
                 value: "rt".to_string(),
@@ -62,14 +62,14 @@ fn parse_return_statement() {
                 end: 7,
             },
         ]),
-        vec![Node::Return(Box::new(Node::Operation {
+        &[Node::Return(Box::new(Node::Operation {
             operator: Operator::Add,
             a: Box::new(Node::Number(6.)),
             b: Box::new(Node::Number(9.)),
         }))]
     );
     assert_eq!(
-        parse(&[
+        &parse(&[
             Token {
                 token: TokenType::Keyword,
                 value: "rt".to_string(),
@@ -95,14 +95,14 @@ fn parse_return_statement() {
                 end: 5,
             },
         ]),
-        vec![Node::Return(Box::new(Node::Operation {
+        &[Node::Return(Box::new(Node::Operation {
             operator: Operator::Add,
             a: Box::new(Node::Number(6.)),
             b: Box::new(Node::Number(9.)),
         }))]
     );
     assert_eq!(
-        parse(&[
+        &parse(&[
             Token {
                 token: TokenType::Keyword,
                 value: "rt".to_string(),
@@ -140,7 +140,7 @@ fn parse_return_statement() {
                 end: 7,
             },
         ]),
-        vec![Node::Return(Box::new(Node::Operation {
+        &[Node::Return(Box::new(Node::Operation {
             operator: Operator::Add,
             a: Box::new(Node::Operation {
                 operator: Operator::Add,
@@ -151,7 +151,7 @@ fn parse_return_statement() {
         }))]
     );
     assert_eq!(
-        parse(&[
+        &parse(&[
             Token {
                 token: TokenType::Keyword,
                 value: "rt".to_string(),
@@ -189,7 +189,7 @@ fn parse_return_statement() {
                 end: 7,
             },
         ]),
-        vec![Node::Return(Box::new(Node::Operation {
+        &[Node::Return(Box::new(Node::Operation {
             operator: Operator::Add,
             a: Box::new(Node::Number(6.)),
             b: Box::new(Node::Operation {
@@ -200,7 +200,7 @@ fn parse_return_statement() {
         }))]
     );
     assert_eq!(
-        parse(&[
+        &parse(&[
             Token {
                 token: TokenType::Keyword,
                 value: "rt".to_string(),
@@ -244,7 +244,7 @@ fn parse_return_statement() {
                 end: 10,
             }
         ]),
-        vec![Node::Return(Box::new(Node::Scope(vec![Node::Return(
+        &[Node::Return(Box::new(Node::Scope(vec![Node::Return(
             Box::new(Node::Operation {
                 operator: Operator::Add,
                 a: Box::new(Node::Number(6.)),

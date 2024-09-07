@@ -7,7 +7,7 @@ use nilang_lexer::tokens::{Token, TokenType};
 #[test]
 fn parse_simple_operations() {
     assert_eq!(
-        parse(&[
+        &parse(&[
             Token {
                 token: TokenType::Number,
                 value: "6".to_string(),
@@ -27,7 +27,7 @@ fn parse_simple_operations() {
                 end: 2,
             },
         ]),
-        vec![Node::Operation {
+        &[Node::Operation {
             operator: Operator::Add,
             a: Box::new(Node::Number(6.)),
             b: Box::new(Node::Number(9.)),
@@ -35,7 +35,7 @@ fn parse_simple_operations() {
     );
 
     assert_eq!(
-        parse(&[
+        &parse(&[
             Token {
                 token: TokenType::Number,
                 value: "5".to_string(),
@@ -55,7 +55,7 @@ fn parse_simple_operations() {
                 end: 4,
             },
         ]),
-        vec![Node::Operation {
+        &[Node::Operation {
             operator: Operator::Subtract,
             a: Box::new(Node::Number(5.)),
             b: Box::new(Node::Number(7.5)),
@@ -63,7 +63,7 @@ fn parse_simple_operations() {
     );
 
     assert_eq!(
-        parse(&[
+        &parse(&[
             Token {
                 token: TokenType::Number,
                 value: "0.3".to_string(),
@@ -83,7 +83,7 @@ fn parse_simple_operations() {
                 end: 4,
             },
         ]),
-        vec![Node::Operation {
+        &[Node::Operation {
             operator: Operator::Multiply,
             a: Box::new(Node::Number(0.3)),
             b: Box::new(Node::Number(4.)),
@@ -91,7 +91,7 @@ fn parse_simple_operations() {
     );
 
     assert_eq!(
-        parse(&[
+        &parse(&[
             Token {
                 token: TokenType::Number,
                 value: "2".to_string(),
@@ -111,7 +111,7 @@ fn parse_simple_operations() {
                 end: 2,
             },
         ]),
-        vec![Node::Operation {
+        &[Node::Operation {
             operator: Operator::Divide,
             a: Box::new(Node::Number(2.)),
             b: Box::new(Node::Number(1.)),
@@ -119,7 +119,7 @@ fn parse_simple_operations() {
     );
 
     assert_eq!(
-        parse(&[
+        &parse(&[
             Token {
                 token: TokenType::Number,
                 value: "5".to_string(),
@@ -139,7 +139,7 @@ fn parse_simple_operations() {
                 end: 4,
             },
         ]),
-        vec![Node::Operation {
+        &[Node::Operation {
             operator: Operator::Modulo,
             a: Box::new(Node::Number(5.)),
             b: Box::new(Node::Number(1.5)),

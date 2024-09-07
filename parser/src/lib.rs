@@ -34,7 +34,7 @@ where
         },
     ) = tokens.next()
     {
-        return match token {
+        match token {
             TokenType::Number => convert_number(tkn),
             TokenType::Operator => convert_operation(program, tokens, tkn),
             TokenType::OpeningParenthesis => convert_parenthesis(tokens, (start, end)),
@@ -43,17 +43,31 @@ where
             TokenType::ClosingBrace => panic!("[{}] Unexpected closing brace", start),
             TokenType::Keyword => match value.as_str() {
                 "rt" => Node::Return(Box::new(convert(program, tokens))),
-                "fn" => convert_function(tokens, tkn),
+                "fn" => convert_function_declaration(tokens, tkn),
+                "vr" => convert_variable_declaration(program, tokens, tkn),
                 _ => panic!("{}", UNEXPECTED_ERROR),
             },
-            TokenType::Literal => panic!("{}", UNEXPECTED_ERROR),
-        };
+            TokenType::Equals => panic!("[{}] Unexpected equals sign", start),
+            TokenType::Literal => {
+                match tokens.peek() {
+                    Some(Token {
+                        token: TokenType::OpeningParenthesis,
+                        ..
+                    }) => {
+                        // Function call
+                        todo!()
+                    }
+                    _ => Node::VariableReference(value.to_owned()),
+                }
+            }
+            TokenType::Semicolon => panic!("[{}] Unexpected semicolon", start),
+        }
     } else {
         panic!("{}", UNEXPECTED_END_OF_INPUT_ERROR);
     }
 }
 
-fn convert_function<'a, I>(
+fn convert_function_declaration<'a, I>(
     tokens: &mut Peekable<I>,
     Token {
         token: _,
@@ -65,7 +79,7 @@ fn convert_function<'a, I>(
 where
     I: Iterator<Item = &'a Token>,
 {
-    Node::Function {
+    Node::FunctionDeclaration {
         name: match tokens.next() {
             Some(Token {
                 token: TokenType::Literal,
@@ -123,16 +137,21 @@ where
 
     match program
         .pop()
-        .unwrap_or_else(|| panic!("[{}] Expected a number or an operator", start - 1))
+        .unwrap_or_else(|| panic!("[{}] Expected a number or a variable", start - 1))
     {
         a @ Node::Number(_) => Node::Operation {
             operator,
             a: Box::new(a),
             b: Box::new(convert(program, tokens)),
         },
+        a @ Node::VariableReference(_) => Node::Operation {
+            operator,
+            a: Box::new(a),
+            b: Box::new(convert(program, tokens)),
+        },
         a @ Node::Operation { .. } => extend_operation(a, operator, convert(program, tokens)),
         Node::Return(value) => Node::Return(Box::new(match *value {
-            a @ Node::Number(_) => Node::Operation {
+            a @ Node::Number(_) | a @ Node::VariableReference(_) => Node::Operation {
                 operator,
                 a: Box::new(a),
                 b: Box::new(convert(program, tokens)),
@@ -143,7 +162,9 @@ where
                 a: Box::new(a),
                 b: Box::new(convert(program, tokens)),
             },
-            Node::Return(_) | Node::Function { .. } => {
+            Node::Return(_)
+            | Node::FunctionDeclaration { .. }
+            | Node::VariableDeclaration { .. } => {
                 panic!("{}", UNEXPECTED_ERROR)
             }
         })),
@@ -152,7 +173,7 @@ where
             a: Box::new(a),
             b: Box::new(convert(program, tokens)),
         },
-        Node::Function { .. } => {
+        Node::FunctionDeclaration { .. } | Node::VariableDeclaration { .. } => {
             panic!("[{}] Unexpected token", start - 1)
         }
     }
@@ -224,6 +245,94 @@ fn convert_number(
         )
     } else {
         panic!("{}", UNEXPECTED_ERROR);
+    }
+}
+
+fn convert_variable_declaration<'a, I>(
+    program: &mut Vec<Node>,
+    tokens: &mut Peekable<I>,
+    Token {
+        token: _,
+        value: _,
+        start: _,
+        end,
+    }: &Token,
+) -> Node
+where
+    I: Iterator<Item = &'a Token>,
+{
+    Node::VariableDeclaration {
+        name: match tokens.next() {
+            Some(Token {
+                token: TokenType::Literal,
+                value,
+                ..
+            }) => value.to_owned(),
+            _ => panic!("[{}] Expected a variable name", end + 1),
+        },
+        value: Box::new({
+            if let Some(Token {
+                token: TokenType::Equals,
+                ..
+            }) = tokens.next()
+            {
+                match convert(program, tokens) {
+                    node @ Node::Number(_) | node @ Node::VariableReference(_) => {
+                        match tokens.peek() {
+                            Some(Token {
+                                token: TokenType::Semicolon,
+                                ..
+                            }) => {
+                                tokens.next();
+                                node
+                            }
+                            Some(Token {
+                                token: TokenType::Operator,
+                                ..
+                            }) => {
+                                program.push(node);
+                                let token = tokens.next().unwrap();
+                                let node = convert_operation(program, tokens, token);
+
+                                if let Some(Token {
+                                    token: TokenType::Semicolon,
+                                    ..
+                                }) = tokens.peek()
+                                {
+                                    tokens.next();
+                                } else {
+                                    panic!("[{}] Expected a semicolon", end + 1);
+                                }
+
+                                node
+                            }
+                            _ => {
+                                panic!("[{}] Expected a semicolon, or an operator", end + 1);
+                            }
+                        }
+                    }
+                    node @ Node::Operation { .. } => {
+                        if let Some(Token {
+                            token: TokenType::Semicolon,
+                            ..
+                        }) = tokens.peek()
+                        {
+                            tokens.next();
+                        } else {
+                            panic!("[{}] Expected a semicolon", end + 1);
+                        }
+
+                        node
+                    }
+                    _ => panic!(
+                        "[{}] Expected a number, variable reference or operation",
+                        end + 1
+                    ),
+                }
+            } else {
+                panic!("[{}] Expected an equals sign", end + 1)
+            }
+        }),
     }
 }
 

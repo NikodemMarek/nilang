@@ -4,7 +4,7 @@ use nilang_lexer::tokens::{Token, TokenType};
 #[test]
 fn parse_function() {
     assert_eq!(
-        parse(&[
+        &parse(&[
             Token {
                 token: TokenType::Keyword,
                 value: "fn".to_string(),
@@ -54,7 +54,7 @@ fn parse_function() {
                 end: 15,
             },
         ]),
-        vec![Node::Function {
+        &[Node::FunctionDeclaration {
             name: "main".to_string(),
             parameters: Vec::new(),
             body: Box::new(Node::Scope(Vec::from(&[Node::Return(Box::new(

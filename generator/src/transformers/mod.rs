@@ -2,21 +2,27 @@ pub mod function;
 pub mod operator;
 pub mod r#return;
 pub mod scope;
+pub mod variable_declaration;
 
 use nilang_parser::nodes::Node;
+use scope::Scope;
+use variable_declaration::transform_variable_declaration;
 
 use crate::transformers::{
     function::transform_function, operator::transform_operation, r#return::transform_return,
     scope::transform_scope,
 };
 
-pub fn transform(node: &Node) -> (Vec<String>, Vec<String>) {
+pub fn transform(node: &Node, scope: &mut Scope) -> (Vec<String>, Vec<String>) {
     match node {
-        Node::Return(_) => transform_return(node),
-        Node::Function { .. } => transform_function(node),
-        Node::Scope(_) => transform_scope(node),
-        Node::Operation { .. } => transform_operation(node),
-        Node::Number(n) => (Vec::new(), Vec::from([format!("push ${}", n)])),
+        Node::Return(_) => transform_return(node, scope),
+        Node::FunctionDeclaration { .. } => transform_function(node, scope),
+        Node::Scope(_) => transform_scope(node, scope),
+        Node::Operation { .. } => transform_operation(node, scope, "%rax"),
+        Node::VariableDeclaration { .. } => transform_variable_declaration(node, scope),
+        node @ Node::Number(_) | node @ Node::VariableReference(_) => {
+            panic!("Unexpected node: {:?}", node)
+        }
     }
 }
 
@@ -27,7 +33,7 @@ mod tests {
 
     #[test]
     fn transform_main_function() {
-        let node = Node::Function {
+        let node = Node::FunctionDeclaration {
             name: "main".to_string(),
             parameters: Vec::new(),
             body: Box::new(Node::Scope(Vec::from(&[Node::Return(Box::new(
@@ -38,7 +44,7 @@ mod tests {
                 },
             ))]))),
         };
-        let (data, code) = transform(&node);
+        let (data, code) = transform(&node, &mut super::Scope::default());
 
         assert_eq!(data, Vec::<String>::new());
         assert_eq!(
@@ -46,14 +52,11 @@ mod tests {
             Vec::from([
                 String::from(".globl _main"),
                 String::from("_main:"),
-                String::from("    push $1"),
-                String::from("    push $2"),
-                String::from("    pop %rbx"),
-                String::from("    pop %rax"),
-                String::from("    add %rbx, %rax"),
-                String::from("    push %rax"),
-                String::from("    pop %rax"),
-                String::from("    movl %eax, %ebx"),
+                String::from("    pushq %rbp"),
+                String::from("    movq %rsp, %rbp"),
+                String::from("    movq $1, %rbx"),
+                String::from("    add $2, %rbx"),
+                String::from("    leave"),
                 String::from("    ret"),
                 String::new(),
             ])

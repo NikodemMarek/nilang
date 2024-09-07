@@ -4,10 +4,10 @@ use crate::{
 };
 
 #[test]
-fn convert_operators() {
+fn lex_operators() {
     assert_eq!(
-        lex("  +"),
-        vec![Token {
+        &lex("  +"),
+        &[Token {
             token: TokenType::Operator,
             value: "+".to_string(),
             start: 2,
@@ -15,8 +15,8 @@ fn convert_operators() {
         }]
     );
     assert_eq!(
-        lex(" - "),
-        vec![Token {
+        &lex(" - "),
+        &[Token {
             token: TokenType::Operator,
             value: "-".to_string(),
             start: 1,
@@ -24,8 +24,8 @@ fn convert_operators() {
         }]
     );
     assert_eq!(
-        lex("*"),
-        vec![Token {
+        &lex("*"),
+        &[Token {
             token: TokenType::Operator,
             value: "*".to_string(),
             start: 0,
@@ -33,8 +33,8 @@ fn convert_operators() {
         }]
     );
     assert_eq!(
-        lex("/"),
-        vec![Token {
+        &lex("/"),
+        &[Token {
             token: TokenType::Operator,
             value: "/".to_string(),
             start: 0,
@@ -42,8 +42,8 @@ fn convert_operators() {
         }]
     );
     assert_eq!(
-        lex("%"),
-        vec![Token {
+        &lex("%"),
+        &[Token {
             token: TokenType::Operator,
             value: "%".to_string(),
             start: 0,

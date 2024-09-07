@@ -4,10 +4,10 @@ use crate::{
 };
 
 #[test]
-fn convert_parentheses() {
+fn lex_special_characters() {
     assert_eq!(
-        lex(" (5)"),
-        vec![
+        &lex(" (5)"),
+        &[
             Token {
                 token: TokenType::OpeningParenthesis,
                 value: "(".to_string(),
@@ -29,8 +29,8 @@ fn convert_parentheses() {
         ]
     );
     assert_eq!(
-        lex("(5 + 4)"),
-        vec![
+        &lex("(5 + 4)"),
+        &[
             Token {
                 token: TokenType::OpeningParenthesis,
                 value: "(".to_string(),
@@ -60,6 +60,29 @@ fn convert_parentheses() {
                 value: ")".to_string(),
                 start: 6,
                 end: 6,
+            },
+        ]
+    );
+    assert_eq!(
+        &lex("a = b"),
+        &[
+            Token {
+                token: TokenType::Literal,
+                value: "a".to_string(),
+                start: 0,
+                end: 0,
+            },
+            Token {
+                token: TokenType::Equals,
+                value: "=".to_string(),
+                start: 2,
+                end: 2,
+            },
+            Token {
+                token: TokenType::Literal,
+                value: "b".to_string(),
+                start: 4,
+                end: 4,
             },
         ]
     );

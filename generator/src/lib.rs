@@ -1,15 +1,19 @@
+#![feature(box_patterns)]
+
 mod transformers;
 mod utils;
 
 use nilang_parser::nodes::Node;
-use transformers::transform;
+use transformers::{scope::Scope, transform};
 use utils::generate_function;
 
 pub fn generate<I: IntoIterator<Item = Node>>(program: I) -> String {
+    let mut scope = Scope::default();
+
     let (data, code) = program.into_iter().fold(
         (Vec::with_capacity(256), Vec::with_capacity(4096)),
         |(data, code), node| {
-            let (d, c) = transform(&node);
+            let (d, c) = transform(&node, &mut scope);
             ([data, d].concat(), [code, c].concat())
         },
     );
@@ -23,7 +27,7 @@ fn generate_program(data: &[String], code: &[String]) -> String {
         &[
             String::from("call _main"),
             String::from("movl $1, %eax"),
-            String::from("movl $0, %ebx"),
+            // String::from("movl $0, %ebx"),
             String::from("int $0x80"),
         ],
     );
@@ -40,7 +44,7 @@ mod tests {
     #[test]
     fn generate() {
         use nilang_parser::nodes::{Node, Operator};
-        let node = Node::Function {
+        let node = Node::FunctionDeclaration {
             name: "main".to_string(),
             parameters: Vec::new(),
             body: Box::new(Node::Scope(Vec::from(&[Node::Return(Box::new(
@@ -55,7 +59,7 @@ mod tests {
 
         assert_eq!(
             output,
-            ".data\n\n.text\n.globl _start\n_start:\n    call _main\n    movl $1, %eax\n    movl $0, %ebx\n    int $0x80\n    ret\n\n.globl _main\n_main:\n    push $1\n    push $2\n    pop %rbx\n    pop %rax\n    add %rbx, %rax\n    push %rax\n    pop %rax\n    movl %eax, %ebx\n    ret\n"
+            ".data\n\n.text\n.globl _start\n_start:\n    call _main\n    movl $1, %eax\n    int $0x80\n    ret\n\n.globl _main\n_main:\n    pushq %rbp\n    movq %rsp, %rbp\n    movq $1, %rbx\n    add $2, %rbx\n    leave\n    ret\n"
         )
     }
 
@@ -65,6 +69,6 @@ mod tests {
         let code = Vec::from([String::from("code")]);
         let output = super::generate_program(&data, &code);
 
-        assert_eq!(output, ".data\ndata\n.text\n.globl _start\n_start:\n    call _main\n    movl $1, %eax\n    movl $0, %ebx\n    int $0x80\n    ret\n\ncode")
+        assert_eq!(output, ".data\ndata\n.text\n.globl _start\n_start:\n    call _main\n    movl $1, %eax\n    int $0x80\n    ret\n\ncode")
     }
 }
