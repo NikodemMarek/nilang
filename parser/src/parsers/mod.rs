@@ -4,7 +4,7 @@ use keyword_parser::parse_keyword;
 use literal_parser::parse_literal;
 use nilang_lexer::tokens::{Token, TokenType};
 use number_parser::parse_number;
-use operation_parser::parse_operation;
+use operation_parser::parse_operation_greedy;
 use parenthesis_parser::parse_parenthesis;
 use scope_parser::parse_scope;
 
@@ -16,6 +16,7 @@ pub mod literal_parser;
 pub mod number_parser;
 pub mod operation_parser;
 pub mod parenthesis_parser;
+pub mod return_parser;
 pub mod scope_parser;
 pub mod variable_declaration_parser;
 
@@ -31,7 +32,7 @@ where
     {
         match token {
             TokenType::Number => parse_number(tkn),
-            TokenType::Operator => parse_operation(program, tokens, tkn),
+            TokenType::Operator => parse_operation_greedy(program, tokens, tkn),
             TokenType::OpeningParenthesis => parse_parenthesis(tokens, (start, end)),
             TokenType::ClosingParenthesis => panic!("[{}] Unexpected closing parenthesis", start),
             TokenType::OpeningBrace => parse_scope(tokens),

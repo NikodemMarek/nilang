@@ -4,17 +4,12 @@ use nilang_lexer::tokens::{Token, TokenType};
 
 use crate::nodes::Node;
 
-use super::{operation_parser::parse_operation, parse};
+use super::{operation_parser::parse_operation_greedy, parse};
 
 pub fn parse_variable_declaration<'a, I>(
     program: &mut Vec<Node>,
     tokens: &mut Peekable<I>,
-    Token {
-        token: _,
-        value: _,
-        start: _,
-        end,
-    }: &Token,
+    Token { end, .. }: &Token,
 ) -> Node
 where
     I: Iterator<Item = &'a Token>,
@@ -50,7 +45,7 @@ where
                             }) => {
                                 program.push(node);
                                 let token = tokens.next().unwrap();
-                                let node = parse_operation(program, tokens, token);
+                                let node = parse_operation_greedy(program, tokens, token);
 
                                 if let Some(Token {
                                     token: TokenType::Semicolon,

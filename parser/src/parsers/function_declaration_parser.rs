@@ -8,12 +8,7 @@ use super::parse;
 
 pub fn parse_function_declaration<'a, I>(
     tokens: &mut Peekable<I>,
-    Token {
-        token: _,
-        value: _,
-        start: _,
-        end,
-    }: &Token,
+    Token { end, .. }: &Token,
 ) -> Node
 where
     I: Iterator<Item = &'a Token>,
@@ -105,10 +100,16 @@ mod tests {
                     end: 14,
                 },
                 Token {
-                    token: TokenType::ClosingBrace,
-                    value: "}".to_string(),
+                    token: TokenType::Semicolon,
+                    value: ";".to_string(),
                     start: 15,
                     end: 15,
+                },
+                Token {
+                    token: TokenType::ClosingBrace,
+                    value: "}".to_string(),
+                    start: 16,
+                    end: 16,
                 },
             ]),
             &[Node::FunctionDeclaration {
