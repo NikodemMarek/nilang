@@ -1,5 +1,6 @@
 use std::iter::Peekable;
 
+use errors::ParserErrors;
 use nilang_lexer::tokens::{Token, TokenType};
 
 use crate::nodes::Node;
@@ -10,18 +11,21 @@ pub fn parse_variable_declaration<'a, I>(
     program: &mut Vec<Node>,
     tokens: &mut Peekable<I>,
     Token { end, .. }: &Token,
-) -> Node
+) -> eyre::Result<Node>
 where
     I: Iterator<Item = &'a Token>,
 {
-    Node::VariableDeclaration {
+    Ok(Node::VariableDeclaration {
         name: match tokens.next() {
             Some(Token {
                 token: TokenType::Literal,
                 value,
                 ..
             }) => value.to_owned(),
-            _ => panic!("[{}] Expected a variable name", end + 1),
+            _ => Err(ParserErrors::ExpectedTokens {
+                tokens: Vec::from([TokenType::Literal]),
+                loc: (end.0, end.1 + 1),
+            })?,
         },
         value: Box::new({
             if let Some(Token {
@@ -29,7 +33,7 @@ where
                 ..
             }) = tokens.next()
             {
-                match parse(program, tokens) {
+                match parse(program, tokens)? {
                     node @ Node::Number(_) | node @ Node::VariableReference(_) => {
                         match tokens.peek() {
                             Some(Token {
@@ -45,7 +49,7 @@ where
                             }) => {
                                 program.push(node);
                                 let token = tokens.next().unwrap();
-                                let node = parse_operation_greedy(program, tokens, token);
+                                let node = parse_operation_greedy(program, tokens, token)?;
 
                                 if let Some(Token {
                                     token: TokenType::Semicolon,
@@ -54,14 +58,18 @@ where
                                 {
                                     tokens.next();
                                 } else {
-                                    panic!("[{}] Expected a semicolon", end + 1);
+                                    Err(ParserErrors::ExpectedTokens {
+                                        tokens: Vec::from([TokenType::Semicolon]),
+                                        loc: (end.0, end.1 + 1),
+                                    })?
                                 }
 
                                 node
                             }
-                            _ => {
-                                panic!("[{}] Expected a semicolon, or an operator", end + 1);
-                            }
+                            _ => Err(ParserErrors::ExpectedTokens {
+                                tokens: Vec::from([TokenType::Semicolon, TokenType::Operator]),
+                                loc: (end.0, end.1 + 1),
+                            })?,
                         }
                     }
                     node @ Node::Operation { .. } => {
@@ -72,68 +80,84 @@ where
                         {
                             tokens.next();
                         } else {
-                            panic!("[{}] Expected a semicolon", end + 1);
+                            Err(ParserErrors::ExpectedTokens {
+                                tokens: Vec::from([TokenType::Semicolon]),
+                                loc: (end.0, end.1 + 1),
+                            })?
                         }
 
                         node
                     }
-                    _ => panic!(
-                        "[{}] Expected a number, variable reference or operation",
-                        end + 1
-                    ),
+                    _ => Err(ParserErrors::ExpectedTokens {
+                        tokens: Vec::from([
+                            TokenType::Number,
+                            TokenType::Literal,
+                            TokenType::Operator,
+                        ]),
+                        loc: (end.0, end.1 + 1),
+                    })?,
                 }
             } else {
-                panic!("[{}] Expected an equals sign", end + 1)
+                Err(ParserErrors::ExpectedTokens {
+                    tokens: Vec::from([TokenType::Equals]),
+                    loc: (end.0, end.1 + 1),
+                })?
             }
         }),
-    }
+    })
 }
 
 #[cfg(test)]
 mod tests {
     use nilang_lexer::tokens::{Token, TokenType};
 
-    use crate::{nodes::Node, parse};
+    use crate::{nodes::Node, parsers::variable_declaration_parser::parse_variable_declaration};
 
     #[test]
-    fn parse_variable_declaration() {
+    fn parse_variable_declaration_statement() {
+        let tokens = [
+            Token {
+                token: TokenType::Literal,
+                value: "test".to_string(),
+                start: (0, 1),
+                end: (0, 4),
+            },
+            Token {
+                token: TokenType::Equals,
+                value: "=".to_string(),
+                start: (0, 5),
+                end: (0, 5),
+            },
+            Token {
+                token: TokenType::Number,
+                value: "9".to_string(),
+                start: (0, 6),
+                end: (0, 6),
+            },
+            Token {
+                token: TokenType::Semicolon,
+                value: ";".to_string(),
+                start: (0, 7),
+                end: (0, 7),
+            },
+        ];
+
         assert_eq!(
-            &parse(&[
-                Token {
+            parse_variable_declaration(
+                &mut Vec::new(),
+                &mut tokens.iter().peekable(),
+                &Token {
                     token: TokenType::Keyword,
                     value: "vr".to_string(),
-                    start: 0,
-                    end: 1,
+                    start: (0, 0),
+                    end: (0, 1),
                 },
-                Token {
-                    token: TokenType::Literal,
-                    value: "test".to_string(),
-                    start: 1,
-                    end: 4,
-                },
-                Token {
-                    token: TokenType::Equals,
-                    value: "=".to_string(),
-                    start: 5,
-                    end: 5,
-                },
-                Token {
-                    token: TokenType::Number,
-                    value: "9".to_string(),
-                    start: 6,
-                    end: 6,
-                },
-                Token {
-                    token: TokenType::Semicolon,
-                    value: ";".to_string(),
-                    start: 7,
-                    end: 7,
-                },
-            ]),
-            &[Node::VariableDeclaration {
+            )
+            .unwrap(),
+            Node::VariableDeclaration {
                 name: "test".to_string(),
                 value: Box::new(Node::Number(9.))
-            }]
+            }
         );
     }
 }

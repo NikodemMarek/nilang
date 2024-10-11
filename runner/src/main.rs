@@ -1,16 +1,46 @@
 use std::fs::{read_to_string, write};
 
+use errors::{NilangError, ParserErrors};
+
 fn main() {
     let code = read_to_string("test.ni").unwrap();
 
-    let hw = compile(&code);
-
-    write("test.asm", hw).unwrap();
+    let compiled = compile(&code);
+    write("test.asm", compiled).unwrap();
 }
 
-fn compile(input: &str) -> String {
-    let lexed = nilang_lexer::lex(input);
-    let parsed = nilang_parser::parse(&lexed);
-    dbg!(&parsed);
-    nilang_generator::generate(parsed)
+fn compile(code: &str) -> String {
+    let lexed = match nilang_lexer::lex(code) {
+        Ok(parsed) => parsed,
+        Err(err) => {
+            panic!("{}", err);
+        }
+    };
+    let parsed = match nilang_parser::parse(&lexed) {
+        Ok(parsed) => parsed,
+        Err(err) => {
+            let (start, end, message): ((usize, usize), (usize, usize), String) = err
+                .root_cause()
+                .downcast_ref::<ParserErrors>()
+                .unwrap()
+                .into();
+
+            panic!(
+                "{}",
+                NilangError {
+                    code: code.to_owned(),
+                    start,
+                    end,
+                    message,
+                }
+            );
+        }
+    };
+
+    match nilang_generator::generate(parsed) {
+        Ok(generated) => generated,
+        Err(err) => {
+            panic!("{}", err);
+        }
+    }
 }

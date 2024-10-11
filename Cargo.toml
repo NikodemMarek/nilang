@@ -1,7 +1,9 @@
 [workspace]
 resolver = "2"
 
-members = [ "generator",
+members = [
+    "errors",
+    "generator",
     "lexer",
     "parser",
 

@@ -6,48 +6,52 @@ use crate::{
 #[test]
 fn lex_operators() {
     assert_eq!(
-        &lex("  +"),
+        &lex("  +").unwrap(),
         &[Token {
             token: TokenType::Operator,
             value: "+".to_string(),
-            start: 2,
-            end: 2,
+            start: (0, 2),
+            end: (0, 2),
         }]
     );
+
     assert_eq!(
-        &lex(" - "),
+        &lex(" - ").unwrap(),
         &[Token {
             token: TokenType::Operator,
             value: "-".to_string(),
-            start: 1,
-            end: 1,
+            start: (0, 1),
+            end: (0, 1),
         }]
     );
+
     assert_eq!(
-        &lex("*"),
+        &lex("*").unwrap(),
         &[Token {
             token: TokenType::Operator,
             value: "*".to_string(),
-            start: 0,
-            end: 0,
+            start: (0, 0),
+            end: (0, 0),
         }]
     );
+
     assert_eq!(
-        &lex("/"),
+        &lex("/").unwrap(),
         &[Token {
             token: TokenType::Operator,
             value: "/".to_string(),
-            start: 0,
-            end: 0,
+            start: (0, 0),
+            end: (0, 0),
         }]
     );
+
     assert_eq!(
-        &lex("%"),
+        &lex("%").unwrap(),
         &[Token {
             token: TokenType::Operator,
             value: "%".to_string(),
-            start: 0,
-            end: 0,
+            start: (0, 0),
+            end: (0, 0),
         }]
     );
 }

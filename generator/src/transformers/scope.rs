@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use errors::GeneratorErrors;
 use nilang_parser::nodes::Node;
 
 use crate::transformers::transform;
@@ -20,46 +21,49 @@ impl Scope {
         }
     }
 
-    pub fn insert(&mut self, name: &str) -> i8 {
+    pub fn insert(&mut self, name: &str) -> eyre::Result<i8> {
         let name = name.to_owned();
         if self.variables.contains_key(&name) {
-            panic!("Variable {} already exists", name);
+            Err(GeneratorErrors::VariableAlreadyExists { name: name.clone() })?
         }
 
         self.allocated += 1;
 
         let pointer_offset = -self.allocated * SINGLE_ALLOCATION_SIZE;
         self.variables.insert(name, pointer_offset);
-        pointer_offset
+        Ok(pointer_offset)
     }
-    pub fn insert_unnamed(&mut self) -> i8 {
+    pub fn insert_unnamed(&mut self) -> eyre::Result<i8> {
         self.allocated += 1;
-        -self.allocated * SINGLE_ALLOCATION_SIZE
+        Ok(-self.allocated * SINGLE_ALLOCATION_SIZE)
     }
-    pub fn get(&self, name: &str) -> i8 {
-        *self
-            .variables
-            .get(name)
-            .unwrap_or_else(|| panic!("Variable `{}` not declared", name))
+    pub fn get(&self, name: &str) -> eyre::Result<i8> {
+        let offset = match self.variables.get(name) {
+            Some(offset) => *offset,
+            None => Err(GeneratorErrors::VariableDoesNotExist {
+                name: String::from(name),
+            })?,
+        };
+
+        Ok(offset)
     }
 }
 
-pub fn transform_scope(a: &Node, scope: &mut Scope) -> Vec<String> {
+pub fn transform_scope(a: &Node, scope: &mut Scope) -> eyre::Result<Vec<String>> {
     if let Node::Scope(inner) = a {
         let mut scope = Scope::inherit(scope);
 
-        let code = inner
-            .iter()
-            .map(|node| transform(node, &mut scope))
-            .reduce(|a, b| [a, b].concat())
-            .unwrap();
+        let mut code = Vec::with_capacity(4096);
+        for node in inner {
+            code.append(&mut transform(node, &mut scope)?);
+        }
 
-        [
+        Ok([
             Vec::from([String::from("pushq %rbp"), String::from("movq %rsp, %rbp")]),
             code,
             Vec::from([String::from("leave")]),
         ]
-        .concat()
+        .concat())
     } else {
         panic!("Unexpected node: {:?}", a)
     }
@@ -76,7 +80,7 @@ mod tests {
         let code = transform_scope(&node, &mut super::Scope::default());
 
         assert_eq!(
-            &code,
+            &code.unwrap(),
             &[
                 String::from("pushq %rbp"),
                 String::from("movq %rsp, %rbp"),

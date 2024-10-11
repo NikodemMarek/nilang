@@ -1,12 +1,16 @@
 use std::iter::Peekable;
 
+use errors::ParserErrors;
 use nilang_lexer::tokens::{Token, TokenType};
 
-use crate::{nodes::Node, UNEXPECTED_ERROR};
+use crate::nodes::Node;
 
 use super::parse;
 
-pub fn parse_parenthesis<'a, I>(tokens: &mut Peekable<I>, (start, end): (&usize, &usize)) -> Node
+pub fn parse_parenthesis<'a, I>(
+    tokens: &mut Peekable<I>,
+    (start, end): (&(usize, usize), &(usize, usize)),
+) -> eyre::Result<Node>
 where
     I: Iterator<Item = &'a Token>,
 {
@@ -19,22 +23,28 @@ where
             tokens.next();
             break;
         } else {
-            let node = parse(&mut in_parenthesis, tokens);
+            let node = parse(&mut in_parenthesis, tokens)?;
             in_parenthesis.push(node);
         }
     }
 
     if in_parenthesis.is_empty() {
-        panic!("[{}-{}] Empty parenthesis", start, last_node_end)
+        Err(ParserErrors::EmptyParenthesis {
+            from: *start,
+            to: *last_node_end,
+        })?
     }
     if in_parenthesis.len() > 1 {
-        panic!(
-            "[{}-{}] Invalid operation in parenthesis",
-            start, last_node_end
-        )
+        Err(ParserErrors::InvalidParenthesisContent {
+            from: *start,
+            to: *last_node_end,
+        })?
     }
 
-    in_parenthesis.first().expect(UNEXPECTED_ERROR).to_owned()
+    match in_parenthesis.first() {
+        Some(node) => Ok(node.to_owned()),
+        None => Err(ParserErrors::ThisNeverHappens)?,
+    }
 }
 
 #[cfg(test)]
@@ -43,96 +53,99 @@ mod tests {
 
     use crate::{
         nodes::{Node, Operator},
-        parse,
+        parsers::parenthesis_parser::parse_parenthesis,
     };
 
     #[test]
     fn parse_parenthesis_operations() {
+        let tokens = [
+            Token {
+                token: TokenType::OpeningParenthesis,
+                value: "(".to_string(),
+                start: (0, 0),
+                end: (0, 0),
+            },
+            Token {
+                token: TokenType::Number,
+                value: "6".to_string(),
+                start: (0, 1),
+                end: (0, 1),
+            },
+            Token {
+                token: TokenType::Operator,
+                value: "+".to_string(),
+                start: (0, 2),
+                end: (0, 2),
+            },
+            Token {
+                token: TokenType::Number,
+                value: "9".to_string(),
+                start: (0, 3),
+                end: (0, 3),
+            },
+            Token {
+                token: TokenType::ClosingParenthesis,
+                value: ")".to_string(),
+                start: (0, 4),
+                end: (0, 4),
+            },
+        ];
         assert_eq!(
-            &parse(&[
-                Token {
-                    token: TokenType::OpeningParenthesis,
-                    value: "(".to_string(),
-                    start: 0,
-                    end: 0,
-                },
-                Token {
-                    token: TokenType::Number,
-                    value: "6".to_string(),
-                    start: 1,
-                    end: 1,
-                },
-                Token {
-                    token: TokenType::Operator,
-                    value: "+".to_string(),
-                    start: 2,
-                    end: 2,
-                },
-                Token {
-                    token: TokenType::Number,
-                    value: "9".to_string(),
-                    start: 3,
-                    end: 3,
-                },
-                Token {
-                    token: TokenType::ClosingParenthesis,
-                    value: ")".to_string(),
-                    start: 4,
-                    end: 4,
-                },
-            ]),
-            &[Node::Operation {
+            parse_parenthesis(&mut tokens.iter().peekable(), (&(0, 0), &(0, 4))).unwrap(),
+            Node::Operation {
                 operator: Operator::Add,
                 a: Box::new(Node::Number(6.)),
                 b: Box::new(Node::Number(9.)),
-            }]
+            }
         );
+
+        let tokens = [
+            Token {
+                token: TokenType::OpeningParenthesis,
+                value: "(".to_string(),
+                start: (0, 0),
+                end: (0, 0),
+            },
+            Token {
+                token: TokenType::Number,
+                value: "6".to_string(),
+                start: (0, 1),
+                end: (0, 1),
+            },
+            Token {
+                token: TokenType::Operator,
+                value: "+".to_string(),
+                start: (0, 2),
+                end: (0, 2),
+            },
+            Token {
+                token: TokenType::Number,
+                value: "9".to_string(),
+                start: (0, 3),
+                end: (0, 3),
+            },
+            Token {
+                token: TokenType::ClosingParenthesis,
+                value: ")".to_string(),
+                start: (0, 4),
+                end: (0, 4),
+            },
+            Token {
+                token: TokenType::Operator,
+                value: "+".to_string(),
+                start: (0, 5),
+                end: (0, 5),
+            },
+            Token {
+                token: TokenType::Number,
+                value: "5".to_string(),
+                start: (0, 6),
+                end: (0, 6),
+            },
+        ];
         assert_eq!(
-            &parse(&[
-                Token {
-                    token: TokenType::OpeningParenthesis,
-                    value: "(".to_string(),
-                    start: 0,
-                    end: 0,
-                },
-                Token {
-                    token: TokenType::Number,
-                    value: "6".to_string(),
-                    start: 1,
-                    end: 1,
-                },
-                Token {
-                    token: TokenType::Operator,
-                    value: "+".to_string(),
-                    start: 2,
-                    end: 2,
-                },
-                Token {
-                    token: TokenType::Number,
-                    value: "9".to_string(),
-                    start: 3,
-                    end: 3,
-                },
-                Token {
-                    token: TokenType::ClosingParenthesis,
-                    value: ")".to_string(),
-                    start: 4,
-                    end: 4,
-                },
-                Token {
-                    token: TokenType::Operator,
-                    value: "+".to_string(),
-                    start: 5,
-                    end: 5,
-                },
-                Token {
-                    token: TokenType::Number,
-                    value: "5".to_string(),
-                    start: 6,
-                    end: 6,
-                },
-            ]),
-            &[Node::Operation {
+            parse_parenthesis(&mut tokens.iter().peekable(), (&(0, 0), &(0, 4))).unwrap(),
+            Node::Operation {
                 operator: Operator::Add,
                 a: Box::new(Node::Operation {
                     operator: Operator::Add,
@@ -140,54 +153,56 @@ mod tests {
                     b: Box::new(Node::Number(9.)),
                 }),
                 b: Box::new(Node::Number(5.)),
-            }]
+            }
         );
+
+        let tokens = [
+            Token {
+                token: TokenType::Number,
+                value: "6".to_string(),
+                start: (0, 0),
+                end: (0, 0),
+            },
+            Token {
+                token: TokenType::Operator,
+                value: "+".to_string(),
+                start: (0, 1),
+                end: (0, 1),
+            },
+            Token {
+                token: TokenType::OpeningParenthesis,
+                value: "(".to_string(),
+                start: (0, 2),
+                end: (0, 2),
+            },
+            Token {
+                token: TokenType::Number,
+                value: "9".to_string(),
+                start: (0, 3),
+                end: (0, 3),
+            },
+            Token {
+                token: TokenType::Operator,
+                value: "+".to_string(),
+                start: (0, 4),
+                end: (0, 4),
+            },
+            Token {
+                token: TokenType::Number,
+                value: "5".to_string(),
+                start: (0, 5),
+                end: (0, 5),
+            },
+            Token {
+                token: TokenType::ClosingParenthesis,
+                value: ")".to_string(),
+                start: (0, 6),
+                end: (0, 6),
+            },
+        ];
         assert_eq!(
-            &parse(&[
-                Token {
-                    token: TokenType::Number,
-                    value: "6".to_string(),
-                    start: 0,
-                    end: 0,
-                },
-                Token {
-                    token: TokenType::Operator,
-                    value: "+".to_string(),
-                    start: 1,
-                    end: 1,
-                },
-                Token {
-                    token: TokenType::OpeningParenthesis,
-                    value: "(".to_string(),
-                    start: 2,
-                    end: 2,
-                },
-                Token {
-                    token: TokenType::Number,
-                    value: "9".to_string(),
-                    start: 3,
-                    end: 3,
-                },
-                Token {
-                    token: TokenType::Operator,
-                    value: "+".to_string(),
-                    start: 4,
-                    end: 4,
-                },
-                Token {
-                    token: TokenType::Number,
-                    value: "5".to_string(),
-                    start: 5,
-                    end: 5,
-                },
-                Token {
-                    token: TokenType::ClosingParenthesis,
-                    value: ")".to_string(),
-                    start: 6,
-                    end: 6,
-                },
-            ]),
-            &[Node::Operation {
+            parse_parenthesis(&mut tokens.iter().peekable(), (&(0, 2), &(0, 6))).unwrap(),
+            Node::Operation {
                 operator: Operator::Add,
                 a: Box::new(Node::Number(6.)),
                 b: Box::new(Node::Operation {
@@ -195,66 +210,68 @@ mod tests {
                     a: Box::new(Node::Number(9.)),
                     b: Box::new(Node::Number(5.)),
                 }),
-            }]
+            }
         );
+
+        let tokens = [
+            Token {
+                token: TokenType::OpeningParenthesis,
+                value: "(".to_string(),
+                start: (0, 0),
+                end: (0, 0),
+            },
+            Token {
+                token: TokenType::Number,
+                value: "6".to_string(),
+                start: (0, 1),
+                end: (0, 1),
+            },
+            Token {
+                token: TokenType::Operator,
+                value: "+".to_string(),
+                start: (0, 2),
+                end: (0, 2),
+            },
+            Token {
+                token: TokenType::OpeningParenthesis,
+                value: "(".to_string(),
+                start: (0, 3),
+                end: (0, 3),
+            },
+            Token {
+                token: TokenType::Number,
+                value: "9".to_string(),
+                start: (0, 4),
+                end: (0, 4),
+            },
+            Token {
+                token: TokenType::Operator,
+                value: "+".to_string(),
+                start: (0, 5),
+                end: (0, 5),
+            },
+            Token {
+                token: TokenType::Number,
+                value: "5".to_string(),
+                start: (0, 6),
+                end: (0, 6),
+            },
+            Token {
+                token: TokenType::ClosingParenthesis,
+                value: ")".to_string(),
+                start: (0, 7),
+                end: (0, 7),
+            },
+            Token {
+                token: TokenType::ClosingParenthesis,
+                value: ")".to_string(),
+                start: (0, 8),
+                end: (0, 8),
+            },
+        ];
         assert_eq!(
-            &parse(&[
-                Token {
-                    token: TokenType::OpeningParenthesis,
-                    value: "(".to_string(),
-                    start: 0,
-                    end: 0,
-                },
-                Token {
-                    token: TokenType::Number,
-                    value: "6".to_string(),
-                    start: 1,
-                    end: 1,
-                },
-                Token {
-                    token: TokenType::Operator,
-                    value: "+".to_string(),
-                    start: 2,
-                    end: 2,
-                },
-                Token {
-                    token: TokenType::OpeningParenthesis,
-                    value: "(".to_string(),
-                    start: 3,
-                    end: 3,
-                },
-                Token {
-                    token: TokenType::Number,
-                    value: "9".to_string(),
-                    start: 4,
-                    end: 4,
-                },
-                Token {
-                    token: TokenType::Operator,
-                    value: "+".to_string(),
-                    start: 5,
-                    end: 5,
-                },
-                Token {
-                    token: TokenType::Number,
-                    value: "5".to_string(),
-                    start: 6,
-                    end: 6,
-                },
-                Token {
-                    token: TokenType::ClosingParenthesis,
-                    value: ")".to_string(),
-                    start: 7,
-                    end: 7,
-                },
-                Token {
-                    token: TokenType::ClosingParenthesis,
-                    value: ")".to_string(),
-                    start: 8,
-                    end: 8,
-                },
-            ]),
-            &[Node::Operation {
+            parse_parenthesis(&mut tokens.iter().peekable(), (&(0, 0), &(0, 8))).unwrap(),
+            Node::Operation {
                 operator: Operator::Add,
                 a: Box::new(Node::Number(6.)),
                 b: Box::new(Node::Operation {
@@ -262,54 +279,56 @@ mod tests {
                     a: Box::new(Node::Number(9.)),
                     b: Box::new(Node::Number(5.)),
                 }),
-            }]
+            }
         );
+
+        let tokens = [
+            Token {
+                token: TokenType::Number,
+                value: "6".to_string(),
+                start: (0, 0),
+                end: (0, 0),
+            },
+            Token {
+                token: TokenType::Operator,
+                value: "*".to_string(),
+                start: (0, 1),
+                end: (0, 1),
+            },
+            Token {
+                token: TokenType::OpeningParenthesis,
+                value: "(".to_string(),
+                start: (0, 2),
+                end: (0, 2),
+            },
+            Token {
+                token: TokenType::Number,
+                value: "9".to_string(),
+                start: (0, 3),
+                end: (0, 3),
+            },
+            Token {
+                token: TokenType::Operator,
+                value: "+".to_string(),
+                start: (0, 4),
+                end: (0, 4),
+            },
+            Token {
+                token: TokenType::Number,
+                value: "5".to_string(),
+                start: (0, 5),
+                end: (0, 5),
+            },
+            Token {
+                token: TokenType::ClosingParenthesis,
+                value: ")".to_string(),
+                start: (0, 6),
+                end: (0, 6),
+            },
+        ];
         assert_eq!(
-            &parse(&[
-                Token {
-                    token: TokenType::Number,
-                    value: "6".to_string(),
-                    start: 0,
-                    end: 0,
-                },
-                Token {
-                    token: TokenType::Operator,
-                    value: "*".to_string(),
-                    start: 1,
-                    end: 1,
-                },
-                Token {
-                    token: TokenType::OpeningParenthesis,
-                    value: "(".to_string(),
-                    start: 2,
-                    end: 2,
-                },
-                Token {
-                    token: TokenType::Number,
-                    value: "9".to_string(),
-                    start: 3,
-                    end: 3,
-                },
-                Token {
-                    token: TokenType::Operator,
-                    value: "+".to_string(),
-                    start: 4,
-                    end: 4,
-                },
-                Token {
-                    token: TokenType::Number,
-                    value: "5".to_string(),
-                    start: 5,
-                    end: 5,
-                },
-                Token {
-                    token: TokenType::ClosingParenthesis,
-                    value: ")".to_string(),
-                    start: 6,
-                    end: 6,
-                },
-            ]),
-            &[Node::Operation {
+            parse_parenthesis(&mut tokens.iter().peekable(), (&(0, 2), &(0, 6))).unwrap(),
+            Node::Operation {
                 operator: Operator::Multiply,
                 a: Box::new(Node::Number(6.)),
                 b: Box::new(Node::Operation {
@@ -317,66 +336,68 @@ mod tests {
                     a: Box::new(Node::Number(9.)),
                     b: Box::new(Node::Number(5.)),
                 }),
-            }]
+            }
         );
+
+        let tokens = [
+            Token {
+                token: TokenType::Number,
+                value: "6".to_string(),
+                start: (0, 0),
+                end: (0, 0),
+            },
+            Token {
+                token: TokenType::Operator,
+                value: "*".to_string(),
+                start: (0, 1),
+                end: (0, 1),
+            },
+            Token {
+                token: TokenType::OpeningParenthesis,
+                value: "(".to_string(),
+                start: (0, 2),
+                end: (0, 2),
+            },
+            Token {
+                token: TokenType::Number,
+                value: "9".to_string(),
+                start: (0, 3),
+                end: (0, 3),
+            },
+            Token {
+                token: TokenType::Operator,
+                value: "+".to_string(),
+                start: (0, 4),
+                end: (0, 4),
+            },
+            Token {
+                token: TokenType::Number,
+                value: "5".to_string(),
+                start: (0, 5),
+                end: (0, 5),
+            },
+            Token {
+                token: TokenType::ClosingParenthesis,
+                value: ")".to_string(),
+                start: (0, 6),
+                end: (0, 6),
+            },
+            Token {
+                token: TokenType::Operator,
+                value: "*".to_string(),
+                start: (0, 7),
+                end: (0, 7),
+            },
+            Token {
+                token: TokenType::Number,
+                value: "7".to_string(),
+                start: (0, 8),
+                end: (0, 8),
+            },
+        ];
         assert_eq!(
-            &parse(&[
-                Token {
-                    token: TokenType::Number,
-                    value: "6".to_string(),
-                    start: 0,
-                    end: 0,
-                },
-                Token {
-                    token: TokenType::Operator,
-                    value: "*".to_string(),
-                    start: 1,
-                    end: 1,
-                },
-                Token {
-                    token: TokenType::OpeningParenthesis,
-                    value: "(".to_string(),
-                    start: 2,
-                    end: 2,
-                },
-                Token {
-                    token: TokenType::Number,
-                    value: "9".to_string(),
-                    start: 3,
-                    end: 3,
-                },
-                Token {
-                    token: TokenType::Operator,
-                    value: "+".to_string(),
-                    start: 4,
-                    end: 4,
-                },
-                Token {
-                    token: TokenType::Number,
-                    value: "5".to_string(),
-                    start: 5,
-                    end: 5,
-                },
-                Token {
-                    token: TokenType::ClosingParenthesis,
-                    value: ")".to_string(),
-                    start: 6,
-                    end: 6,
-                },
-                Token {
-                    token: TokenType::Operator,
-                    value: "*".to_string(),
-                    start: 7,
-                    end: 7,
-                },
-                Token {
-                    token: TokenType::Number,
-                    value: "7".to_string(),
-                    start: 8,
-                    end: 8,
-                },
-            ]),
-            &[Node::Operation {
+            parse_parenthesis(&mut tokens.iter().peekable(), (&(0, 2), &(0, 6))).unwrap(),
+            Node::Operation {
                 operator: Operator::Multiply,
                 a: Box::new(Node::Operation {
                     operator: Operator::Multiply,
@@ -388,7 +409,7 @@ mod tests {
                     }),
                 }),
                 b: Box::new(Node::Number(7.)),
-            }]
+            }
         );
     }
 }

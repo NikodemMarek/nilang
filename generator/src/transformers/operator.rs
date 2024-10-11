@@ -2,7 +2,11 @@ use nilang_parser::nodes::{Node, Operator};
 
 use super::scope::Scope;
 
-pub fn transform_operation(node: &Node, scope: &mut Scope, result_register: &str) -> Vec<String> {
+pub fn transform_operation(
+    node: &Node,
+    scope: &mut Scope,
+    result_register: &str,
+) -> eyre::Result<Vec<String>> {
     if let Node::Operation { operator, a, b } = node {
         let (code, second_operator) = match (*a.clone(), *b.clone()) {
             (Node::Number(value_a), Node::Number(value_b)) => (
@@ -11,12 +15,12 @@ pub fn transform_operation(node: &Node, scope: &mut Scope, result_register: &str
             ),
             (Node::Number(value_a), Node::VariableReference(name_b)) => (
                 Vec::from([format!("movq ${}, {}", value_a, result_register)]),
-                format!("{}(%rbp)", scope.get(&name_b)),
+                format!("{}(%rbp)", scope.get(&name_b)?),
             ),
             (Node::VariableReference(name_a), Node::Number(value_b)) => (
                 Vec::from([format!(
                     "movq {}(%rbp), {}",
-                    scope.get(&name_a),
+                    scope.get(&name_a)?,
                     result_register
                 )]),
                 format!("${}", value_b),
@@ -24,24 +28,24 @@ pub fn transform_operation(node: &Node, scope: &mut Scope, result_register: &str
             (Node::VariableReference(name_a), Node::VariableReference(name_b)) => (
                 Vec::from([format!(
                     "movq {}(%rbp), {}",
-                    scope.get(&name_a),
+                    scope.get(&name_a)?,
                     result_register
                 )]),
-                format!("{}(%rbp)", scope.get(&name_b)),
+                format!("{}(%rbp)", scope.get(&name_b)?),
             ),
             (operation_a @ Node::Operation { .. }, Node::Number(value_b)) => (
-                transform_operation(&operation_a, scope, result_register),
+                transform_operation(&operation_a, scope, result_register)?,
                 format!("${}", value_b),
             ),
             (operation_a @ Node::Operation { .. }, Node::VariableReference(name_b)) => (
-                transform_operation(&operation_a, scope, result_register),
-                format!("{}(%rbp)", scope.get(&name_b)),
+                transform_operation(&operation_a, scope, result_register)?,
+                format!("{}(%rbp)", scope.get(&name_b)?),
             ),
             (Node::Number(value_a), operation_b @ Node::Operation { .. }) => {
-                let result_pointer_offset_b = scope.insert_unnamed();
+                let result_pointer_offset_b = scope.insert_unnamed()?;
                 (
                     [
-                        transform_operation(&operation_b, scope, result_register),
+                        transform_operation(&operation_b, scope, result_register)?,
                         Vec::from([
                             format!(
                                 "movq {}, {}(%rbp)",
@@ -55,16 +59,16 @@ pub fn transform_operation(node: &Node, scope: &mut Scope, result_register: &str
                 )
             }
             (Node::VariableReference(name_a), operation_b @ Node::Operation { .. }) => {
-                let result_pointer_offset_b = scope.insert_unnamed();
+                let result_pointer_offset_b = scope.insert_unnamed()?;
                 (
                     [
-                        transform_operation(&operation_b, scope, result_register),
+                        transform_operation(&operation_b, scope, result_register)?,
                         Vec::from([
                             format!(
                                 "movq {}, {}(%rbp)",
                                 result_register, result_pointer_offset_b
                             ),
-                            format!("movq {}(%rbp), {}", scope.get(&name_a), result_register),
+                            format!("movq {}(%rbp), {}", scope.get(&name_a)?, result_register),
                         ]),
                     ]
                     .concat(),
@@ -72,15 +76,15 @@ pub fn transform_operation(node: &Node, scope: &mut Scope, result_register: &str
                 )
             }
             (a @ Node::Operation { .. }, b @ Node::Operation { .. }) => {
-                let result_pointer_offset_a = scope.insert_unnamed();
+                let result_pointer_offset_a = scope.insert_unnamed()?;
                 (
                     [
-                        transform_operation(&a, scope, result_register),
+                        transform_operation(&a, scope, result_register)?,
                         Vec::from([format!(
                             "movq {}, {}(%rbp)",
                             result_register, result_pointer_offset_a
                         )]),
-                        transform_operation(&b, scope, result_register),
+                        transform_operation(&b, scope, result_register)?,
                         Vec::from([format!(
                             "movq {}(%rbp), {}",
                             result_pointer_offset_a, result_register
@@ -93,7 +97,7 @@ pub fn transform_operation(node: &Node, scope: &mut Scope, result_register: &str
             _ => panic!("Invalid node type"),
         };
 
-        [
+        Ok([
             code,
             match operator {
                 Operator::Add => {
@@ -119,7 +123,7 @@ pub fn transform_operation(node: &Node, scope: &mut Scope, result_register: &str
                 ]),
             },
         ]
-        .concat()
+        .concat())
     } else {
         panic!("Invalid node type");
     }
@@ -140,8 +144,8 @@ mod tests {
         let code = transform_operation(&node, &mut Scope::default(), "%rax");
 
         assert_eq!(
-            code,
-            Vec::from([String::from("movq $1, %rax"), String::from("add $2, %rax"),])
+            code.unwrap(),
+            [String::from("movq $1, %rax"), String::from("add $2, %rax"),]
         );
     }
 
@@ -155,8 +159,8 @@ mod tests {
         let code = transform_operation(&node, &mut Scope::default(), "%rax");
 
         assert_eq!(
-            code,
-            Vec::from([String::from("movq $1, %rax"), String::from("sub $2, %rax"),])
+            code.unwrap(),
+            [String::from("movq $1, %rax"), String::from("sub $2, %rax"),]
         );
     }
 
@@ -170,8 +174,8 @@ mod tests {
         let code = transform_operation(&node, &mut Scope::default(), "%rax");
 
         assert_eq!(
-            code,
-            Vec::from([String::from("movq $1, %rax"), String::from("imul $2, %rax"),])
+            code.unwrap(),
+            [String::from("movq $1, %rax"), String::from("imul $2, %rax"),]
         );
     }
 
@@ -185,14 +189,14 @@ mod tests {
         let code = transform_operation(&node, &mut Scope::default(), "%rax");
 
         assert_eq!(
-            code,
-            Vec::from([
+            code.unwrap(),
+            [
                 String::from("movq $1, %rax"),
                 String::from("movq $2, %rbx"),
                 String::from("cqto"),
                 String::from("idiv %rbx"),
                 String::from("movq %rax, %rax")
-            ])
+            ]
         );
     }
 
@@ -206,14 +210,14 @@ mod tests {
         let code = transform_operation(&node, &mut Scope::default(), "%rax");
 
         assert_eq!(
-            code,
-            Vec::from([
+            code.unwrap(),
+            [
                 String::from("movq $1, %rax"),
                 String::from("movq $2, %rbx"),
                 String::from("cqto"),
                 String::from("idiv %rbx"),
                 String::from("movq %rdx, %rax"),
-            ])
+            ]
         );
     }
 
@@ -225,15 +229,15 @@ mod tests {
             b: Box::new(Node::VariableReference(String::from("a"))),
         };
         let mut scope = Scope::default();
-        scope.insert("a");
+        let _ = scope.insert("a");
         let code = transform_operation(&node, &mut scope, "%rax");
 
         assert_eq!(
-            code,
-            Vec::from([
+            code.unwrap(),
+            [
                 String::from("movq $1, %rax"),
                 String::from("add -8(%rbp), %rax"),
-            ])
+            ]
         );
     }
 
@@ -245,15 +249,15 @@ mod tests {
             b: Box::new(Node::Number(2.)),
         };
         let mut scope = Scope::default();
-        scope.insert("a");
+        let _ = scope.insert("a");
         let code = transform_operation(&node, &mut scope, "%rax");
 
         assert_eq!(
-            code,
-            Vec::from([
+            code.unwrap(),
+            [
                 String::from("movq -8(%rbp), %rax"),
                 String::from("add $2, %rax"),
-            ])
+            ]
         );
     }
 
@@ -265,16 +269,16 @@ mod tests {
             b: Box::new(Node::VariableReference(String::from("b"))),
         };
         let mut scope = Scope::default();
-        scope.insert("a");
-        scope.insert("b");
+        let _ = scope.insert("a");
+        let _ = scope.insert("b");
         let code = transform_operation(&node, &mut scope, "%rax");
 
         assert_eq!(
-            code,
-            Vec::from([
+            code.unwrap(),
+            [
                 String::from("movq -8(%rbp), %rax"),
                 String::from("add -16(%rbp), %rax"),
-            ])
+            ]
         );
     }
 
@@ -292,12 +296,12 @@ mod tests {
         let code = transform_operation(&node, &mut Scope::default(), "%rax");
 
         assert_eq!(
-            code,
-            Vec::from([
+            code.unwrap(),
+            [
                 String::from("movq $1, %rax"),
                 String::from("imul $2, %rax"),
                 String::from("add $3, %rax"),
-            ])
+            ]
         );
     }
 
@@ -313,18 +317,18 @@ mod tests {
             }),
         };
         let mut scope = Scope::default();
-        scope.insert("a");
+        let _ = scope.insert("a");
         let code = transform_operation(&node, &mut scope, "%rax");
 
         assert_eq!(
-            code,
-            Vec::from([
+            code.unwrap(),
+            [
                 String::from("movq $2, %rax"),
                 String::from("imul $3, %rax"),
                 String::from("movq %rax, -16(%rbp)"),
                 String::from("movq -8(%rbp), %rax"),
                 String::from("add -16(%rbp), %rax"),
-            ])
+            ]
         );
     }
 
@@ -342,14 +346,14 @@ mod tests {
         let code = transform_operation(&node, &mut Scope::default(), "%rax");
 
         assert_eq!(
-            code,
-            Vec::from([
+            code.unwrap(),
+            [
                 String::from("movq $2, %rax"),
                 String::from("imul $3, %rax"),
                 String::from("movq %rax, -8(%rbp)"),
                 String::from("movq $1, %rax"),
                 String::from("add -8(%rbp), %rax"),
-            ])
+            ]
         );
     }
 
@@ -365,16 +369,16 @@ mod tests {
             b: Box::new(Node::VariableReference(String::from("a"))),
         };
         let mut scope = Scope::default();
-        scope.insert("a");
+        let _ = scope.insert("a");
         let code = transform_operation(&node, &mut scope, "%rax");
 
         assert_eq!(
-            code,
-            Vec::from([
+            code.unwrap(),
+            [
                 String::from("movq $1, %rax"),
                 String::from("imul $2, %rax"),
                 String::from("add -8(%rbp), %rax"),
-            ])
+            ]
         );
     }
 
@@ -396,8 +400,8 @@ mod tests {
         let code = transform_operation(&node, &mut Scope::default(), "%rax");
 
         assert_eq!(
-            code,
-            Vec::from([
+            code.unwrap(),
+            [
                 String::from("movq $1, %rax"),
                 String::from("imul $2, %rax"),
                 String::from("movq %rax, -8(%rbp)"),
@@ -405,7 +409,7 @@ mod tests {
                 String::from("sub $4, %rax"),
                 String::from("movq -8(%rbp), %rax"),
                 String::from("add %rbx, %rax"),
-            ])
+            ]
         );
     }
 }

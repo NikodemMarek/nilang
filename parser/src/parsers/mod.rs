@@ -1,5 +1,6 @@
 use std::iter::Peekable;
 
+use errors::ParserErrors;
 use keyword_parser::parse_keyword;
 use literal_parser::parse_literal;
 use nilang_lexer::tokens::{Token, TokenType};
@@ -8,7 +9,7 @@ use operation_parser::parse_operation_greedy;
 use parenthesis_parser::parse_parenthesis;
 use scope_parser::parse_scope;
 
-use crate::{nodes::Node, UNEXPECTED_END_OF_INPUT_ERROR};
+use crate::nodes::Node;
 
 pub mod function_declaration_parser;
 pub mod keyword_parser;
@@ -20,7 +21,7 @@ pub mod return_parser;
 pub mod scope_parser;
 pub mod variable_declaration_parser;
 
-pub fn parse<'a, I>(program: &mut Vec<Node>, tokens: &mut Peekable<I>) -> Node
+pub fn parse<'a, I>(program: &mut Vec<Node>, tokens: &mut Peekable<I>) -> eyre::Result<Node>
 where
     I: Iterator<Item = &'a Token>,
 {
@@ -30,19 +31,24 @@ where
         },
     ) = tokens.next()
     {
-        match token {
-            TokenType::Number => parse_number(tkn),
-            TokenType::Operator => parse_operation_greedy(program, tokens, tkn),
-            TokenType::OpeningParenthesis => parse_parenthesis(tokens, (start, end)),
-            TokenType::ClosingParenthesis => panic!("[{}] Unexpected closing parenthesis", start),
-            TokenType::OpeningBrace => parse_scope(tokens),
-            TokenType::ClosingBrace => panic!("[{}] Unexpected closing brace", start),
-            TokenType::Keyword => parse_keyword(program, tokens, tkn),
-            TokenType::Equals => panic!("[{}] Unexpected equals sign", start),
-            TokenType::Literal => parse_literal(tokens, tkn),
-            TokenType::Semicolon => panic!("[{}] Unexpected semicolon", start),
-        }
+        Ok(match token {
+            TokenType::Number => parse_number(tkn)?,
+            TokenType::Operator => parse_operation_greedy(program, tokens, tkn)?,
+            TokenType::OpeningParenthesis => parse_parenthesis(tokens, (start, end))?,
+            TokenType::OpeningBrace => parse_scope(tokens)?,
+            TokenType::Keyword => parse_keyword(program, tokens, tkn)?,
+            TokenType::Literal => parse_literal(tokens, tkn)?,
+            token @ TokenType::ClosingParenthesis
+            | token @ TokenType::ClosingBrace
+            | token @ TokenType::Equals
+            | token @ TokenType::Semicolon => Err(ParserErrors::UnexpectedToken {
+                token: *token,
+                loc: *start,
+            })?,
+        })
     } else {
-        panic!("{}", UNEXPECTED_END_OF_INPUT_ERROR);
+        Err(ParserErrors::EndOfInput {
+            loc: (usize::MAX, usize::MAX),
+        })?
     }
 }

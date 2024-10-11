@@ -1,5 +1,6 @@
 use std::iter::Peekable;
 
+use errors::ParserErrors;
 use nilang_lexer::tokens::{Token, TokenType};
 
 use crate::nodes::Node;
@@ -9,18 +10,21 @@ use super::parse;
 pub fn parse_function_declaration<'a, I>(
     tokens: &mut Peekable<I>,
     Token { end, .. }: &Token,
-) -> Node
+) -> eyre::Result<Node>
 where
     I: Iterator<Item = &'a Token>,
 {
-    Node::FunctionDeclaration {
+    Ok(Node::FunctionDeclaration {
         name: match tokens.next() {
             Some(Token {
                 token: TokenType::Literal,
                 value,
                 ..
             }) => value.to_owned(),
-            _ => panic!("[{}] Expected a function name", end + 1),
+            _ => Err(ParserErrors::ExpectedTokens {
+                tokens: Vec::from([TokenType::Literal]),
+                loc: (end.0, end.1 + 1),
+            })?,
         },
         parameters: if let (
             Some(Token {
@@ -38,13 +42,16 @@ where
             todo!()
         },
         body: Box::new({
-            if let scope @ Node::Scope(_) = parse(&mut Vec::new(), tokens) {
+            if let scope @ Node::Scope(_) = parse(&mut Vec::new(), tokens)? {
                 scope
             } else {
-                panic!("[{}] Expected a scope", end + 1)
+                Err(ParserErrors::ExpectedTokens {
+                    tokens: Vec::from([TokenType::OpeningBrace]),
+                    loc: (end.0, end.1 + 1),
+                })?
             }
         }),
-    }
+    })
 }
 
 #[cfg(test)]
@@ -60,58 +67,59 @@ mod tests {
                 Token {
                     token: TokenType::Keyword,
                     value: "fn".to_string(),
-                    start: 0,
-                    end: 1,
+                    start: (0, 0),
+                    end: (0, 1),
                 },
                 Token {
                     token: TokenType::Literal,
                     value: "main".to_string(),
-                    start: 3,
-                    end: 6,
+                    start: (0, 3),
+                    end: (0, 6),
                 },
                 Token {
                     token: TokenType::OpeningParenthesis,
                     value: "(".to_string(),
-                    start: 7,
-                    end: 7,
+                    start: (0, 7),
+                    end: (0, 7),
                 },
                 Token {
                     token: TokenType::ClosingParenthesis,
                     value: ")".to_string(),
-                    start: 8,
-                    end: 8,
+                    start: (0, 8),
+                    end: (0, 8),
                 },
                 Token {
                     token: TokenType::OpeningBrace,
                     value: "{".to_string(),
-                    start: 9,
-                    end: 9,
+                    start: (0, 9),
+                    end: (0, 9),
                 },
                 Token {
                     token: TokenType::Keyword,
                     value: "rt".to_string(),
-                    start: 11,
-                    end: 12,
+                    start: (0, 11),
+                    end: (0, 12),
                 },
                 Token {
                     token: TokenType::Number,
                     value: "6".to_string(),
-                    start: 14,
-                    end: 14,
+                    start: (0, 14),
+                    end: (0, 14),
                 },
                 Token {
                     token: TokenType::Semicolon,
                     value: ";".to_string(),
-                    start: 15,
-                    end: 15,
+                    start: (0, 15),
+                    end: (0, 15),
                 },
                 Token {
                     token: TokenType::ClosingBrace,
                     value: "}".to_string(),
-                    start: 16,
-                    end: 16,
+                    start: (0, 16),
+                    end: (0, 16),
                 },
-            ]),
+            ])
+            .unwrap(),
             &[Node::FunctionDeclaration {
                 name: "main".to_string(),
                 parameters: Vec::new(),

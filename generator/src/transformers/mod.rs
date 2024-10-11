@@ -13,7 +13,7 @@ use crate::transformers::{
     scope::transform_scope,
 };
 
-pub fn transform(node: &Node, scope: &mut Scope) -> Vec<String> {
+pub fn transform(node: &Node, scope: &mut Scope) -> eyre::Result<Vec<String>> {
     match node {
         Node::Return(_) => transform_return(node, scope),
         Node::FunctionDeclaration { .. } => transform_function(node, scope),
@@ -47,7 +47,7 @@ mod tests {
         let code = transform(&node, &mut super::Scope::default());
 
         assert_eq!(
-            code,
+            code.unwrap(),
             Vec::from([
                 String::from(".globl _main"),
                 String::from("_main:"),

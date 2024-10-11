@@ -2,8 +2,8 @@
 pub struct Token {
     pub token: TokenType,
     pub value: String,
-    pub start: usize,
-    pub end: usize,
+    pub start: (usize, usize),
+    pub end: (usize, usize),
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]

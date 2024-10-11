@@ -2,14 +2,15 @@ use nilang_parser::nodes::Node;
 
 use super::{operator::transform_operation, scope::Scope};
 
-pub fn transform_return(a: &Node, scope: &mut Scope) -> Vec<String> {
+pub fn transform_return(a: &Node, scope: &mut Scope) -> eyre::Result<Vec<String>> {
     if let Node::Return(inner) = a {
         match *inner.clone() {
-            Node::Number(value) => Vec::from([format!("movq ${}, %rbx", value)]),
+            Node::Number(value) => Ok(Vec::from([format!("movq ${}, %rbx", value)])),
             node @ Node::Operation { .. } => transform_operation(&node, scope, "%rbx"),
-            Node::VariableReference(name) => {
-                Vec::from([format!("movq {}(%rbp), %rbx", scope.get(&name))])
-            }
+            Node::VariableReference(name) => Ok(Vec::from([format!(
+                "movq {}(%rbp), %rbx",
+                scope.get(&name)?
+            )])),
             Node::FunctionDeclaration { .. } | Node::Scope(_) => todo!(),
             Node::VariableDeclaration { .. } | Node::Return(_) => {
                 panic!("Unexpected node: {:?}", a)
@@ -30,17 +31,20 @@ mod tests {
         let node = Node::Return(Box::new(Node::Number(42.)));
         let code = transform_return(&node, &mut super::Scope::default());
 
-        assert_eq!(code, Vec::from([String::from("movq $42, %rbx")]));
+        assert_eq!(code.unwrap(), Vec::from([String::from("movq $42, %rbx")]));
     }
 
     #[test]
     fn return_variable_reference() {
         let node = Node::Return(Box::new(Node::VariableReference(String::from("a"))));
         let mut scope = super::Scope::default();
-        scope.insert("a");
+        let _ = scope.insert("a");
         let code = transform_return(&node, &mut scope);
 
-        assert_eq!(code, Vec::from([String::from("movq -8(%rbp), %rbx")]));
+        assert_eq!(
+            code.unwrap(),
+            Vec::from([String::from("movq -8(%rbp), %rbx")])
+        );
     }
 
     #[test]
@@ -52,6 +56,6 @@ mod tests {
         }));
         let code = transform_return(&node, &mut super::Scope::default());
 
-        assert_eq!(code, Vec::from(["movq $1, %rbx", "add $2, %rbx"]));
+        assert_eq!(code.unwrap(), Vec::from(["movq $1, %rbx", "add $2, %rbx"]));
     }
 }

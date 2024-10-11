@@ -7,16 +7,15 @@ use nilang_parser::nodes::Node;
 use transformers::{scope::Scope, transform};
 use utils::generate_function;
 
-pub fn generate<I: IntoIterator<Item = Node>>(program: I) -> String {
+pub fn generate<I: IntoIterator<Item = Node>>(program: I) -> eyre::Result<String> {
     let mut scope = Scope::default();
 
-    let code = program
-        .into_iter()
-        .fold(Vec::with_capacity(4096), |code, node| {
-            [code, transform(&node, &mut scope)].concat()
-        });
+    let mut code = Vec::with_capacity(4096);
+    for node in program {
+        code.append(&mut transform(&node, &mut scope)?);
+    }
 
-    generate_program(&[], &code)
+    Ok(generate_program(&[], &code))
 }
 
 fn generate_program(data: &[String], code: &[String]) -> String {
@@ -56,7 +55,7 @@ mod tests {
         let output = super::generate(std::iter::once(node));
 
         assert_eq!(
-            output,
+            output.unwrap(),
             ".data\n\n.text\n.globl _start\n_start:\n    call _main\n    movl $1, %eax\n    int $0x80\n    ret\n\n.globl _main\n_main:\n    pushq %rbp\n    movq %rsp, %rbp\n    movq $1, %rbx\n    add $2, %rbx\n    leave\n    ret\n"
         )
     }

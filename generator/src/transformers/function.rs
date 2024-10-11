@@ -4,14 +4,14 @@ use crate::{transformers::transform, utils::generate_function};
 
 use super::scope::Scope;
 
-pub fn transform_function(a: &Node, scope: &mut Scope) -> Vec<String> {
+pub fn transform_function(a: &Node, scope: &mut Scope) -> eyre::Result<Vec<String>> {
     if let Node::FunctionDeclaration {
         name,
         parameters: _,
         body,
     } = a
     {
-        generate_function(name, &transform(body, scope))
+        Ok(generate_function(name, &transform(body, scope)?))
     } else {
         panic!("Unexpected node: {:?}", a)
     }
@@ -34,7 +34,7 @@ mod tests {
         let code = transform_function(&node, &mut Scope::default());
 
         assert_eq!(
-            code,
+            code.unwrap(),
             Vec::from([
                 String::from(".globl _main"),
                 String::from("_main:"),

@@ -1,8 +1,9 @@
 use std::iter::Peekable;
 
+use errors::ParserErrors;
 use nilang_lexer::tokens::{Token, TokenType};
 
-use crate::{nodes::Node, UNEXPECTED_ERROR};
+use crate::nodes::Node;
 
 use super::{
     function_declaration_parser::parse_function_declaration, return_parser::parse_return,
@@ -13,18 +14,18 @@ pub fn parse_keyword<'a, I>(
     program: &mut Vec<Node>,
     tokens: &mut Peekable<I>,
     tkn @ Token { token, value, .. }: &Token,
-) -> Node
+) -> eyre::Result<Node>
 where
     I: Iterator<Item = &'a Token>,
 {
     if let TokenType::Keyword = token {
-        match value.as_str() {
-            "rt" => parse_return(program, tokens, tkn),
-            "fn" => parse_function_declaration(tokens, tkn),
-            "vr" => parse_variable_declaration(program, tokens, tkn),
-            _ => panic!("{}", UNEXPECTED_ERROR),
-        }
+        Ok(match value.as_str() {
+            "rt" => parse_return(program, tokens, tkn)?,
+            "fn" => parse_function_declaration(tokens, tkn)?,
+            "vr" => parse_variable_declaration(program, tokens, tkn)?,
+            _ => Err(ParserErrors::ThisNeverHappens)?,
+        })
     } else {
-        panic!("{}", UNEXPECTED_ERROR);
+        Err(ParserErrors::ThisNeverHappens)?
     }
 }

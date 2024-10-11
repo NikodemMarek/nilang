@@ -6,30 +6,32 @@ use crate::{
 #[test]
 fn lex_keywords() {
     assert_eq!(
-        &lex("fn"),
+        &lex("fn").unwrap(),
         &[Token {
             token: TokenType::Keyword,
             value: "fn".to_string(),
-            start: 0,
-            end: 1,
+            start: (0, 0),
+            end: (0, 1),
         }]
     );
+
     assert_eq!(
-        &lex("rt"),
+        &lex("rt").unwrap(),
         &[Token {
             token: TokenType::Keyword,
             value: "rt".to_string(),
-            start: 0,
-            end: 1,
+            start: (0, 0),
+            end: (0, 1),
         }]
     );
+
     assert_eq!(
-        &lex("vr"),
+        &lex("vr").unwrap(),
         &[Token {
             token: TokenType::Keyword,
             value: "vr".to_string(),
-            start: 0,
-            end: 1,
+            start: (0, 0),
+            end: (0, 1),
         }]
     );
 }

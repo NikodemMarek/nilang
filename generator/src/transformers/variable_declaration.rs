@@ -2,21 +2,23 @@ use nilang_parser::nodes::Node;
 
 use super::{operator::transform_operation, scope::Scope};
 
-pub fn transform_variable_declaration(node: &Node, scope: &mut Scope) -> Vec<String> {
+pub fn transform_variable_declaration(node: &Node, scope: &mut Scope) -> eyre::Result<Vec<String>> {
     if let Node::VariableDeclaration { name, value } = node {
         match *value.to_owned() {
-            Node::Number(num) => {
-                Vec::from([format!("movq ${}, {}(%rbp)", num, scope.insert(name))])
-            }
-            Node::VariableReference(reference_name) => Vec::from([
-                format!("movq {}(%rbp), %rax", scope.get(&reference_name)),
-                format!("movq %rax, {}(%rbp)", scope.insert(name)),
-            ]),
-            node @ Node::Operation { .. } => [
-                transform_operation(&node, scope, "%rax"),
-                Vec::from([format!("movq %rax, {}(%rbp)", scope.insert(name))]),
+            Node::Number(num) => Ok(Vec::from([format!(
+                "movq ${}, {}(%rbp)",
+                num,
+                scope.insert(name)?
+            )])),
+            Node::VariableReference(reference_name) => Ok(Vec::from([
+                format!("movq {}(%rbp), %rax", scope.get(&reference_name)?),
+                format!("movq %rax, {}(%rbp)", scope.insert(name)?),
+            ])),
+            node @ Node::Operation { .. } => Ok([
+                transform_operation(&node, scope, "%rax")?,
+                Vec::from([format!("movq %rax, {}(%rbp)", scope.insert(name)?)]),
             ]
-            .concat(),
+            .concat()),
             _ => panic!("Unexpected node: {:?}", value),
         }
     } else {
@@ -38,7 +40,10 @@ mod tests {
         };
         let code = transform_variable_declaration(&node, &mut super::Scope::default());
 
-        assert_eq!(code, Vec::from([String::from("movq $42, -8(%rbp)")]));
+        assert_eq!(
+            code.unwrap(),
+            Vec::from([String::from("movq $42, -8(%rbp)")])
+        );
     }
 
     #[test]
@@ -48,11 +53,11 @@ mod tests {
             value: Box::new(Node::VariableReference(String::from("b"))),
         };
         let mut scope = super::Scope::default();
-        scope.insert("b");
+        let _ = scope.insert("b");
         let code = transform_variable_declaration(&node, &mut scope);
 
         assert_eq!(
-            code,
+            code.unwrap(),
             Vec::from([
                 String::from("movq -8(%rbp), %rax"),
                 String::from("movq %rax, -16(%rbp)")
@@ -73,7 +78,7 @@ mod tests {
         let code = transform_variable_declaration(&node, &mut super::Scope::default());
 
         assert_eq!(
-            code,
+            code.unwrap(),
             Vec::from([
                 String::from("movq $1, %rax"),
                 String::from("add $2, %rax"),

@@ -1,6 +1,7 @@
+use errors::ParserErrors;
 use nilang_lexer::tokens::{Token, TokenType};
 
-use crate::{nodes::Node, UNEXPECTED_ERROR};
+use crate::nodes::Node;
 
 pub fn parse_number(
     Token {
@@ -9,15 +10,17 @@ pub fn parse_number(
         start,
         end,
     }: &Token,
-) -> Node {
+) -> eyre::Result<Node> {
     if let TokenType::Number = token {
-        Node::Number(
-            value
-                .parse()
-                .unwrap_or_else(|_| panic!("[{start}-{end}] Invalid number: \"{value}\"")),
-        )
+        Ok(Node::Number(match value.parse() {
+            Ok(parsed) => parsed,
+            Err(_) => Err(ParserErrors::NotANumber {
+                from: *start,
+                to: *end,
+            })?,
+        }))
     } else {
-        panic!("{}", UNEXPECTED_ERROR);
+        Err(ParserErrors::ThisNeverHappens)?
     }
 }
 
@@ -25,45 +28,49 @@ pub fn parse_number(
 mod tests {
     use nilang_lexer::tokens::{Token, TokenType};
 
-    use crate::{nodes::Node, parse};
+    use crate::{nodes::Node, parsers::number_parser::parse_number};
 
     #[test]
     fn parse_numbers() {
         assert_eq!(
-            &parse(&[Token {
+            parse_number(&Token {
                 token: TokenType::Number,
                 value: "54".to_string(),
-                start: 0,
-                end: 2,
-            }]),
-            &[Node::Number(54.)]
+                start: (0, 0),
+                end: (0, 2),
+            })
+            .unwrap(),
+            Node::Number(54.)
         );
         assert_eq!(
-            &parse(&[Token {
+            parse_number(&Token {
                 token: TokenType::Number,
                 value: "6.".to_string(),
-                start: 0,
-                end: 2,
-            }]),
-            &[Node::Number(6.)]
+                start: (0, 0),
+                end: (0, 2),
+            })
+            .unwrap(),
+            Node::Number(6.)
         );
         assert_eq!(
-            &parse(&[Token {
+            parse_number(&Token {
                 token: TokenType::Number,
                 value: ".2".to_string(),
-                start: 0,
-                end: 2,
-            }]),
-            &[Node::Number(0.2)]
+                start: (0, 0),
+                end: (0, 2),
+            })
+            .unwrap(),
+            Node::Number(0.2)
         );
         assert_eq!(
-            &parse(&[Token {
+            parse_number(&Token {
                 token: TokenType::Number,
                 value: "8.5".to_string(),
-                start: 0,
-                end: 2,
-            }]),
-            &[Node::Number(8.5)]
+                start: (0, 0),
+                end: (0, 2),
+            })
+            .unwrap(),
+            Node::Number(8.5)
         );
     }
 }
