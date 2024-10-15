@@ -1,4 +1,5 @@
 pub mod function;
+pub mod function_call;
 pub mod operator;
 pub mod r#return;
 pub mod scope;
@@ -9,8 +10,8 @@ use scope::Scope;
 use variable_declaration::transform_variable_declaration;
 
 use crate::transformers::{
-    function::transform_function, operator::transform_operation, r#return::transform_return,
-    scope::transform_scope,
+    function::transform_function, function_call::transform_function_call,
+    operator::transform_operation, r#return::transform_return, scope::transform_scope,
 };
 
 pub fn transform(node: &Node, scope: &mut Scope) -> eyre::Result<Vec<String>> {
@@ -20,6 +21,7 @@ pub fn transform(node: &Node, scope: &mut Scope) -> eyre::Result<Vec<String>> {
         Node::Scope(_) => transform_scope(node, scope),
         Node::Operation { .. } => transform_operation(node, scope, "%rax"),
         Node::VariableDeclaration { .. } => transform_variable_declaration(node, scope),
+        Node::FunctionCall { .. } => transform_function_call(node, scope),
         node @ Node::Number(_) | node @ Node::VariableReference(_) => {
             panic!("Unexpected node: {:?}", node)
         }

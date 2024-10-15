@@ -41,7 +41,8 @@ where
             token @ TokenType::ClosingParenthesis
             | token @ TokenType::ClosingBrace
             | token @ TokenType::Equals
-            | token @ TokenType::Semicolon => Err(ParserErrors::UnexpectedToken {
+            | token @ TokenType::Semicolon
+            | token @ TokenType::Comma => Err(ParserErrors::UnexpectedToken {
                 token: *token,
                 loc: *start,
             })?,

@@ -37,6 +37,7 @@ impl Scope {
         self.allocated += 1;
         Ok(-self.allocated * SINGLE_ALLOCATION_SIZE)
     }
+
     pub fn get(&self, name: &str) -> eyre::Result<i8> {
         let offset = match self.variables.get(name) {
             Some(offset) => *offset,

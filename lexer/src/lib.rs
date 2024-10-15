@@ -163,6 +163,16 @@ pub fn lex(input: &str) -> eyre::Result<Vec<tokens::Token>> {
 
                 column += 1;
             }
+            ',' => {
+                tokens.push(Token {
+                    token: TokenType::Comma,
+                    value: char.to_string(),
+                    start: (line, column),
+                    end: (line, column),
+                });
+
+                column += 1;
+            }
             '\n' => {
                 line += 1;
                 column = 0;

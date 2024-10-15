@@ -26,20 +26,67 @@ where
                 loc: (end.0, end.1 + 1),
             })?,
         },
-        parameters: if let (
-            Some(Token {
-                token: TokenType::OpeningParenthesis,
-                ..
-            }),
-            Some(Token {
-                token: TokenType::ClosingParenthesis,
-                ..
-            }),
-        ) = (tokens.next(), tokens.next())
-        {
-            Vec::new()
-        } else {
-            todo!()
+        parameters: {
+            if !matches!(
+                tokens.next(),
+                Some(Token {
+                    token: TokenType::OpeningParenthesis,
+                    ..
+                })
+            ) {
+                Err(ParserErrors::ExpectedTokens {
+                    tokens: Vec::from([TokenType::OpeningParenthesis]),
+                    loc: (end.0, end.1 + 1),
+                })?;
+            }
+
+            let mut parameters = Vec::new();
+
+            loop {
+                match tokens.next() {
+                    Some(Token {
+                        token: TokenType::Literal,
+                        value,
+                        ..
+                    }) => {
+                        parameters.push(value.to_owned());
+
+                        match tokens.next() {
+                            Some(Token {
+                                token: TokenType::ClosingParenthesis,
+                                ..
+                            }) => break,
+                            Some(Token {
+                                token: TokenType::Comma,
+                                ..
+                            }) => {}
+                            Some(Token { start, .. }) => Err(ParserErrors::ExpectedTokens {
+                                tokens: Vec::from([
+                                    TokenType::Comma,
+                                    TokenType::ClosingParenthesis,
+                                ]),
+                                loc: *start,
+                            })?,
+                            None => Err(ParserErrors::EndOfInput {
+                                loc: (usize::MAX, usize::MAX),
+                            })?,
+                        }
+                    }
+                    Some(Token {
+                        token: TokenType::ClosingParenthesis,
+                        ..
+                    }) => break,
+                    Some(Token { start, .. }) => Err(ParserErrors::ExpectedTokens {
+                        tokens: Vec::from([TokenType::Literal, TokenType::ClosingParenthesis]),
+                        loc: *start,
+                    })?,
+                    None => Err(ParserErrors::EndOfInput {
+                        loc: (usize::MAX, usize::MAX),
+                    })?,
+                }
+            }
+
+            parameters
         },
         body: Box::new({
             if let scope @ Node::Scope(_) = parse(&mut Vec::new(), tokens)? {

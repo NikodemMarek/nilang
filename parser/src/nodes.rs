@@ -5,6 +5,10 @@ pub enum Node {
         parameters: Vec<String>,
         body: Box<Node>,
     },
+    FunctionCall {
+        name: String,
+        arguments: Vec<Node>,
+    },
     Number(f64),
     Operation {
         operator: Operator,

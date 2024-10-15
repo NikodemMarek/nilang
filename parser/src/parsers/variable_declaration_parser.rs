@@ -34,44 +34,44 @@ where
             }) = tokens.next()
             {
                 match parse(program, tokens)? {
-                    node @ Node::Number(_) | node @ Node::VariableReference(_) => {
-                        match tokens.peek() {
-                            Some(Token {
+                    node @ Node::Number(_)
+                    | node @ Node::VariableReference(_)
+                    | node @ Node::FunctionCall { .. } => match tokens.peek() {
+                        Some(Token {
+                            token: TokenType::Semicolon,
+                            ..
+                        }) => {
+                            tokens.next();
+                            node
+                        }
+                        Some(Token {
+                            token: TokenType::Operator,
+                            ..
+                        }) => {
+                            program.push(node);
+                            let token = tokens.next().unwrap();
+                            let node = parse_operation_greedy(program, tokens, token)?;
+
+                            if let Some(Token {
                                 token: TokenType::Semicolon,
                                 ..
-                            }) => {
+                            }) = tokens.peek()
+                            {
                                 tokens.next();
-                                node
+                            } else {
+                                Err(ParserErrors::ExpectedTokens {
+                                    tokens: Vec::from([TokenType::Semicolon]),
+                                    loc: (end.0, end.1 + 1),
+                                })?
                             }
-                            Some(Token {
-                                token: TokenType::Operator,
-                                ..
-                            }) => {
-                                program.push(node);
-                                let token = tokens.next().unwrap();
-                                let node = parse_operation_greedy(program, tokens, token)?;
 
-                                if let Some(Token {
-                                    token: TokenType::Semicolon,
-                                    ..
-                                }) = tokens.peek()
-                                {
-                                    tokens.next();
-                                } else {
-                                    Err(ParserErrors::ExpectedTokens {
-                                        tokens: Vec::from([TokenType::Semicolon]),
-                                        loc: (end.0, end.1 + 1),
-                                    })?
-                                }
-
-                                node
-                            }
-                            _ => Err(ParserErrors::ExpectedTokens {
-                                tokens: Vec::from([TokenType::Semicolon, TokenType::Operator]),
-                                loc: (end.0, end.1 + 1),
-                            })?,
+                            node
                         }
-                    }
+                        _ => Err(ParserErrors::ExpectedTokens {
+                            tokens: Vec::from([TokenType::Semicolon, TokenType::Operator]),
+                            loc: (end.0, end.1 + 1),
+                        })?,
+                    },
                     node @ Node::Operation { .. } => {
                         if let Some(Token {
                             token: TokenType::Semicolon,

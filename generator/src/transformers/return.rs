@@ -1,6 +1,6 @@
 use nilang_parser::nodes::Node;
 
-use super::{operator::transform_operation, scope::Scope};
+use super::{function_call::transform_function_call, operator::transform_operation, scope::Scope};
 
 pub fn transform_return(a: &Node, scope: &mut Scope) -> eyre::Result<Vec<String>> {
     if let Node::Return(inner) = a {
@@ -12,6 +12,7 @@ pub fn transform_return(a: &Node, scope: &mut Scope) -> eyre::Result<Vec<String>
                 scope.get(&name)?
             )])),
             Node::FunctionDeclaration { .. } | Node::Scope(_) => todo!(),
+            node @ Node::FunctionCall { .. } => transform_function_call(&node, scope),
             Node::VariableDeclaration { .. } | Node::Return(_) => {
                 panic!("Unexpected node: {:?}", a)
             }

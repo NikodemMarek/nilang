@@ -7,11 +7,17 @@ use super::scope::Scope;
 pub fn transform_function(a: &Node, scope: &mut Scope) -> eyre::Result<Vec<String>> {
     if let Node::FunctionDeclaration {
         name,
-        parameters: _,
+        parameters,
         body,
     } = a
     {
-        Ok(generate_function(name, &transform(body, scope)?))
+        let mut scope = Scope::inherit(scope);
+        for parameter in parameters {
+            // TODO: Take parameters from the stack
+            scope.insert(parameter)?;
+        }
+
+        Ok(generate_function(name, &transform(body, &mut scope)?))
     } else {
         panic!("Unexpected node: {:?}", a)
     }

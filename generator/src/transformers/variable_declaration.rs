@@ -1,6 +1,6 @@
 use nilang_parser::nodes::Node;
 
-use super::{operator::transform_operation, scope::Scope};
+use super::{function_call::transform_function_call, operator::transform_operation, scope::Scope};
 
 pub fn transform_variable_declaration(node: &Node, scope: &mut Scope) -> eyre::Result<Vec<String>> {
     if let Node::VariableDeclaration { name, value } = node {
@@ -17,6 +17,11 @@ pub fn transform_variable_declaration(node: &Node, scope: &mut Scope) -> eyre::R
             node @ Node::Operation { .. } => Ok([
                 transform_operation(&node, scope, "%rax")?,
                 Vec::from([format!("movq %rax, {}(%rbp)", scope.insert(name)?)]),
+            ]
+            .concat()),
+            node @ Node::FunctionCall { .. } => Ok([
+                transform_function_call(&node, scope)?,
+                Vec::from([format!("movq %rbx, {}(%rbp)", scope.insert(name)?)]),
             ]
             .concat()),
             _ => panic!("Unexpected node: {:?}", value),

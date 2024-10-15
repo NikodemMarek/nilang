@@ -98,5 +98,6 @@ fn token_type_to_str(token: &TokenType) -> &str {
         TokenType::Keyword => "keyword",
         TokenType::Literal => "name",
         TokenType::Equals => "equals",
+        TokenType::Comma => "comma",
     }
 }

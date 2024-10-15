@@ -59,14 +59,16 @@ where
             a: Box::new(a),
             b: Box::new(parse(program, tokens)?),
         },
-        a @ Node::VariableReference(_) => Node::Operation {
+        a @ Node::VariableReference(_) | a @ Node::FunctionCall { .. } => Node::Operation {
             operator,
             a: Box::new(a),
             b: Box::new(parse(program, tokens)?),
         },
         a @ Node::Operation { .. } => extend_operation(a, operator, parse(program, tokens)?)?,
         Node::Return(value) => Node::Return(Box::new(match *value {
-            a @ Node::Number(_) | a @ Node::VariableReference(_) => Node::Operation {
+            a @ Node::Number(_)
+            | a @ Node::VariableReference(_)
+            | a @ Node::FunctionCall { .. } => Node::Operation {
                 operator,
                 a: Box::new(a),
                 b: Box::new(parse(program, tokens)?),
