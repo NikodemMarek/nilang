@@ -28,7 +28,7 @@ args@{
   ignoreLockHash,
 }:
 let
-  nixifiedLockHash = "842f43e7509d104f31afadff0d1c74cf13b11c8ee9e9beb6de32e0168fb7268e";
+  nixifiedLockHash = "2f7c91bd0a02af55c88d3dfdaa16d549b09b2cd3e5c01b9791bc79fef9f3c7d9";
   workspaceSrc = if args.workspaceSrc == null then ./. else args.workspaceSrc;
   currentLockHash = builtins.hashFile "sha256" (workspaceSrc + /Cargo.lock);
   lockHashIgnored = if ignoreLockHash
@@ -90,7 +90,7 @@ in
     ];
     dependencies = {
       indenter = (rustPackages."registry+https://github.com/rust-lang/crates.io-index".indenter."0.3.3" { inherit profileName; }).out;
-      once_cell = (rustPackages."registry+https://github.com/rust-lang/crates.io-index".once_cell."1.19.0" { inherit profileName; }).out;
+      once_cell = (rustPackages."registry+https://github.com/rust-lang/crates.io-index".once_cell."1.20.2" { inherit profileName; }).out;
     };
   });
   
@@ -117,6 +117,8 @@ in
     registry = "unknown";
     src = fetchCrateLocal workspaceSrc;
     dependencies = {
+      errors = (rustPackages."unknown".errors."0.1.0" { inherit profileName; }).out;
+      eyre = (rustPackages."registry+https://github.com/rust-lang/crates.io-index".eyre."0.6.12" { inherit profileName; }).out;
       nilang_parser = (rustPackages."unknown".nilang-parser."0.1.0" { inherit profileName; }).out;
     };
   });
@@ -158,11 +160,11 @@ in
     };
   });
   
-  "registry+https://github.com/rust-lang/crates.io-index".once_cell."1.19.0" = overridableMkRustCrate (profileName: rec {
+  "registry+https://github.com/rust-lang/crates.io-index".once_cell."1.20.2" = overridableMkRustCrate (profileName: rec {
     name = "once_cell";
-    version = "1.19.0";
+    version = "1.20.2";
     registry = "registry+https://github.com/rust-lang/crates.io-index";
-    src = fetchCratesIo { inherit name version; sha256 = "3fdb12b2476b595f9358c5161aa467c2438859caa136dec86c26fdd2efe17b92"; };
+    src = fetchCratesIo { inherit name version; sha256 = "1261fe7e33c73b354eab43b1273a57c8f967d0391e80353e51f764ac02cf6775"; };
     features = builtins.concatLists [
       [ "alloc" ]
       [ "default" ]
