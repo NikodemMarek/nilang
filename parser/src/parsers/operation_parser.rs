@@ -1,9 +1,10 @@
 use std::iter::Peekable;
 
 use errors::ParserErrors;
-use nilang_lexer::tokens::{Token, TokenType};
-
-use crate::nodes::{Node, Operator};
+use nilang_types::{
+    nodes::{Node, Operator},
+    tokens::{Token, TokenType},
+};
 
 use super::parse;
 
@@ -152,11 +153,13 @@ fn extend_operation(operation: Node, operator: Operator, node: Node) -> eyre::Re
 
 #[cfg(test)]
 mod tests {
-    use nilang_lexer::tokens::{Token, TokenType};
-
-    use crate::{
+    use nilang_types::{
         nodes::{Node, Operator},
-        parsers::operation_parser::{extend_operation, parse_operation, parse_operation_greedy},
+        tokens::{Token, TokenType},
+    };
+
+    use crate::parsers::operation_parser::{
+        extend_operation, parse_operation, parse_operation_greedy,
     };
 
     #[test]

@@ -1,9 +1,10 @@
 use std::iter::Peekable;
 
 use errors::ParserErrors;
-use nilang_lexer::tokens::{Token, TokenType};
-
-use crate::nodes::Node;
+use nilang_types::{
+    nodes::Node,
+    tokens::{Token, TokenType},
+};
 
 use super::parse;
 
@@ -49,12 +50,12 @@ where
 
 #[cfg(test)]
 mod tests {
-    use nilang_lexer::tokens::{Token, TokenType};
-
-    use crate::{
+    use nilang_types::{
         nodes::{Node, Operator},
-        parsers::parenthesis_parser::parse_parenthesis,
+        tokens::{Token, TokenType},
     };
+
+    use crate::parsers::parenthesis_parser::parse_parenthesis;
 
     #[test]
     fn parse_parenthesis_operations() {

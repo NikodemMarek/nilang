@@ -3,7 +3,7 @@
 mod transformers;
 mod utils;
 
-use nilang_parser::nodes::Node;
+use nilang_types::nodes::Node;
 use transformers::{scope::Scope, transform};
 use utils::generate_function;
 
@@ -38,9 +38,10 @@ fn generate_program(data: &[String], code: &[String]) -> String {
 
 #[cfg(test)]
 mod tests {
+    use nilang_types::nodes::{Node, Operator};
+
     #[test]
     fn generate() {
-        use nilang_parser::nodes::{Node, Operator};
         let node = Node::FunctionDeclaration {
             name: "main".to_string(),
             parameters: Vec::new(),

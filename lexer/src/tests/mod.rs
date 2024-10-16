@@ -1,4 +1,4 @@
-mod lex_keywords;
+mod lex_identifier;
 mod lex_literals;
 mod lex_numbers;
 mod lex_operations;

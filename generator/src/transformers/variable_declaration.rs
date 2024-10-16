@@ -1,4 +1,4 @@
-use nilang_parser::nodes::Node;
+use nilang_types::nodes::Node;
 
 use super::{function_call::transform_function_call, operator::transform_operation, scope::Scope};
 
@@ -33,7 +33,7 @@ pub fn transform_variable_declaration(node: &Node, scope: &mut Scope) -> eyre::R
 
 #[cfg(test)]
 mod tests {
-    use nilang_parser::nodes::Node;
+    use nilang_types::nodes::{Node, Operator};
 
     use super::transform_variable_declaration;
 
@@ -75,7 +75,7 @@ mod tests {
         let node = Node::VariableDeclaration {
             name: String::from("a"),
             value: Box::new(Node::Operation {
-                operator: nilang_parser::nodes::Operator::Add,
+                operator: Operator::Add,
                 a: Box::new(Node::Number(1.)),
                 b: Box::new(Node::Number(2.)),
             }),

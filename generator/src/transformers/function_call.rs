@@ -1,4 +1,4 @@
-use nilang_parser::nodes::Node;
+use nilang_types::nodes::Node;
 
 use super::{operator::transform_operation, scope::Scope};
 

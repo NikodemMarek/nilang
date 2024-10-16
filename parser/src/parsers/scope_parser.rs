@@ -1,9 +1,10 @@
 use std::iter::Peekable;
 
 use errors::ParserErrors;
-use nilang_lexer::tokens::{Token, TokenType};
-
-use crate::nodes::Node;
+use nilang_types::{
+    nodes::Node,
+    tokens::{Token, TokenType},
+};
 
 use super::parse;
 

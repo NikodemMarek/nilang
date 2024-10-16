@@ -3,9 +3,10 @@ resolver = "2"
 
 members = [
     "errors",
-    "generator",
+    "types",
     "lexer",
     "parser",
+    "generator",
 
     "runner",
 ]

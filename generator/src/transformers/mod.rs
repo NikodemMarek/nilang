@@ -5,7 +5,7 @@ pub mod r#return;
 pub mod scope;
 pub mod variable_declaration;
 
-use nilang_parser::nodes::Node;
+use nilang_types::nodes::Node;
 use scope::Scope;
 use variable_declaration::transform_variable_declaration;
 
@@ -31,7 +31,7 @@ pub fn transform(node: &Node, scope: &mut Scope) -> eyre::Result<Vec<String>> {
 #[cfg(test)]
 mod tests {
     use crate::transformers::transform;
-    use nilang_parser::nodes::{Node, Operator};
+    use nilang_types::nodes::{Node, Operator};
 
     #[test]
     fn transform_main_function() {

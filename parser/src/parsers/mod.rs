@@ -1,18 +1,19 @@
 use std::iter::Peekable;
 
 use errors::ParserErrors;
-use keyword_parser::parse_keyword;
+use identifier_parser::parse_identifier;
 use literal_parser::parse_literal;
-use nilang_lexer::tokens::{Token, TokenType};
+use nilang_types::{
+    nodes::Node,
+    tokens::{Token, TokenType},
+};
 use number_parser::parse_number;
 use operation_parser::parse_operation_greedy;
 use parenthesis_parser::parse_parenthesis;
 use scope_parser::parse_scope;
 
-use crate::nodes::Node;
-
 pub mod function_declaration_parser;
-pub mod keyword_parser;
+pub mod identifier_parser;
 pub mod literal_parser;
 pub mod number_parser;
 pub mod operation_parser;
@@ -36,7 +37,7 @@ where
             TokenType::Operator => parse_operation_greedy(program, tokens, tkn)?,
             TokenType::OpeningParenthesis => parse_parenthesis(tokens, (start, end))?,
             TokenType::OpeningBrace => parse_scope(tokens)?,
-            TokenType::Keyword => parse_keyword(program, tokens, tkn)?,
+            TokenType::Identifier => parse_identifier(program, tokens, tkn)?,
             TokenType::Literal => parse_literal(tokens, tkn)?,
             token @ TokenType::ClosingParenthesis
             | token @ TokenType::ClosingBrace

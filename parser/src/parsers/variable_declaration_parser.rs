@@ -1,9 +1,10 @@
 use std::iter::Peekable;
 
 use errors::ParserErrors;
-use nilang_lexer::tokens::{Token, TokenType};
-
-use crate::nodes::Node;
+use nilang_types::{
+    nodes::Node,
+    tokens::{Token, TokenType},
+};
 
 use super::{operation_parser::parse_operation_greedy, parse};
 
@@ -109,9 +110,12 @@ where
 
 #[cfg(test)]
 mod tests {
-    use nilang_lexer::tokens::{Token, TokenType};
+    use nilang_types::{
+        nodes::Node,
+        tokens::{Token, TokenType},
+    };
 
-    use crate::{nodes::Node, parsers::variable_declaration_parser::parse_variable_declaration};
+    use crate::parsers::variable_declaration_parser::parse_variable_declaration;
 
     #[test]
     fn parse_variable_declaration_statement() {
@@ -147,7 +151,7 @@ mod tests {
                 &mut Vec::new(),
                 &mut tokens.iter().peekable(),
                 &Token {
-                    token: TokenType::Keyword,
+                    token: TokenType::Identifier,
                     value: "vr".to_string(),
                     start: (0, 0),
                     end: (0, 1),

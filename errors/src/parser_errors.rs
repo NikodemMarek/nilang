@@ -1,4 +1,4 @@
-use nilang_lexer::tokens::TokenType;
+use nilang_types::tokens::TokenType;
 
 #[derive(Debug, Clone)]
 pub enum ParserErrors {
@@ -95,7 +95,7 @@ fn token_type_to_str(token: &TokenType) -> &str {
         TokenType::ClosingBrace => "closing brace",
         TokenType::Number => "number",
         TokenType::Operator => "operator",
-        TokenType::Keyword => "keyword",
+        TokenType::Identifier => "identifier",
         TokenType::Literal => "name",
         TokenType::Equals => "equals",
         TokenType::Comma => "comma",

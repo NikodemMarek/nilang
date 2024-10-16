@@ -1,9 +1,10 @@
+use std::iter::Peekable;
+
+use errors::LexerErrors;
 use eyre::eyre;
-use tokens::{Token, TokenType};
+use nilang_types::tokens::{Token, TokenType};
 
-pub mod tokens;
-
-pub fn lex(input: &str) -> eyre::Result<Vec<tokens::Token>> {
+pub fn lex(input: &str) -> eyre::Result<Vec<Token>> {
     let mut chars = input.chars().peekable();
 
     let mut tokens = Vec::new();
@@ -77,7 +78,7 @@ pub fn lex(input: &str) -> eyre::Result<Vec<tokens::Token>> {
                             _ => {
                                 tokens.push(Token {
                                     token: match collector.value.as_str() {
-                                        "fn" | "rt" | "vr" => TokenType::Keyword,
+                                        "fn" | "rt" | "vr" => TokenType::Identifier,
                                         _ => TokenType::Literal,
                                     },
                                     end: (line, column),
@@ -92,7 +93,7 @@ pub fn lex(input: &str) -> eyre::Result<Vec<tokens::Token>> {
                     } else {
                         tokens.push(Token {
                             token: match collector.value.as_str() {
-                                "fn" | "rt" | "vr" => TokenType::Keyword,
+                                "fn" | "rt" | "vr" => TokenType::Identifier,
                                 _ => TokenType::Literal,
                             },
                             end: (line, column),

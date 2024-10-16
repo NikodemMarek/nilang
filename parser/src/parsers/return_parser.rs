@@ -1,9 +1,12 @@
 use std::iter::Peekable;
 
 use errors::ParserErrors;
-use nilang_lexer::tokens::{Token, TokenType};
+use nilang_types::{
+    nodes::Node,
+    tokens::{Token, TokenType},
+};
 
-use crate::{nodes::Node, parsers::operation_parser::parse_operation_greedy};
+use crate::parsers::operation_parser::parse_operation_greedy;
 
 use super::parse;
 
@@ -63,12 +66,12 @@ where
 
 #[cfg(test)]
 mod tests {
-    use nilang_lexer::tokens::{Token, TokenType};
-
-    use crate::{
+    use nilang_types::{
         nodes::{Node, Operator},
-        parsers::return_parser::parse_return,
+        tokens::{Token, TokenType},
     };
+
+    use crate::parsers::return_parser::parse_return;
 
     #[test]
     fn parse_return_statement() {
@@ -91,7 +94,7 @@ mod tests {
                 &mut Vec::new(),
                 &mut tokens.iter().peekable(),
                 &Token {
-                    token: TokenType::Keyword,
+                    token: TokenType::Identifier,
                     value: "rt".to_string(),
                     start: (0, 0),
                     end: (0, 1),
@@ -144,7 +147,7 @@ mod tests {
                 &mut Vec::new(),
                 &mut tokens.iter().peekable(),
                 &Token {
-                    token: TokenType::Keyword,
+                    token: TokenType::Identifier,
                     value: "rt".to_string(),
                     start: (0, 0),
                     end: (0, 1),
@@ -189,7 +192,7 @@ mod tests {
                 &mut Vec::new(),
                 &mut tokens.iter().peekable(),
                 &Token {
-                    token: TokenType::Keyword,
+                    token: TokenType::Identifier,
                     value: "rt".to_string(),
                     start: (0, 0),
                     end: (0, 1),
@@ -246,7 +249,7 @@ mod tests {
                 &mut Vec::new(),
                 &mut tokens.iter().peekable(),
                 &Token {
-                    token: TokenType::Keyword,
+                    token: TokenType::Identifier,
                     value: "rt".to_string(),
                     start: (0, 0),
                     end: (0, 1),

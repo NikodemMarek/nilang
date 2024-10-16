@@ -1,9 +1,10 @@
 use std::iter::Peekable;
 
 use errors::ParserErrors;
-use nilang_lexer::tokens::{Token, TokenType};
-
-use crate::nodes::Node;
+use nilang_types::{
+    nodes::Node,
+    tokens::{Token, TokenType},
+};
 
 use super::parse;
 
@@ -103,77 +104,82 @@ where
 
 #[cfg(test)]
 mod tests {
-    use nilang_lexer::tokens::{Token, TokenType};
-
-    use crate::{nodes::Node, parse};
+    use nilang_types::{
+        nodes::Node,
+        tokens::{Token, TokenType},
+    };
 
     #[test]
     fn parse_function_declaration() {
         assert_eq!(
-            &parse(&[
-                Token {
-                    token: TokenType::Keyword,
+            &super::parse_function_declaration(
+                &mut [
+                    Token {
+                        token: TokenType::Literal,
+                        value: "main".to_string(),
+                        start: (0, 3),
+                        end: (0, 6),
+                    },
+                    Token {
+                        token: TokenType::OpeningParenthesis,
+                        value: "(".to_string(),
+                        start: (0, 7),
+                        end: (0, 7),
+                    },
+                    Token {
+                        token: TokenType::ClosingParenthesis,
+                        value: ")".to_string(),
+                        start: (0, 8),
+                        end: (0, 8),
+                    },
+                    Token {
+                        token: TokenType::OpeningBrace,
+                        value: "{".to_string(),
+                        start: (0, 9),
+                        end: (0, 9),
+                    },
+                    Token {
+                        token: TokenType::Identifier,
+                        value: "rt".to_string(),
+                        start: (0, 11),
+                        end: (0, 12),
+                    },
+                    Token {
+                        token: TokenType::Number,
+                        value: "6".to_string(),
+                        start: (0, 14),
+                        end: (0, 14),
+                    },
+                    Token {
+                        token: TokenType::Semicolon,
+                        value: ";".to_string(),
+                        start: (0, 15),
+                        end: (0, 15),
+                    },
+                    Token {
+                        token: TokenType::ClosingBrace,
+                        value: "}".to_string(),
+                        start: (0, 16),
+                        end: (0, 16),
+                    },
+                ]
+                .iter()
+                .peekable(),
+                &Token {
+                    token: TokenType::Identifier,
                     value: "fn".to_string(),
                     start: (0, 0),
                     end: (0, 1),
                 },
-                Token {
-                    token: TokenType::Literal,
-                    value: "main".to_string(),
-                    start: (0, 3),
-                    end: (0, 6),
-                },
-                Token {
-                    token: TokenType::OpeningParenthesis,
-                    value: "(".to_string(),
-                    start: (0, 7),
-                    end: (0, 7),
-                },
-                Token {
-                    token: TokenType::ClosingParenthesis,
-                    value: ")".to_string(),
-                    start: (0, 8),
-                    end: (0, 8),
-                },
-                Token {
-                    token: TokenType::OpeningBrace,
-                    value: "{".to_string(),
-                    start: (0, 9),
-                    end: (0, 9),
-                },
-                Token {
-                    token: TokenType::Keyword,
-                    value: "rt".to_string(),
-                    start: (0, 11),
-                    end: (0, 12),
-                },
-                Token {
-                    token: TokenType::Number,
-                    value: "6".to_string(),
-                    start: (0, 14),
-                    end: (0, 14),
-                },
-                Token {
-                    token: TokenType::Semicolon,
-                    value: ";".to_string(),
-                    start: (0, 15),
-                    end: (0, 15),
-                },
-                Token {
-                    token: TokenType::ClosingBrace,
-                    value: "}".to_string(),
-                    start: (0, 16),
-                    end: (0, 16),
-                },
-            ])
+            )
             .unwrap(),
-            &[Node::FunctionDeclaration {
+            &Node::FunctionDeclaration {
                 name: "main".to_string(),
                 parameters: Vec::new(),
                 body: Box::new(Node::Scope(Vec::from(&[Node::Return(Box::new(
                     Node::Number(6.)
                 ))]))),
-            }]
+            }
         );
     }
 }

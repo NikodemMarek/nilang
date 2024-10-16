@@ -1,9 +1,10 @@
 use std::{iter::Peekable, usize};
 
 use errors::ParserErrors;
-use nilang_lexer::tokens::{Token, TokenType};
-
-use crate::nodes::Node;
+use nilang_types::{
+    nodes::Node,
+    tokens::{Token, TokenType},
+};
 
 use super::{number_parser::parse_number, operation_parser::parse_operation_greedy};
 

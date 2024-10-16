@@ -1,7 +1,6 @@
-use crate::{
-    lex,
-    tokens::{Token, TokenType},
-};
+use nilang_types::tokens::{Token, TokenType};
+
+use crate::lex;
 
 #[test]
 fn lex_special_characters() {

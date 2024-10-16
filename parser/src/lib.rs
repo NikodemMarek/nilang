@@ -1,7 +1,5 @@
-use nilang_lexer::tokens::Token;
-use nodes::Node;
+use nilang_types::{nodes::Node, tokens::Token};
 
-pub mod nodes;
 mod parsers;
 
 pub fn parse(tokens: &[Token]) -> eyre::Result<Vec<Node>> {

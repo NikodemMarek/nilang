@@ -1,7 +1,8 @@
 use errors::ParserErrors;
-use nilang_lexer::tokens::{Token, TokenType};
-
-use crate::nodes::Node;
+use nilang_types::{
+    nodes::Node,
+    tokens::{Token, TokenType},
+};
 
 pub fn parse_number(
     Token {
@@ -26,9 +27,12 @@ pub fn parse_number(
 
 #[cfg(test)]
 mod tests {
-    use nilang_lexer::tokens::{Token, TokenType};
+    use nilang_types::{
+        nodes::Node,
+        tokens::{Token, TokenType},
+    };
 
-    use crate::{nodes::Node, parsers::number_parser::parse_number};
+    use crate::parsers::number_parser::parse_number;
 
     #[test]
     fn parse_numbers() {

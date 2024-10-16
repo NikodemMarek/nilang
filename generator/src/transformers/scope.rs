@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use errors::GeneratorErrors;
-use nilang_parser::nodes::Node;
+use nilang_types::nodes::Node;
 
 use crate::transformers::transform;
 
@@ -68,7 +68,7 @@ pub fn transform_scope(a: &Node, scope: &mut Scope) -> eyre::Result<Vec<String>>
 #[cfg(test)]
 mod tests {
     use crate::transformers::scope::transform_scope;
-    use nilang_parser::nodes::Node;
+    use nilang_types::nodes::Node;
 
     #[test]
     fn scope_with_return() {

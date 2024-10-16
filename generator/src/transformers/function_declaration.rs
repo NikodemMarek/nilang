@@ -1,4 +1,4 @@
-use nilang_parser::nodes::Node;
+use nilang_types::nodes::Node;
 
 use crate::{transformers::transform, utils::generate_function};
 
@@ -40,8 +40,9 @@ pub fn transform_function_declaration(a: &Node, scope: &mut Scope) -> eyre::Resu
 
 #[cfg(test)]
 mod tests {
+    use nilang_types::nodes::Node;
+
     use crate::transformers::{function_declaration::transform_function_declaration, scope::Scope};
-    use nilang_parser::nodes::Node;
 
     #[test]
     fn function() {

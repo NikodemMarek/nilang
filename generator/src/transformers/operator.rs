@@ -1,4 +1,4 @@
-use nilang_parser::nodes::{Node, Operator};
+use nilang_types::nodes::{Node, Operator};
 
 use super::scope::Scope;
 
@@ -131,8 +131,9 @@ pub fn transform_operation(
 
 #[cfg(test)]
 mod tests {
+    use nilang_types::nodes::{Node, Operator};
+
     use crate::transformers::{operator::transform_operation, scope::Scope};
-    use nilang_parser::nodes::{Node, Operator};
 
     #[test]
     fn add_numbers() {

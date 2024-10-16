@@ -10,7 +10,7 @@ pub struct Token {
 pub enum TokenType {
     Number,
     Operator,
-    Keyword,
+    Identifier,
     Literal,
     OpeningParenthesis,
     ClosingParenthesis,

@@ -1,4 +1,4 @@
-use nilang_parser::nodes::Node;
+use nilang_types::nodes::Node;
 
 use super::{function_call::transform_function_call, operator::transform_operation, scope::Scope};
 
@@ -24,8 +24,9 @@ pub fn transform_return(a: &Node, scope: &mut Scope) -> eyre::Result<Vec<String>
 
 #[cfg(test)]
 mod tests {
+    use nilang_types::nodes::{Node, Operator};
+
     use crate::transformers::r#return::transform_return;
-    use nilang_parser::nodes::Node;
 
     #[test]
     fn return_number() {
@@ -51,7 +52,7 @@ mod tests {
     #[test]
     fn return_operation() {
         let node = Node::Return(Box::new(Node::Operation {
-            operator: nilang_parser::nodes::Operator::Add,
+            operator: Operator::Add,
             a: Box::new(Node::Number(1.)),
             b: Box::new(Node::Number(2.)),
         }));
