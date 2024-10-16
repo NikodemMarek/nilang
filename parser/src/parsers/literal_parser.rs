@@ -9,7 +9,9 @@ use super::{number_parser::parse_number, operation_parser::parse_operation_greed
 
 pub fn parse_literal<'a, I>(
     tokens: &mut Peekable<I>,
-    Token { token, value, .. }: &Token,
+    Token {
+        token, value: name, ..
+    }: &Token,
 ) -> eyre::Result<Node>
 where
     I: Iterator<Item = &'a Token>,
@@ -31,7 +33,7 @@ where
                             ..
                         }) => {
                             return Ok(Node::FunctionCall {
-                                name: value.to_owned(),
+                                name: name.to_owned(),
                                 arguments,
                             });
                         }
@@ -59,7 +61,19 @@ where
                                 Some(Token {
                                     token: TokenType::Comma,
                                     ..
-                                }) => (),
+                                }) => {
+                                    tokens.next();
+                                }
+                                Some(Token {
+                                    token: TokenType::ClosingParenthesis,
+                                    ..
+                                }) => {
+                                    tokens.next();
+                                    return Ok(Node::FunctionCall {
+                                        name: name.to_owned(),
+                                        arguments,
+                                    });
+                                }
                                 Some(Token { token, start, .. }) => {
                                     Err(ParserErrors::UnexpectedToken {
                                         token: *token,
@@ -95,7 +109,19 @@ where
                                 Some(Token {
                                     token: TokenType::Comma,
                                     ..
-                                }) => (),
+                                }) => {
+                                    tokens.next();
+                                }
+                                Some(Token {
+                                    token: TokenType::ClosingParenthesis,
+                                    ..
+                                }) => {
+                                    tokens.next().unwrap();
+                                    return Ok(Node::FunctionCall {
+                                        name: name.to_owned(),
+                                        arguments,
+                                    });
+                                }
                                 Some(Token { token, start, .. }) => {
                                     Err(ParserErrors::UnexpectedToken {
                                         token: *token,
@@ -117,7 +143,7 @@ where
                     }
                 }
             }
-            _ => Node::VariableReference(value.to_owned()),
+            _ => Node::VariableReference(name.to_owned()),
         })
     } else {
         Err(ParserErrors::ThisNeverHappens)?

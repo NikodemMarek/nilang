@@ -59,12 +59,7 @@ pub fn transform_scope(a: &Node, scope: &mut Scope) -> eyre::Result<Vec<String>>
             code.append(&mut transform(node, &mut scope)?);
         }
 
-        Ok([
-            Vec::from([String::from("pushq %rbp"), String::from("movq %rsp, %rbp")]),
-            code,
-            Vec::from([String::from("leave")]),
-        ]
-        .concat())
+        Ok(code)
     } else {
         panic!("Unexpected node: {:?}", a)
     }

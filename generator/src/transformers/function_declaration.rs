@@ -2,7 +2,7 @@ use nilang_parser::nodes::Node;
 
 use crate::{transformers::transform, utils::generate_function};
 
-use super::scope::Scope;
+use super::{function_call::REGISTERS, scope::Scope};
 
 pub fn transform_function_declaration(a: &Node, scope: &mut Scope) -> eyre::Result<Vec<String>> {
     if let Node::FunctionDeclaration {
@@ -14,15 +14,25 @@ pub fn transform_function_declaration(a: &Node, scope: &mut Scope) -> eyre::Resu
         let mut code = Vec::new();
 
         let mut scope = Scope::inherit(scope);
-        for (index, parameter) in parameters.iter().enumerate() {
-            // TODO: Take parameters from the stack
+        for (num, parameter) in parameters.iter().enumerate() {
             let offset = scope.insert(parameter)?;
-            code.push(format!("    movq -{}(%rsp), %rax", index * 8));
-            code.push(format!("    movq %rax, {}(%rsp)", offset));
+            if num < REGISTERS.len() {
+                code.push(format!("movq %{}, {}(%rsp)", REGISTERS[num], offset));
+            } else {
+                // TODO: Take parameters from the stack
+            }
         }
 
-        code.extend(generate_function(name, &transform(body, &mut scope)?));
-        Ok(code)
+        Ok(generate_function(
+            name,
+            &[
+                Vec::from([String::from("pushq %rbp"), String::from("movq %rsp, %rbp")]),
+                code,
+                transform(body, &mut scope)?,
+                Vec::from([String::from("leave")]),
+            ]
+            .concat(),
+        ))
     } else {
         panic!("Unexpected node: {:?}", a)
     }

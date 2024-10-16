@@ -1,5 +1,5 @@
-pub mod function;
 pub mod function_call;
+pub mod function_declaration;
 pub mod operator;
 pub mod r#return;
 pub mod scope;
@@ -10,14 +10,14 @@ use scope::Scope;
 use variable_declaration::transform_variable_declaration;
 
 use crate::transformers::{
-    function::transform_function, function_call::transform_function_call,
+    function_call::transform_function_call, function_declaration::transform_function_declaration,
     operator::transform_operation, r#return::transform_return, scope::transform_scope,
 };
 
 pub fn transform(node: &Node, scope: &mut Scope) -> eyre::Result<Vec<String>> {
     match node {
         Node::Return(_) => transform_return(node, scope),
-        Node::FunctionDeclaration { .. } => transform_function(node, scope),
+        Node::FunctionDeclaration { .. } => transform_function_declaration(node, scope),
         Node::Scope(_) => transform_scope(node, scope),
         Node::Operation { .. } => transform_operation(node, scope, "%rax"),
         Node::VariableDeclaration { .. } => transform_variable_declaration(node, scope),
