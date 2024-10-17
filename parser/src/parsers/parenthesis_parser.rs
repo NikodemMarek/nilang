@@ -67,7 +67,7 @@ mod tests {
                 end: (0, 0),
             },
             Token {
-                token: TokenType::Number,
+                token: TokenType::Literal,
                 value: "6".to_string(),
                 start: (0, 1),
                 end: (0, 1),
@@ -79,7 +79,7 @@ mod tests {
                 end: (0, 2),
             },
             Token {
-                token: TokenType::Number,
+                token: TokenType::Literal,
                 value: "9".to_string(),
                 start: (0, 3),
                 end: (0, 3),
@@ -108,7 +108,7 @@ mod tests {
                 end: (0, 0),
             },
             Token {
-                token: TokenType::Number,
+                token: TokenType::Literal,
                 value: "6".to_string(),
                 start: (0, 1),
                 end: (0, 1),
@@ -120,7 +120,7 @@ mod tests {
                 end: (0, 2),
             },
             Token {
-                token: TokenType::Number,
+                token: TokenType::Literal,
                 value: "9".to_string(),
                 start: (0, 3),
                 end: (0, 3),
@@ -138,7 +138,7 @@ mod tests {
                 end: (0, 5),
             },
             Token {
-                token: TokenType::Number,
+                token: TokenType::Literal,
                 value: "5".to_string(),
                 start: (0, 6),
                 end: (0, 6),
@@ -159,7 +159,7 @@ mod tests {
 
         let tokens = [
             Token {
-                token: TokenType::Number,
+                token: TokenType::Literal,
                 value: "6".to_string(),
                 start: (0, 0),
                 end: (0, 0),
@@ -177,7 +177,7 @@ mod tests {
                 end: (0, 2),
             },
             Token {
-                token: TokenType::Number,
+                token: TokenType::Literal,
                 value: "9".to_string(),
                 start: (0, 3),
                 end: (0, 3),
@@ -189,7 +189,7 @@ mod tests {
                 end: (0, 4),
             },
             Token {
-                token: TokenType::Number,
+                token: TokenType::Literal,
                 value: "5".to_string(),
                 start: (0, 5),
                 end: (0, 5),
@@ -222,7 +222,7 @@ mod tests {
                 end: (0, 0),
             },
             Token {
-                token: TokenType::Number,
+                token: TokenType::Literal,
                 value: "6".to_string(),
                 start: (0, 1),
                 end: (0, 1),
@@ -240,7 +240,7 @@ mod tests {
                 end: (0, 3),
             },
             Token {
-                token: TokenType::Number,
+                token: TokenType::Literal,
                 value: "9".to_string(),
                 start: (0, 4),
                 end: (0, 4),
@@ -252,7 +252,7 @@ mod tests {
                 end: (0, 5),
             },
             Token {
-                token: TokenType::Number,
+                token: TokenType::Literal,
                 value: "5".to_string(),
                 start: (0, 6),
                 end: (0, 6),
@@ -285,7 +285,7 @@ mod tests {
 
         let tokens = [
             Token {
-                token: TokenType::Number,
+                token: TokenType::Literal,
                 value: "6".to_string(),
                 start: (0, 0),
                 end: (0, 0),
@@ -303,7 +303,7 @@ mod tests {
                 end: (0, 2),
             },
             Token {
-                token: TokenType::Number,
+                token: TokenType::Literal,
                 value: "9".to_string(),
                 start: (0, 3),
                 end: (0, 3),
@@ -315,7 +315,7 @@ mod tests {
                 end: (0, 4),
             },
             Token {
-                token: TokenType::Number,
+                token: TokenType::Literal,
                 value: "5".to_string(),
                 start: (0, 5),
                 end: (0, 5),
@@ -342,7 +342,7 @@ mod tests {
 
         let tokens = [
             Token {
-                token: TokenType::Number,
+                token: TokenType::Literal,
                 value: "6".to_string(),
                 start: (0, 0),
                 end: (0, 0),
@@ -360,7 +360,7 @@ mod tests {
                 end: (0, 2),
             },
             Token {
-                token: TokenType::Number,
+                token: TokenType::Literal,
                 value: "9".to_string(),
                 start: (0, 3),
                 end: (0, 3),
@@ -372,7 +372,7 @@ mod tests {
                 end: (0, 4),
             },
             Token {
-                token: TokenType::Number,
+                token: TokenType::Literal,
                 value: "5".to_string(),
                 start: (0, 5),
                 end: (0, 5),
@@ -390,7 +390,7 @@ mod tests {
                 end: (0, 7),
             },
             Token {
-                token: TokenType::Number,
+                token: TokenType::Literal,
                 value: "7".to_string(),
                 start: (0, 8),
                 end: (0, 8),

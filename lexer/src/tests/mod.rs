@@ -1,7 +1,7 @@
-mod lex_identifier;
-mod lex_literals;
-mod lex_numbers;
-mod lex_operations;
-mod lex_operators;
-mod lex_special_characters;
-mod lex_whitespaces;
+mod identifier;
+mod keyword;
+mod literal;
+mod operation;
+mod operator;
+mod special_character;
+mod whitespace;

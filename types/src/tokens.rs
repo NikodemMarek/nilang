@@ -8,9 +8,9 @@ pub struct Token {
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum TokenType {
-    Number,
     Operator,
     Identifier,
+    Keyword,
     Literal,
     OpeningParenthesis,
     ClosingParenthesis,

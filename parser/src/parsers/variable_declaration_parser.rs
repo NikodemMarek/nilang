@@ -19,12 +19,12 @@ where
     Ok(Node::VariableDeclaration {
         name: match tokens.next() {
             Some(Token {
-                token: TokenType::Literal,
+                token: TokenType::Identifier,
                 value,
                 ..
             }) => value.to_owned(),
             _ => Err(ParserErrors::ExpectedTokens {
-                tokens: Vec::from([TokenType::Literal]),
+                tokens: Vec::from([TokenType::Identifier]),
                 loc: (end.0, end.1 + 1),
             })?,
         },
@@ -91,8 +91,8 @@ where
                     }
                     _ => Err(ParserErrors::ExpectedTokens {
                         tokens: Vec::from([
-                            TokenType::Number,
                             TokenType::Literal,
+                            TokenType::Keyword,
                             TokenType::Operator,
                         ]),
                         loc: (end.0, end.1 + 1),
@@ -121,7 +121,7 @@ mod tests {
     fn parse_variable_declaration_statement() {
         let tokens = [
             Token {
-                token: TokenType::Literal,
+                token: TokenType::Identifier,
                 value: "test".to_string(),
                 start: (0, 1),
                 end: (0, 4),
@@ -133,7 +133,7 @@ mod tests {
                 end: (0, 5),
             },
             Token {
-                token: TokenType::Number,
+                token: TokenType::Literal,
                 value: "9".to_string(),
                 start: (0, 6),
                 end: (0, 6),

@@ -1,152 +1,80 @@
-use std::{iter::Peekable, usize};
-
 use errors::ParserErrors;
 use nilang_types::{
     nodes::Node,
     tokens::{Token, TokenType},
 };
 
-use super::{number_parser::parse_number, operation_parser::parse_operation_greedy};
-
-pub fn parse_literal<'a, I>(
-    tokens: &mut Peekable<I>,
+pub fn parse_literal(
     Token {
-        token, value: name, ..
+        token,
+        value,
+        start,
+        end,
     }: &Token,
-) -> eyre::Result<Node>
-where
-    I: Iterator<Item = &'a Token>,
-{
+) -> eyre::Result<Node> {
     if let TokenType::Literal = token {
-        Ok(match tokens.peek() {
-            Some(Token {
-                token: TokenType::OpeningParenthesis,
-                ..
-            }) => {
-                tokens.next();
-
-                let mut arguments = Vec::new();
-
-                loop {
-                    match tokens.next() {
-                        Some(Token {
-                            token: TokenType::ClosingParenthesis,
-                            ..
-                        }) => {
-                            return Ok(Node::FunctionCall {
-                                name: name.to_owned(),
-                                arguments,
-                            });
-                        }
-                        Some(
-                            literal @ Token {
-                                token: TokenType::Literal,
-                                ..
-                            },
-                        ) => {
-                            arguments.push(parse_literal(tokens, literal)?);
-
-                            match tokens.peek() {
-                                Some(Token {
-                                    token: TokenType::Operator,
-                                    ..
-                                }) => {
-                                    let mut program = Vec::from([arguments.pop().unwrap()]);
-                                    let next = tokens.next().unwrap();
-                                    arguments.push(parse_operation_greedy(
-                                        &mut program,
-                                        tokens,
-                                        next,
-                                    )?);
-                                }
-                                Some(Token {
-                                    token: TokenType::Comma,
-                                    ..
-                                }) => {
-                                    tokens.next();
-                                }
-                                Some(Token {
-                                    token: TokenType::ClosingParenthesis,
-                                    ..
-                                }) => {
-                                    tokens.next();
-                                    return Ok(Node::FunctionCall {
-                                        name: name.to_owned(),
-                                        arguments,
-                                    });
-                                }
-                                Some(Token { token, start, .. }) => {
-                                    Err(ParserErrors::UnexpectedToken {
-                                        token: *token,
-                                        loc: *start,
-                                    })?
-                                }
-                                None => Err(ParserErrors::EndOfInput {
-                                    loc: (usize::MAX, usize::MAX),
-                                })?,
-                            }
-                        }
-                        Some(
-                            token @ Token {
-                                token: TokenType::Number,
-                                ..
-                            },
-                        ) => {
-                            arguments.push(parse_number(token)?);
-
-                            match tokens.peek() {
-                                Some(Token {
-                                    token: TokenType::Operator,
-                                    ..
-                                }) => {
-                                    let mut program = Vec::from([arguments.pop().unwrap()]);
-                                    let next = tokens.next().unwrap();
-                                    arguments.push(parse_operation_greedy(
-                                        &mut program,
-                                        tokens,
-                                        next,
-                                    )?);
-                                }
-                                Some(Token {
-                                    token: TokenType::Comma,
-                                    ..
-                                }) => {
-                                    tokens.next();
-                                }
-                                Some(Token {
-                                    token: TokenType::ClosingParenthesis,
-                                    ..
-                                }) => {
-                                    tokens.next().unwrap();
-                                    return Ok(Node::FunctionCall {
-                                        name: name.to_owned(),
-                                        arguments,
-                                    });
-                                }
-                                Some(Token { token, start, .. }) => {
-                                    Err(ParserErrors::UnexpectedToken {
-                                        token: *token,
-                                        loc: *start,
-                                    })?
-                                }
-                                None => Err(ParserErrors::EndOfInput {
-                                    loc: (usize::MAX, usize::MAX),
-                                })?,
-                            }
-                        }
-                        Some(Token { token, start, .. }) => Err(ParserErrors::UnexpectedToken {
-                            token: *token,
-                            loc: *start,
-                        })?,
-                        None => Err(ParserErrors::EndOfInput {
-                            loc: (usize::MAX, usize::MAX),
-                        })?,
-                    }
-                }
-            }
-            _ => Node::VariableReference(name.to_owned()),
+        Ok(match value.parse() {
+            Ok(parsed) => Node::Number(parsed),
+            Err(_) => Err(ParserErrors::NotANumber {
+                from: *start,
+                to: *end,
+            })?,
         })
     } else {
         Err(ParserErrors::ThisNeverHappens)?
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use nilang_types::{
+        nodes::Node,
+        tokens::{Token, TokenType},
+    };
+
+    use crate::parsers::literal_parser::parse_literal;
+
+    #[test]
+    fn parse_numbers() {
+        assert_eq!(
+            parse_literal(&Token {
+                token: TokenType::Literal,
+                value: "54".to_string(),
+                start: (0, 0),
+                end: (0, 2),
+            })
+            .unwrap(),
+            Node::Number(54.)
+        );
+        assert_eq!(
+            parse_literal(&Token {
+                token: TokenType::Literal,
+                value: "6.".to_string(),
+                start: (0, 0),
+                end: (0, 2),
+            })
+            .unwrap(),
+            Node::Number(6.)
+        );
+        assert_eq!(
+            parse_literal(&Token {
+                token: TokenType::Literal,
+                value: ".2".to_string(),
+                start: (0, 0),
+                end: (0, 2),
+            })
+            .unwrap(),
+            Node::Number(0.2)
+        );
+        assert_eq!(
+            parse_literal(&Token {
+                token: TokenType::Literal,
+                value: "8.5".to_string(),
+                start: (0, 0),
+                end: (0, 2),
+            })
+            .unwrap(),
+            Node::Number(8.5)
+        );
     }
 }

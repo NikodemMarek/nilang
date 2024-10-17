@@ -93,10 +93,10 @@ fn token_type_to_str(token: &TokenType) -> &str {
         TokenType::ClosingParenthesis => "closing parenthesis",
         TokenType::OpeningBrace => "opening brace",
         TokenType::ClosingBrace => "closing brace",
-        TokenType::Number => "number",
+        TokenType::Literal => "literal",
         TokenType::Operator => "operator",
         TokenType::Identifier => "identifier",
-        TokenType::Literal => "name",
+        TokenType::Keyword => "keyword",
         TokenType::Equals => "equals",
         TokenType::Comma => "comma",
     }

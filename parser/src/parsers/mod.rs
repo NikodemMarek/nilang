@@ -2,20 +2,20 @@ use std::iter::Peekable;
 
 use errors::ParserErrors;
 use identifier_parser::parse_identifier;
+use keyword_parser::parse_keyword;
 use literal_parser::parse_literal;
 use nilang_types::{
     nodes::Node,
     tokens::{Token, TokenType},
 };
-use number_parser::parse_number;
 use operation_parser::parse_operation_greedy;
 use parenthesis_parser::parse_parenthesis;
 use scope_parser::parse_scope;
 
 pub mod function_declaration_parser;
 pub mod identifier_parser;
+pub mod keyword_parser;
 pub mod literal_parser;
-pub mod number_parser;
 pub mod operation_parser;
 pub mod parenthesis_parser;
 pub mod return_parser;
@@ -33,12 +33,12 @@ where
     ) = tokens.next()
     {
         Ok(match token {
-            TokenType::Number => parse_number(tkn)?,
+            TokenType::Literal => parse_literal(tkn)?,
             TokenType::Operator => parse_operation_greedy(program, tokens, tkn)?,
             TokenType::OpeningParenthesis => parse_parenthesis(tokens, (start, end))?,
             TokenType::OpeningBrace => parse_scope(tokens)?,
-            TokenType::Identifier => parse_identifier(program, tokens, tkn)?,
-            TokenType::Literal => parse_literal(tokens, tkn)?,
+            TokenType::Keyword => parse_keyword(program, tokens, tkn)?,
+            TokenType::Identifier => parse_identifier(tokens, tkn)?,
             token @ TokenType::ClosingParenthesis
             | token @ TokenType::ClosingBrace
             | token @ TokenType::Equals

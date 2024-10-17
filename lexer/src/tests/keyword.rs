@@ -3,11 +3,11 @@ use nilang_types::tokens::{Token, TokenType};
 use crate::lex;
 
 #[test]
-fn lex_identifier() {
+fn keyword() {
     assert_eq!(
         &lex("fn").unwrap(),
         &[Token {
-            token: TokenType::Identifier,
+            token: TokenType::Keyword,
             value: "fn".to_string(),
             start: (0, 0),
             end: (0, 1),
@@ -17,7 +17,7 @@ fn lex_identifier() {
     assert_eq!(
         &lex("rt").unwrap(),
         &[Token {
-            token: TokenType::Identifier,
+            token: TokenType::Keyword,
             value: "rt".to_string(),
             start: (0, 0),
             end: (0, 1),
@@ -27,7 +27,7 @@ fn lex_identifier() {
     assert_eq!(
         &lex("vr").unwrap(),
         &[Token {
-            token: TokenType::Identifier,
+            token: TokenType::Keyword,
             value: "vr".to_string(),
             start: (0, 0),
             end: (0, 1),

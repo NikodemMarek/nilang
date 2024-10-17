@@ -3,11 +3,11 @@ use nilang_types::tokens::{Token, TokenType};
 use crate::lex;
 
 #[test]
-fn lex_numbers() {
+fn literal() {
     assert_eq!(
         &lex("5  ").unwrap(),
         &[Token {
-            token: TokenType::Number,
+            token: TokenType::Literal,
             value: "5".to_string(),
             start: (0, 0),
             end: (0, 0),
@@ -17,7 +17,7 @@ fn lex_numbers() {
     assert_eq!(
         &lex("4.  ").unwrap(),
         &[Token {
-            token: TokenType::Number,
+            token: TokenType::Literal,
             value: "4.".to_string(),
             start: (0, 0),
             end: (0, 1),
@@ -27,7 +27,7 @@ fn lex_numbers() {
     assert_eq!(
         &lex(".9").unwrap(),
         &[Token {
-            token: TokenType::Number,
+            token: TokenType::Literal,
             value: ".9".to_string(),
             start: (0, 0),
             end: (0, 1),
@@ -37,7 +37,7 @@ fn lex_numbers() {
     assert_eq!(
         &lex("3.7").unwrap(),
         &[Token {
-            token: TokenType::Number,
+            token: TokenType::Literal,
             value: "3.7".to_string(),
             start: (0, 0),
             end: (0, 2),

@@ -18,12 +18,12 @@ where
     Ok(Node::FunctionDeclaration {
         name: match tokens.next() {
             Some(Token {
-                token: TokenType::Literal,
+                token: TokenType::Identifier,
                 value,
                 ..
             }) => value.to_owned(),
             _ => Err(ParserErrors::ExpectedTokens {
-                tokens: Vec::from([TokenType::Literal]),
+                tokens: Vec::from([TokenType::Identifier]),
                 loc: (end.0, end.1 + 1),
             })?,
         },
@@ -46,7 +46,7 @@ where
             loop {
                 match tokens.next() {
                     Some(Token {
-                        token: TokenType::Literal,
+                        token: TokenType::Identifier,
                         value,
                         ..
                     }) => {
@@ -78,7 +78,11 @@ where
                         ..
                     }) => break,
                     Some(Token { start, .. }) => Err(ParserErrors::ExpectedTokens {
-                        tokens: Vec::from([TokenType::Literal, TokenType::ClosingParenthesis]),
+                        tokens: Vec::from([
+                            TokenType::Identifier,
+                            TokenType::Literal,
+                            TokenType::ClosingParenthesis,
+                        ]),
                         loc: *start,
                     })?,
                     None => Err(ParserErrors::EndOfInput {
@@ -115,7 +119,7 @@ mod tests {
             &super::parse_function_declaration(
                 &mut [
                     Token {
-                        token: TokenType::Literal,
+                        token: TokenType::Identifier,
                         value: "main".to_string(),
                         start: (0, 3),
                         end: (0, 6),
@@ -139,13 +143,13 @@ mod tests {
                         end: (0, 9),
                     },
                     Token {
-                        token: TokenType::Identifier,
+                        token: TokenType::Keyword,
                         value: "rt".to_string(),
                         start: (0, 11),
                         end: (0, 12),
                     },
                     Token {
-                        token: TokenType::Number,
+                        token: TokenType::Literal,
                         value: "6".to_string(),
                         start: (0, 14),
                         end: (0, 14),
@@ -166,7 +170,7 @@ mod tests {
                 .iter()
                 .peekable(),
                 &Token {
-                    token: TokenType::Identifier,
+                    token: TokenType::Keyword,
                     value: "fn".to_string(),
                     start: (0, 0),
                     end: (0, 1),

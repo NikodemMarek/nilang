@@ -50,7 +50,7 @@ where
     let preceeding = match program.pop() {
         Some(node) => node,
         None => Err(ParserErrors::ExpectedTokens {
-            tokens: Vec::from([TokenType::Number, TokenType::Literal]),
+            tokens: Vec::from([TokenType::Literal, TokenType::Keyword]),
             loc: (start.0, start.1 - 1),
         })?,
     };
@@ -166,7 +166,7 @@ mod tests {
     fn parse_operations_greedy() {
         let tokens = [
             Token {
-                token: TokenType::Number,
+                token: TokenType::Literal,
                 value: "9".to_string(),
                 start: (0, 2),
                 end: (0, 2),
@@ -178,7 +178,7 @@ mod tests {
                 end: (0, 3),
             },
             Token {
-                token: TokenType::Number,
+                token: TokenType::Literal,
                 value: "5".to_string(),
                 start: (0, 4),
                 end: (0, 4),
@@ -211,7 +211,7 @@ mod tests {
     #[test]
     fn parse_simple_operations() {
         let tokens = [Token {
-            token: TokenType::Number,
+            token: TokenType::Literal,
             value: "9".to_string(),
             start: (0, 2),
             end: (0, 2),
@@ -236,7 +236,7 @@ mod tests {
         );
 
         let tokens = [Token {
-            token: TokenType::Number,
+            token: TokenType::Literal,
             value: "7.5".to_string(),
             start: (0, 2),
             end: (0, 4),
@@ -261,7 +261,7 @@ mod tests {
         );
 
         let tokens = [Token {
-            token: TokenType::Number,
+            token: TokenType::Literal,
             value: "4".to_string(),
             start: (0, 4),
             end: (0, 4),
@@ -286,7 +286,7 @@ mod tests {
         );
 
         let tokens = [Token {
-            token: TokenType::Number,
+            token: TokenType::Literal,
             value: "1".to_string(),
             start: (0, 2),
             end: (0, 2),
@@ -311,7 +311,7 @@ mod tests {
         );
 
         let tokens = [Token {
-            token: TokenType::Number,
+            token: TokenType::Literal,
             value: "1.5".to_string(),
             start: (0, 2),
             end: (0, 4),
@@ -340,7 +340,7 @@ mod tests {
     fn parse_complex_operations() {
         let tokens = [
             Token {
-                token: TokenType::Number,
+                token: TokenType::Literal,
                 value: "9".to_string(),
                 start: (0, 2),
                 end: (0, 2),
@@ -352,7 +352,7 @@ mod tests {
                 end: (0, 3),
             },
             Token {
-                token: TokenType::Number,
+                token: TokenType::Literal,
                 value: "5".to_string(),
                 start: (0, 4),
                 end: (0, 4),
@@ -383,7 +383,7 @@ mod tests {
 
         let tokens = [
             Token {
-                token: TokenType::Number,
+                token: TokenType::Literal,
                 value: "9".to_string(),
                 start: (0, 2),
                 end: (0, 2),
@@ -395,7 +395,7 @@ mod tests {
                 end: (0, 3),
             },
             Token {
-                token: TokenType::Number,
+                token: TokenType::Literal,
                 value: "5".to_string(),
                 start: (0, 4),
                 end: (0, 4),
@@ -426,7 +426,7 @@ mod tests {
 
         let tokens = [
             Token {
-                token: TokenType::Number,
+                token: TokenType::Literal,
                 value: ".5".to_string(),
                 start: (0, 2),
                 end: (0, 3),
@@ -438,7 +438,7 @@ mod tests {
                 end: (0, 4),
             },
             Token {
-                token: TokenType::Number,
+                token: TokenType::Literal,
                 value: "7".to_string(),
                 start: (0, 5),
                 end: (0, 5),
@@ -469,7 +469,7 @@ mod tests {
 
         let tokens = [
             Token {
-                token: TokenType::Number,
+                token: TokenType::Literal,
                 value: ".5".to_string(),
                 start: (0, 2),
                 end: (0, 3),
@@ -481,7 +481,7 @@ mod tests {
                 end: (0, 4),
             },
             Token {
-                token: TokenType::Number,
+                token: TokenType::Literal,
                 value: "7".to_string(),
                 start: (0, 5),
                 end: (0, 5),
@@ -512,7 +512,7 @@ mod tests {
 
         let tokens = [
             Token {
-                token: TokenType::Number,
+                token: TokenType::Literal,
                 value: ".5".to_string(),
                 start: (0, 2),
                 end: (0, 3),
@@ -524,7 +524,7 @@ mod tests {
                 end: (0, 4),
             },
             Token {
-                token: TokenType::Number,
+                token: TokenType::Literal,
                 value: "7".to_string(),
                 start: (0, 5),
                 end: (0, 5),
@@ -555,7 +555,7 @@ mod tests {
 
         let tokens = [
             Token {
-                token: TokenType::Number,
+                token: TokenType::Literal,
                 value: ".5".to_string(),
                 start: (0, 2),
                 end: (0, 3),
@@ -567,7 +567,7 @@ mod tests {
                 end: (0, 4),
             },
             Token {
-                token: TokenType::Number,
+                token: TokenType::Literal,
                 value: "7".to_string(),
                 start: (0, 5),
                 end: (0, 5),
@@ -579,7 +579,7 @@ mod tests {
                 end: (0, 6),
             },
             Token {
-                token: TokenType::Number,
+                token: TokenType::Literal,
                 value: "3".to_string(),
                 start: (0, 7),
                 end: (0, 7),
@@ -614,7 +614,7 @@ mod tests {
 
         let tokens = [
             Token {
-                token: TokenType::Number,
+                token: TokenType::Literal,
                 value: "5.5".to_string(),
                 start: (0, 3),
                 end: (0, 5),
@@ -626,7 +626,7 @@ mod tests {
                 end: (0, 6),
             },
             Token {
-                token: TokenType::Number,
+                token: TokenType::Literal,
                 value: "8".to_string(),
                 start: (0, 7),
                 end: (0, 7),
@@ -638,7 +638,7 @@ mod tests {
                 end: (0, 8),
             },
             Token {
-                token: TokenType::Number,
+                token: TokenType::Literal,
                 value: ".7".to_string(),
                 start: (0, 9),
                 end: (0, 11),

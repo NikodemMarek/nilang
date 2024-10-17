@@ -1,8 +1,10 @@
 use colored::Colorize;
 pub use generator_errors::GeneratorErrors;
+pub use lexer_errors::LexerErrors;
 pub use parser_errors::ParserErrors;
 
 mod generator_errors;
+mod lexer_errors;
 mod parser_errors;
 
 #[derive(Debug, Clone)]

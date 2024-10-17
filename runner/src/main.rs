@@ -1,6 +1,6 @@
 use std::fs::{read_to_string, write};
 
-use errors::{NilangError, ParserErrors};
+use errors::{LexerErrors, NilangError, ParserErrors};
 
 fn main() {
     let code = read_to_string("test.ni").unwrap();
@@ -13,9 +13,24 @@ fn compile(code: &str) -> String {
     let lexed = match nilang_lexer::lex(code) {
         Ok(parsed) => parsed,
         Err(err) => {
-            panic!("{}", err);
+            let (start, end, message): ((usize, usize), (usize, usize), String) = err
+                .root_cause()
+                .downcast_ref::<LexerErrors>()
+                .unwrap()
+                .into();
+
+            panic!(
+                "{}",
+                NilangError {
+                    code: code.to_owned(),
+                    start,
+                    end,
+                    message,
+                }
+            );
         }
     };
+
     let parsed = match nilang_parser::parse(&lexed) {
         Ok(parsed) => parsed,
         Err(err) => {

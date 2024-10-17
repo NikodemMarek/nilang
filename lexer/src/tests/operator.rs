@@ -3,7 +3,7 @@ use nilang_types::tokens::{Token, TokenType};
 use crate::lex;
 
 #[test]
-fn lex_operators() {
+fn operator() {
     assert_eq!(
         &lex("  +").unwrap(),
         &[Token {
