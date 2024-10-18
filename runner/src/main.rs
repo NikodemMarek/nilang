@@ -1,6 +1,8 @@
+#![feature(iterator_try_collect)]
+
 use std::fs::{read_to_string, write};
 
-use errors::{LexerErrors, NilangError, ParserErrors};
+use errors::{NilangError, ParserErrors};
 
 fn main() {
     let code = read_to_string("test.ni").unwrap();
@@ -10,14 +12,11 @@ fn main() {
 }
 
 fn compile(code: &str) -> String {
-    let lexed = match nilang_lexer::lex(code) {
+    let mut lex = nilang_lexer::lex(code);
+    let lexed = match lex.try_collect::<Vec<_>>() {
         Ok(parsed) => parsed,
         Err(err) => {
-            let (start, end, message): ((usize, usize), (usize, usize), String) = err
-                .root_cause()
-                .downcast_ref::<LexerErrors>()
-                .unwrap()
-                .into();
+            let (start, end, message): ((usize, usize), (usize, usize), String) = (&err).into();
 
             panic!(
                 "{}",

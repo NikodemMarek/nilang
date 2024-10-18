@@ -237,7 +237,7 @@ impl<'a> Iterator for AggregatedIterator<'a> {
 
 impl AggregatedIterator<'_> {
     #[inline]
-    pub fn new(iter: &str) -> AggregatedIterator {
+    pub fn new(iter: &str) -> AggregatedIterator<'_> {
         AggregatedIterator {
             iter: iter.chars().peekable(),
             loc: (0, 0),

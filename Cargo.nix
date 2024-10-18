@@ -29,7 +29,7 @@ args@{
   ignoreLockHash,
 }:
 let
-  nixifiedLockHash = "388804d30627d99d682fb33a4ae441790582bd1eaf9aa467f021b1688d8c49ba";
+  nixifiedLockHash = "8fa242723d7280ea511d7bfcb49010d2f1c1229801df5221dd38e6d54fd87620";
   workspaceSrc = if args.workspaceSrc == null then ./. else args.workspaceSrc;
   currentLockHash = builtins.hashFile "sha256" (workspaceSrc + /Cargo.lock);
   lockHashIgnored = if ignoreLockHash
@@ -132,7 +132,6 @@ in
     src = fetchCrateLocal workspaceSrc;
     dependencies = {
       errors = (rustPackages."unknown".errors."0.1.0" { inherit profileName; }).out;
-      eyre = (rustPackages."registry+https://github.com/rust-lang/crates.io-index".eyre."0.6.12" { inherit profileName; }).out;
       nilang_types = (rustPackages."unknown".nilang-types."0.1.0" { inherit profileName; }).out;
     };
   });
