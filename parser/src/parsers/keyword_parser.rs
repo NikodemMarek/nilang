@@ -15,14 +15,22 @@ pub fn parse_keyword<I>(tokens: &mut Peekable<I>) -> Result<Node, ParserErrors>
 where
     I: Iterator<Item = Result<Token, LexerErrors>>,
 {
-    let Token { value, .. } = tokens.peek().unwrap().as_ref().unwrap().clone();
+    let value = if let Some(Ok(Token {
+        token: TokenType::Keyword(value),
+        ..
+    })) = tokens.peek()
+    {
+        value
+    } else {
+        unreachable!()
+    };
 
-    Ok(match value.as_str() {
+    Ok(match &**value {
         "rt" => parse_return(tokens)?,
         "fn" => parse_function_declaration(tokens)?,
         "vr" => parse_variable_declaration(tokens)?,
         _ => Err(ParserErrors::ExpectedTokens {
-            tokens: Vec::from([TokenType::Keyword]),
+            tokens: Vec::from([TokenType::Keyword("".into())]),
             loc: (0, 1),
         })?,
     })
@@ -42,20 +50,17 @@ mod tests {
             parse_keyword(
                 &mut [
                     Ok(Token {
-                        token: TokenType::Keyword,
-                        value: "rt".to_string(),
+                        token: TokenType::Keyword("rt".into()),
                         start: (0, 0),
                         end: (0, 1),
                     }),
                     Ok(Token {
-                        token: TokenType::Literal,
-                        value: "5".to_string(),
+                        token: TokenType::Literal("5".into()),
                         start: (0, 3),
                         end: (0, 3),
                     }),
                     Ok(Token {
                         token: TokenType::Semicolon,
-                        value: ";".to_string(),
                         start: (0, 4),
                         end: (0, 4),
                     })
@@ -71,38 +76,32 @@ mod tests {
             parse_keyword(
                 &mut [
                     Ok(Token {
-                        token: TokenType::Keyword,
-                        value: "fn".to_string(),
+                        token: TokenType::Keyword("fn".into()),
                         start: (0, 0),
                         end: (0, 1),
                     }),
                     Ok(Token {
-                        token: TokenType::Identifier,
-                        value: "test".to_string(),
+                        token: TokenType::Identifier("test".into()),
                         start: (0, 3),
                         end: (0, 6),
                     }),
                     Ok(Token {
                         token: TokenType::OpeningParenthesis,
-                        value: "(".to_string(),
                         start: (0, 7),
                         end: (0, 7),
                     }),
                     Ok(Token {
                         token: TokenType::ClosingParenthesis,
-                        value: ")".to_string(),
                         start: (0, 8),
                         end: (0, 8),
                     }),
                     Ok(Token {
                         token: TokenType::OpeningBrace,
-                        value: "{".to_string(),
                         start: (0, 9),
                         end: (0, 9),
                     }),
                     Ok(Token {
                         token: TokenType::ClosingBrace,
-                        value: "}".to_string(),
                         start: (0, 10),
                         end: (0, 10),
                     })
@@ -122,32 +121,28 @@ mod tests {
             parse_keyword(
                 &mut [
                     Ok(Token {
-                        token: TokenType::Keyword,
-                        value: "vr".to_string(),
+                        token: TokenType::Keyword("vr".into()),
                         start: (0, 0),
                         end: (0, 1),
                     }),
                     Ok(Token {
-                        token: TokenType::Identifier,
-                        value: "test".to_string(),
+                        token: TokenType::Identifier("test".into()),
                         start: (0, 3),
                         end: (0, 6),
                     }),
                     Ok(Token {
                         token: TokenType::Equals,
-                        value: "=".to_string(),
+
                         start: (0, 7),
                         end: (0, 7),
                     }),
                     Ok(Token {
-                        token: TokenType::Literal,
-                        value: "6".to_string(),
+                        token: TokenType::Literal("6".into()),
                         start: (0, 8),
                         end: (0, 8),
                     }),
                     Ok(Token {
                         token: TokenType::Semicolon,
-                        value: ";".to_string(),
                         start: (0, 9),
                         end: (0, 9),
                     })

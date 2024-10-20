@@ -15,18 +15,27 @@ pub fn parse_parenthesis<I>(tokens: &mut Peekable<I>) -> Result<Node, ParserErro
 where
     I: Iterator<Item = Result<Token, LexerErrors>>,
 {
-    let Token { start, .. } = tokens.next().unwrap().unwrap();
+    let start = if let Some(Ok(Token {
+        token: TokenType::OpeningParenthesis,
+        start,
+        ..
+    })) = tokens.next()
+    {
+        start
+    } else {
+        unreachable!()
+    };
 
     let content = match tokens.peek() {
         Some(Ok(Token {
-            token: TokenType::Literal,
+            token: TokenType::Literal(_),
             ..
         })) => {
             let literal = parse_literal(tokens);
             parse_operation_if_operator_follows_no_rearrange(tokens, literal?)?
         }
         Some(Ok(Token {
-            token: TokenType::Identifier,
+            token: TokenType::Identifier(_),
             ..
         })) => {
             let identifier = parse_identifier(tokens);
@@ -48,7 +57,7 @@ where
             to: *end,
         })?,
         Some(Ok(Token { token, start, .. })) => Err(ParserErrors::UnexpectedToken {
-            token: *token,
+            token: token.clone(),
             loc: *start,
         })?,
         Some(Err(e)) => Err(ParserErrors::LexerError(e.clone()))?,
@@ -91,31 +100,26 @@ mod tests {
                 &mut [
                     Ok(Token {
                         token: TokenType::OpeningParenthesis,
-                        value: "(".to_string(),
                         start: (0, 0),
                         end: (0, 0),
                     }),
                     Ok(Token {
-                        token: TokenType::Literal,
-                        value: "6".to_string(),
+                        token: TokenType::Literal("6".into()),
                         start: (0, 1),
                         end: (0, 1),
                     }),
                     Ok(Token {
-                        token: TokenType::Operator,
-                        value: "+".to_string(),
+                        token: TokenType::Operator(Operator::Add),
                         start: (0, 2),
                         end: (0, 2),
                     }),
                     Ok(Token {
-                        token: TokenType::Literal,
-                        value: "9".to_string(),
+                        token: TokenType::Literal("9".into()),
                         start: (0, 3),
                         end: (0, 3),
                     }),
                     Ok(Token {
                         token: TokenType::ClosingParenthesis,
-                        value: ")".to_string(),
                         start: (0, 4),
                         end: (0, 4),
                     }),
@@ -136,55 +140,46 @@ mod tests {
                 &mut [
                     Ok(Token {
                         token: TokenType::OpeningParenthesis,
-                        value: "(".to_string(),
                         start: (0, 0),
                         end: (0, 0),
                     }),
                     Ok(Token {
-                        token: TokenType::Literal,
-                        value: "6".to_string(),
+                        token: TokenType::Literal("6".into()),
                         start: (0, 1),
                         end: (0, 1),
                     }),
                     Ok(Token {
-                        token: TokenType::Operator,
-                        value: "*".to_string(),
+                        token: TokenType::Operator(Operator::Multiply),
                         start: (0, 2),
                         end: (0, 2),
                     }),
                     Ok(Token {
                         token: TokenType::OpeningParenthesis,
-                        value: "(".to_string(),
                         start: (0, 3),
                         end: (0, 3),
                     }),
                     Ok(Token {
-                        token: TokenType::Literal,
-                        value: "9".to_string(),
+                        token: TokenType::Literal("9".into()),
                         start: (0, 4),
                         end: (0, 4),
                     }),
                     Ok(Token {
-                        token: TokenType::Operator,
-                        value: "+".to_string(),
+                        token: TokenType::Operator(Operator::Add),
                         start: (0, 5),
                         end: (0, 5),
                     }),
                     Ok(Token {
-                        token: TokenType::Literal,
-                        value: "5".to_string(),
+                        token: TokenType::Literal("5".into()),
                         start: (0, 6),
                         end: (0, 6),
                     }),
                     Ok(Token {
                         token: TokenType::ClosingParenthesis,
-                        value: ")".to_string(),
                         start: (0, 7),
                         end: (0, 7),
                     }),
                     Ok(Token {
                         token: TokenType::ClosingParenthesis,
-                        value: ")".to_string(),
                         start: (0, 8),
                         end: (0, 8),
                     }),
@@ -209,55 +204,46 @@ mod tests {
                 &mut [
                     Ok(Token {
                         token: TokenType::OpeningParenthesis,
-                        value: "(".to_string(),
                         start: (0, 0),
                         end: (0, 0),
                     }),
                     Ok(Token {
                         token: TokenType::OpeningParenthesis,
-                        value: "(".to_string(),
                         start: (0, 1),
                         end: (0, 1),
                     }),
                     Ok(Token {
-                        token: TokenType::Literal,
-                        value: "4".to_string(),
+                        token: TokenType::Literal("4".into()),
                         start: (0, 2),
                         end: (0, 2),
                     }),
                     Ok(Token {
-                        token: TokenType::Operator,
-                        value: "+".to_string(),
+                        token: TokenType::Operator(Operator::Add),
                         start: (0, 3),
                         end: (0, 3),
                     }),
                     Ok(Token {
-                        token: TokenType::Literal,
-                        value: "9".to_string(),
+                        token: TokenType::Literal("9".into()),
                         start: (0, 4),
                         end: (0, 4),
                     }),
                     Ok(Token {
                         token: TokenType::ClosingParenthesis,
-                        value: ")".to_string(),
                         start: (0, 5),
                         end: (0, 5),
                     }),
                     Ok(Token {
-                        token: TokenType::Operator,
-                        value: "*".to_string(),
+                        token: TokenType::Operator(Operator::Multiply),
                         start: (0, 6),
                         end: (0, 6),
                     }),
                     Ok(Token {
-                        token: TokenType::Literal,
-                        value: "1".to_string(),
+                        token: TokenType::Literal("1".into()),
                         start: (0, 7),
                         end: (0, 7),
                     }),
                     Ok(Token {
                         token: TokenType::ClosingParenthesis,
-                        value: ")".to_string(),
                         start: (0, 8),
                         end: (0, 8),
                     }),
@@ -282,79 +268,66 @@ mod tests {
                 &mut [
                     Ok(Token {
                         token: TokenType::OpeningParenthesis,
-                        value: "(".to_string(),
                         start: (0, 0),
                         end: (0, 0),
                     }),
                     Ok(Token {
                         token: TokenType::OpeningParenthesis,
-                        value: "(".to_string(),
                         start: (0, 1),
                         end: (0, 1),
                     }),
                     Ok(Token {
-                        token: TokenType::Literal,
-                        value: "4".to_string(),
+                        token: TokenType::Literal("4".into()),
                         start: (0, 2),
                         end: (0, 2),
                     }),
                     Ok(Token {
-                        token: TokenType::Operator,
-                        value: "+".to_string(),
+                        token: TokenType::Operator(Operator::Add),
                         start: (0, 3),
                         end: (0, 3),
                     }),
                     Ok(Token {
-                        token: TokenType::Literal,
-                        value: "9".to_string(),
+                        token: TokenType::Literal("9".into()),
                         start: (0, 4),
                         end: (0, 4),
                     }),
                     Ok(Token {
                         token: TokenType::ClosingParenthesis,
-                        value: ")".to_string(),
                         start: (0, 5),
                         end: (0, 5),
                     }),
                     Ok(Token {
-                        token: TokenType::Operator,
-                        value: "*".to_string(),
+                        token: TokenType::Operator(Operator::Multiply),
                         start: (0, 6),
                         end: (0, 6),
                     }),
                     Ok(Token {
-                        token: TokenType::Literal,
-                        value: "1".to_string(),
+                        token: TokenType::Literal("1".into()),
                         start: (0, 7),
                         end: (0, 7),
                     }),
                     Ok(Token {
-                        token: TokenType::Operator,
-                        value: "+".to_string(),
+                        token: TokenType::Operator(Operator::Add),
                         start: (0, 8),
                         end: (0, 8),
                     }),
                     Ok(Token {
-                        token: TokenType::Literal,
-                        value: "6".to_string(),
+                        token: TokenType::Literal("6".into()),
                         start: (0, 9),
                         end: (0, 9),
                     }),
                     Ok(Token {
-                        token: TokenType::Operator,
-                        value: "*".to_string(),
+                        token: TokenType::Operator(Operator::Multiply),
                         start: (0, 10),
                         end: (0, 10),
                     }),
                     Ok(Token {
-                        token: TokenType::Literal,
-                        value: "2".to_string(),
+                        token: TokenType::Literal("2".into()),
                         start: (0, 11),
                         end: (0, 11),
                     }),
                     Ok(Token {
                         token: TokenType::ClosingParenthesis,
-                        value: ")".to_string(),
                         start: (0, 12),
                         end: (0, 12),
                     }),

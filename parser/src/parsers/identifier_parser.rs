@@ -15,7 +15,15 @@ pub fn parse_identifier<I>(tokens: &mut Peekable<I>) -> Result<Node, ParserError
 where
     I: Iterator<Item = Result<Token, LexerErrors>>,
 {
-    let Token { value, .. } = tokens.next().unwrap().unwrap();
+    let value = if let Some(Ok(Token {
+        token: TokenType::Identifier(value),
+        ..
+    })) = tokens.next()
+    {
+        value
+    } else {
+        unreachable!()
+    };
 
     Ok(match tokens.peek() {
         Some(Ok(Token {
@@ -26,13 +34,13 @@ where
             parse_operation_if_operator_follows(
                 tokens,
                 Node::FunctionCall {
-                    name: value.to_owned(),
+                    name: value.to_string(),
                     arguments: function_arguments?,
                 },
             )?
         }
         Some(Ok(_)) => {
-            parse_operation_if_operator_follows(tokens, Node::VariableReference(value.to_owned()))?
+            parse_operation_if_operator_follows(tokens, Node::VariableReference(value.to_string()))?
         }
         Some(Err(e)) => Err(ParserErrors::LexerError(e.clone()))?,
         None => Err(ParserErrors::EndOfInput {
@@ -54,14 +62,12 @@ mod tests {
             parse_identifier(
                 &mut [
                     Ok(Token {
-                        token: TokenType::Identifier,
-                        value: "x".to_string(),
+                        token: TokenType::Identifier("x".into()),
                         start: (0, 0),
                         end: (0, 0),
                     }),
                     Ok(Token {
                         token: TokenType::Semicolon,
-                        value: ";".to_string(),
                         start: (0, 1),
                         end: (0, 1),
                     })
@@ -77,20 +83,17 @@ mod tests {
             parse_identifier(
                 &mut [
                     Ok(Token {
-                        token: TokenType::Identifier,
-                        value: "x".to_string(),
+                        token: TokenType::Identifier("x".into()),
                         start: (0, 0),
                         end: (0, 0),
                     }),
                     Ok(Token {
                         token: TokenType::OpeningParenthesis,
-                        value: "(".to_string(),
                         start: (0, 1),
                         end: (0, 1),
                     }),
                     Ok(Token {
                         token: TokenType::ClosingParenthesis,
-                        value: ")".to_string(),
                         start: (0, 2),
                         end: (0, 2),
                     }),

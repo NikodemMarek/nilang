@@ -36,7 +36,7 @@ where
         loop {
             match tokens.peek() {
                 Some(Ok(Token {
-                    token: TokenType::Literal,
+                    token: TokenType::Literal(_),
                     ..
                 })) => {
                     let literal = parse_literal(tokens);
@@ -61,7 +61,7 @@ where
                     }
                 }
                 Some(Ok(Token {
-                    token: TokenType::Identifier,
+                    token: TokenType::Identifier(_),
                     ..
                 })) => {
                     let identifier = parse_identifier(tokens);
@@ -118,7 +118,12 @@ where
                     break;
                 }
                 Some(Ok(Token { start, .. })) => Err(ParserErrors::ExpectedTokens {
-                    tokens: Vec::from([TokenType::Identifier, TokenType::ClosingParenthesis]),
+                    tokens: Vec::from([
+                        TokenType::Identifier("".into()),
+                        TokenType::Literal("".into()),
+                        TokenType::OpeningParenthesis,
+                        TokenType::ClosingParenthesis,
+                    ]),
                     loc: *start,
                 })?,
                 Some(_) | None => Err(ParserErrors::EndOfInput {
@@ -147,31 +152,26 @@ mod tests {
                 &mut [
                     Ok(Token {
                         token: TokenType::OpeningParenthesis,
-                        value: "(".to_string(),
                         start: (0, 0),
                         end: (0, 0),
                     }),
                     Ok(Token {
-                        token: TokenType::Literal,
-                        value: "5".to_string(),
+                        token: TokenType::Literal("5".into()),
                         start: (0, 1),
                         end: (0, 1),
                     }),
                     Ok(Token {
                         token: TokenType::Comma,
-                        value: ",".to_string(),
                         start: (0, 2),
                         end: (0, 2),
                     }),
                     Ok(Token {
-                        token: TokenType::Identifier,
-                        value: "x".to_string(),
+                        token: TokenType::Identifier("x".into()),
                         start: (0, 3),
                         end: (0, 3),
                     }),
                     Ok(Token {
                         token: TokenType::ClosingParenthesis,
-                        value: ")".to_string(),
                         start: (0, 4),
                         end: (0, 4),
                     }),
@@ -188,31 +188,26 @@ mod tests {
                 &mut [
                     Ok(Token {
                         token: TokenType::OpeningParenthesis,
-                        value: "(".to_string(),
                         start: (0, 0),
                         end: (0, 0),
                     }),
                     Ok(Token {
-                        token: TokenType::Identifier,
-                        value: "x".to_string(),
+                        token: TokenType::Identifier("x".into()),
                         start: (0, 1),
                         end: (0, 1),
                     }),
                     Ok(Token {
-                        token: TokenType::Operator,
-                        value: "+".to_string(),
+                        token: TokenType::Operator(Operator::Add),
                         start: (0, 2),
                         end: (0, 2),
                     }),
                     Ok(Token {
-                        token: TokenType::Literal,
-                        value: "4".to_string(),
+                        token: TokenType::Literal("4".into()),
                         start: (0, 3),
                         end: (0, 3),
                     }),
                     Ok(Token {
                         token: TokenType::ClosingParenthesis,
-                        value: ")".to_string(),
                         start: (0, 4),
                         end: (0, 4),
                     }),

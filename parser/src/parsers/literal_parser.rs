@@ -1,15 +1,26 @@
 use std::iter::Peekable;
 
 use errors::{LexerErrors, ParserErrors};
-use nilang_types::{nodes::Node, tokens::Token};
+use nilang_types::{
+    nodes::Node,
+    tokens::{Token, TokenType},
+};
 
 pub fn parse_literal<I>(tokens: &mut Peekable<I>) -> Result<Node, ParserErrors>
 where
     I: Iterator<Item = Result<Token, LexerErrors>>,
 {
-    let Token {
-        value, start, end, ..
-    } = tokens.next().unwrap().unwrap();
+    let (value, start, end) = if let Some(Ok(Token {
+        token: TokenType::Literal(value),
+        start,
+        end,
+        ..
+    })) = tokens.next()
+    {
+        (value, start, end)
+    } else {
+        unreachable!()
+    };
 
     Ok(match value.parse() {
         Ok(parsed) => Node::Number(parsed),
@@ -34,8 +45,7 @@ mod tests {
         assert_eq!(
             parse_literal(
                 &mut [Ok(Token {
-                    token: TokenType::Literal,
-                    value: "54".to_string(),
+                    token: TokenType::Literal("54".into()),
                     start: (0, 0),
                     end: (0, 2),
                 })]
@@ -48,8 +58,7 @@ mod tests {
         assert_eq!(
             parse_literal(
                 &mut [Ok(Token {
-                    token: TokenType::Literal,
-                    value: "6.".to_string(),
+                    token: TokenType::Literal("6.".into()),
                     start: (0, 0),
                     end: (0, 2),
                 })]
@@ -62,8 +71,7 @@ mod tests {
         assert_eq!(
             parse_literal(
                 &mut [Ok(Token {
-                    token: TokenType::Literal,
-                    value: ".2".to_string(),
+                    token: TokenType::Literal(".2".into()),
                     start: (0, 0),
                     end: (0, 2),
                 })]
@@ -76,8 +84,7 @@ mod tests {
         assert_eq!(
             parse_literal(
                 &mut [Ok(Token {
-                    token: TokenType::Literal,
-                    value: "8.5".to_string(),
+                    token: TokenType::Literal("8.5".into()),
                     start: (0, 0),
                     end: (0, 2),
                 })]

@@ -14,7 +14,7 @@ where
 {
     let scope_start = match tokens.peek() {
         Some(Ok(Token { start, .. })) => (start.0, start.1 - 1),
-        Some(_) | None => Err(ParserErrors::ThisNeverHappens)?,
+        Some(_) | None => unreachable!(),
     };
 
     let mut in_scope = Vec::new();

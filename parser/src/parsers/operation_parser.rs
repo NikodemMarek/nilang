@@ -17,7 +17,7 @@ where
 {
     Ok(
         if let Some(Ok(Token {
-            token: TokenType::Operator,
+            token: TokenType::Operator(_),
             ..
         })) = tokens.peek()
         {
@@ -38,7 +38,7 @@ where
 {
     Ok(
         if let Some(Ok(Token {
-            token: TokenType::Operator,
+            token: TokenType::Operator(_),
             ..
         })) = tokens.peek()
         {
@@ -58,15 +58,15 @@ fn parse_operation<I>(
 where
     I: Iterator<Item = Result<Token, LexerErrors>>,
 {
-    let Token { value, start, .. } = tokens.next().unwrap().unwrap();
-
-    let operator = match value.as_str() {
-        "+" => Operator::Add,
-        "-" => Operator::Subtract,
-        "*" => Operator::Multiply,
-        "/" => Operator::Divide,
-        "%" => Operator::Modulo,
-        _ => Err(ParserErrors::ThisNeverHappens)?,
+    let (operator, start) = if let Some(Ok(Token {
+        token: TokenType::Operator(operator),
+        start,
+        ..
+    })) = tokens.next()
+    {
+        (operator, start)
+    } else {
+        unreachable!()
     };
 
     Ok(match preceeding {
@@ -177,26 +177,22 @@ mod tests {
             parse_operation_if_operator_follows(
                 &mut [
                     Ok(Token {
-                        token: TokenType::Operator,
-                        value: "+".to_string(),
+                        token: TokenType::Operator(Operator::Add),
                         start: (0, 1),
                         end: (0, 1),
                     }),
                     Ok(Token {
-                        token: TokenType::Literal,
-                        value: "9".to_string(),
+                        token: TokenType::Literal("9".into()),
                         start: (0, 2),
                         end: (0, 2),
                     }),
                     Ok(Token {
-                        token: TokenType::Operator,
-                        value: "+".to_string(),
+                        token: TokenType::Operator(Operator::Add),
                         start: (0, 3),
                         end: (0, 3),
                     }),
                     Ok(Token {
-                        token: TokenType::Literal,
-                        value: "5".to_string(),
+                        token: TokenType::Literal("5".into()),
                         start: (0, 4),
                         end: (0, 4),
                     }),
@@ -224,14 +220,12 @@ mod tests {
             parse_operation(
                 &mut [
                     Ok(Token {
-                        token: TokenType::Operator,
-                        value: "+".to_string(),
+                        token: TokenType::Operator(Operator::Add),
                         start: (0, 1),
                         end: (0, 1),
                     }),
                     Ok(Token {
-                        token: TokenType::Literal,
-                        value: "9".to_string(),
+                        token: TokenType::Literal("9".into()),
                         start: (0, 2),
                         end: (0, 2),
                     })
@@ -253,14 +247,12 @@ mod tests {
             parse_operation(
                 &mut [
                     Ok(Token {
-                        token: TokenType::Operator,
-                        value: "-".to_string(),
+                        token: TokenType::Operator(Operator::Subtract),
                         start: (0, 1),
                         end: (0, 1),
                     }),
                     Ok(Token {
-                        token: TokenType::Literal,
-                        value: "7.5".to_string(),
+                        token: TokenType::Literal("7.5".into()),
                         start: (0, 2),
                         end: (0, 4),
                     })
@@ -282,14 +274,12 @@ mod tests {
             parse_operation(
                 &mut [
                     Ok(Token {
-                        token: TokenType::Operator,
-                        value: "*".to_string(),
+                        token: TokenType::Operator(Operator::Multiply),
                         start: (0, 1),
                         end: (0, 1),
                     }),
                     Ok(Token {
-                        token: TokenType::Literal,
-                        value: "4".to_string(),
+                        token: TokenType::Literal("4".into()),
                         start: (0, 4),
                         end: (0, 4),
                     })
@@ -311,14 +301,12 @@ mod tests {
             parse_operation(
                 &mut [
                     Ok(Token {
-                        token: TokenType::Operator,
-                        value: "/".to_string(),
+                        token: TokenType::Operator(Operator::Divide),
                         start: (0, 1),
                         end: (0, 1),
                     }),
                     Ok(Token {
-                        token: TokenType::Literal,
-                        value: "1".to_string(),
+                        token: TokenType::Literal("1".into()),
                         start: (0, 2),
                         end: (0, 2),
                     })
@@ -340,14 +328,12 @@ mod tests {
             parse_operation(
                 &mut [
                     Ok(Token {
-                        token: TokenType::Operator,
-                        value: "%".to_string(),
+                        token: TokenType::Operator(Operator::Modulo),
                         start: (0, 1),
                         end: (0, 1),
                     }),
                     Ok(Token {
-                        token: TokenType::Literal,
-                        value: "1.5".to_string(),
+                        token: TokenType::Literal("1.5".into()),
                         start: (0, 2),
                         end: (0, 4),
                     })
@@ -372,26 +358,22 @@ mod tests {
             parse_operation_if_operator_follows(
                 &mut [
                     Ok(Token {
-                        token: TokenType::Operator,
-                        value: "+".to_string(),
+                        token: TokenType::Operator(Operator::Add),
                         start: (0, 1),
                         end: (0, 1),
                     }),
                     Ok(Token {
-                        token: TokenType::Literal,
-                        value: "9".to_string(),
+                        token: TokenType::Literal("9".into()),
                         start: (0, 2),
                         end: (0, 2),
                     }),
                     Ok(Token {
-                        token: TokenType::Operator,
-                        value: "+".to_string(),
+                        token: TokenType::Operator(Operator::Add),
                         start: (0, 3),
                         end: (0, 3),
                     }),
                     Ok(Token {
-                        token: TokenType::Literal,
-                        value: "5".to_string(),
+                        token: TokenType::Literal("5".into()),
                         start: (0, 4),
                         end: (0, 4),
                     }),
@@ -416,26 +398,22 @@ mod tests {
             parse_operation_if_operator_follows(
                 &mut [
                     Ok(Token {
-                        token: TokenType::Operator,
-                        value: "+".to_string(),
+                        token: TokenType::Operator(Operator::Add),
                         start: (0, 1),
                         end: (0, 1),
                     }),
                     Ok(Token {
-                        token: TokenType::Literal,
-                        value: "9".to_string(),
+                        token: TokenType::Literal("9".into()),
                         start: (0, 2),
                         end: (0, 2),
                     }),
                     Ok(Token {
-                        token: TokenType::Operator,
-                        value: "-".to_string(),
+                        token: TokenType::Operator(Operator::Subtract),
                         start: (0, 3),
                         end: (0, 3),
                     }),
                     Ok(Token {
-                        token: TokenType::Literal,
-                        value: "5".to_string(),
+                        token: TokenType::Literal("5".into()),
                         start: (0, 4),
                         end: (0, 4),
                     }),
@@ -460,26 +438,22 @@ mod tests {
             parse_operation_if_operator_follows(
                 &mut [
                     Ok(Token {
-                        token: TokenType::Operator,
-                        value: "*".to_string(),
+                        token: TokenType::Operator(Operator::Multiply),
                         start: (0, 1),
                         end: (0, 1),
                     }),
                     Ok(Token {
-                        token: TokenType::Literal,
-                        value: ".5".to_string(),
+                        token: TokenType::Literal(".5".into()),
                         start: (0, 2),
                         end: (0, 3),
                     }),
                     Ok(Token {
-                        token: TokenType::Operator,
-                        value: "*".to_string(),
+                        token: TokenType::Operator(Operator::Multiply),
                         start: (0, 4),
                         end: (0, 4),
                     }),
                     Ok(Token {
-                        token: TokenType::Literal,
-                        value: "7".to_string(),
+                        token: TokenType::Literal("7".into()),
                         start: (0, 5),
                         end: (0, 5),
                     }),
@@ -504,26 +478,22 @@ mod tests {
             parse_operation_if_operator_follows(
                 &mut [
                     Ok(Token {
-                        token: TokenType::Operator,
-                        value: "*".to_string(),
+                        token: TokenType::Operator(Operator::Multiply),
                         start: (0, 1),
                         end: (0, 1),
                     }),
                     Ok(Token {
-                        token: TokenType::Literal,
-                        value: ".5".to_string(),
+                        token: TokenType::Literal(".5".into()),
                         start: (0, 2),
                         end: (0, 3),
                     }),
                     Ok(Token {
-                        token: TokenType::Operator,
-                        value: "/".to_string(),
+                        token: TokenType::Operator(Operator::Divide),
                         start: (0, 4),
                         end: (0, 4),
                     }),
                     Ok(Token {
-                        token: TokenType::Literal,
-                        value: "7".to_string(),
+                        token: TokenType::Literal("7".into()),
                         start: (0, 5),
                         end: (0, 5),
                     }),
@@ -548,26 +518,22 @@ mod tests {
             parse_operation_if_operator_follows(
                 &mut [
                     Ok(Token {
-                        token: TokenType::Operator,
-                        value: "*".to_string(),
+                        token: TokenType::Operator(Operator::Multiply),
                         start: (0, 1),
                         end: (0, 1),
                     }),
                     Ok(Token {
-                        token: TokenType::Literal,
-                        value: ".5".to_string(),
+                        token: TokenType::Literal(".5".into()),
                         start: (0, 2),
                         end: (0, 3),
                     }),
                     Ok(Token {
-                        token: TokenType::Operator,
-                        value: "+".to_string(),
+                        token: TokenType::Operator(Operator::Add),
                         start: (0, 4),
                         end: (0, 4),
                     }),
                     Ok(Token {
-                        token: TokenType::Literal,
-                        value: "7".to_string(),
+                        token: TokenType::Literal("7".into()),
                         start: (0, 5),
                         end: (0, 5),
                     }),
@@ -592,38 +558,32 @@ mod tests {
             parse_operation_if_operator_follows(
                 &mut [
                     Ok(Token {
-                        token: TokenType::Operator,
-                        value: "/".to_string(),
+                        token: TokenType::Operator(Operator::Divide),
                         start: (0, 1),
                         end: (0, 1),
                     }),
                     Ok(Token {
-                        token: TokenType::Literal,
-                        value: ".5".to_string(),
+                        token: TokenType::Literal(".5".into()),
                         start: (0, 2),
                         end: (0, 3),
                     }),
                     Ok(Token {
-                        token: TokenType::Operator,
-                        value: "+".to_string(),
+                        token: TokenType::Operator(Operator::Add),
                         start: (0, 4),
                         end: (0, 4),
                     }),
                     Ok(Token {
-                        token: TokenType::Literal,
-                        value: "7".to_string(),
+                        token: TokenType::Literal("7".into()),
                         start: (0, 5),
                         end: (0, 5),
                     }),
                     Ok(Token {
-                        token: TokenType::Operator,
-                        value: "*".to_string(),
+                        token: TokenType::Operator(Operator::Multiply),
                         start: (0, 6),
                         end: (0, 6),
                     }),
                     Ok(Token {
-                        token: TokenType::Literal,
-                        value: "3".to_string(),
+                        token: TokenType::Literal("3".into()),
                         start: (0, 7),
                         end: (0, 7),
                     }),
@@ -652,38 +612,32 @@ mod tests {
             parse_operation_if_operator_follows(
                 &mut [
                     Ok(Token {
-                        token: TokenType::Operator,
-                        value: "-".to_string(),
+                        token: TokenType::Operator(Operator::Subtract),
                         start: (0, 2),
                         end: (0, 2),
                     }),
                     Ok(Token {
-                        token: TokenType::Literal,
-                        value: "5.5".to_string(),
+                        token: TokenType::Literal("5.5".into()),
                         start: (0, 3),
                         end: (0, 5),
                     }),
                     Ok(Token {
-                        token: TokenType::Operator,
-                        value: "*".to_string(),
+                        token: TokenType::Operator(Operator::Multiply),
                         start: (0, 6),
                         end: (0, 6),
                     }),
                     Ok(Token {
-                        token: TokenType::Literal,
-                        value: "8".to_string(),
+                        token: TokenType::Literal("8".into()),
                         start: (0, 7),
                         end: (0, 7),
                     }),
                     Ok(Token {
-                        token: TokenType::Operator,
-                        value: "+".to_string(),
+                        token: TokenType::Operator(Operator::Add),
                         start: (0, 8),
                         end: (0, 8),
                     }),
                     Ok(Token {
-                        token: TokenType::Literal,
-                        value: ".7".to_string(),
+                        token: TokenType::Literal(".7".into()),
                         start: (0, 9),
                         end: (0, 11),
                     }),

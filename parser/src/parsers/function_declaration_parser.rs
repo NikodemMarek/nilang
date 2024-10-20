@@ -14,19 +14,18 @@ where
 {
     match tokens.next() {
         Some(Ok(Token {
-            token: TokenType::Keyword,
-            value,
+            token: TokenType::Keyword(value),
             ..
         })) => {
-            if value != "fn" {
+            if *value != *"fn" {
                 Err(ParserErrors::ExpectedTokens {
-                    tokens: Vec::from([TokenType::Keyword]),
+                    tokens: Vec::from([TokenType::Keyword("fn".into())]),
                     loc: (0, 1),
                 })?
             }
         }
         Some(Ok(Token { start, .. })) => Err(ParserErrors::ExpectedTokens {
-            tokens: Vec::from([TokenType::Keyword]),
+            tokens: Vec::from([TokenType::Keyword("fn".into())]),
             loc: start,
         })?,
         Some(Err(e)) => Err(ParserErrors::LexerError(e))?,
@@ -37,12 +36,11 @@ where
 
     let name = match tokens.next() {
         Some(Ok(Token {
-            token: TokenType::Identifier,
-            value,
+            token: TokenType::Identifier(value),
             ..
-        })) => value.to_owned(),
+        })) => value,
         Some(Ok(Token { start, .. })) => Err(ParserErrors::ExpectedTokens {
-            tokens: Vec::from([TokenType::Identifier]),
+            tokens: Vec::from([TokenType::Identifier("".into())]),
             loc: start,
         })?,
         Some(Err(e)) => Err(ParserErrors::LexerError(e))?,
@@ -72,8 +70,7 @@ where
         loop {
             match tokens.next() {
                 Some(Ok(Token {
-                    token: TokenType::Identifier,
-                    value,
+                    token: TokenType::Identifier(value),
                     ..
                 })) => {
                     parameters.push(value.to_owned());
@@ -101,7 +98,10 @@ where
                     ..
                 })) => break,
                 Some(Ok(Token { start, .. })) => Err(ParserErrors::ExpectedTokens {
-                    tokens: Vec::from([TokenType::Identifier, TokenType::ClosingParenthesis]),
+                    tokens: Vec::from([
+                        TokenType::Identifier("".into()),
+                        TokenType::ClosingParenthesis,
+                    ]),
                     loc: start,
                 })?,
                 Some(_) | None => Err(ParserErrors::EndOfInput {
@@ -154,7 +154,7 @@ where
     };
 
     Ok(Node::FunctionDeclaration {
-        name,
+        name: name.to_string(),
         parameters,
         body: Box::new(Node::Scope(body)),
     })
@@ -175,56 +175,47 @@ mod tests {
             &parse_function_declaration(
                 &mut [
                     Ok(Token {
-                        token: TokenType::Keyword,
-                        value: "fn".to_string(),
+                        token: TokenType::Keyword("fn".into()),
                         start: (0, 0),
                         end: (0, 1),
                     }),
                     Ok(Token {
-                        token: TokenType::Identifier,
-                        value: "main".to_string(),
+                        token: TokenType::Identifier("main".into()),
                         start: (0, 3),
                         end: (0, 6),
                     }),
                     Ok(Token {
                         token: TokenType::OpeningParenthesis,
-                        value: "(".to_string(),
                         start: (0, 7),
                         end: (0, 7),
                     }),
                     Ok(Token {
                         token: TokenType::ClosingParenthesis,
-                        value: ")".to_string(),
                         start: (0, 8),
                         end: (0, 8),
                     }),
                     Ok(Token {
                         token: TokenType::OpeningBrace,
-                        value: "{".to_string(),
                         start: (0, 9),
                         end: (0, 9),
                     }),
                     Ok(Token {
-                        token: TokenType::Keyword,
-                        value: "rt".to_string(),
+                        token: TokenType::Keyword("rt".into()),
                         start: (0, 11),
                         end: (0, 12),
                     }),
                     Ok(Token {
-                        token: TokenType::Literal,
-                        value: "6".to_string(),
+                        token: TokenType::Literal("6".into()),
                         start: (0, 14),
                         end: (0, 14),
                     }),
                     Ok(Token {
                         token: TokenType::Semicolon,
-                        value: ";".to_string(),
                         start: (0, 15),
                         end: (0, 15),
                     }),
                     Ok(Token {
                         token: TokenType::ClosingBrace,
-                        value: "}".to_string(),
                         start: (0, 16),
                         end: (0, 16),
                     })

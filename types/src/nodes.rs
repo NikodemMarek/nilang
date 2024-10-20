@@ -3,7 +3,7 @@ pub enum Node {
     Program(Vec<Node>),
     FunctionDeclaration {
         name: String,
-        parameters: Vec<String>,
+        parameters: Vec<Box<str>>,
         body: Box<Node>,
     },
     FunctionCall {
@@ -25,7 +25,7 @@ pub enum Node {
     Return(Box<Node>),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Operator {
     Add,
     Subtract,

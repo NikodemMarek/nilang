@@ -49,8 +49,7 @@ impl<'a> Iterator for AggregatedIterator<'a> {
                                 self.loc.1 += 1;
 
                                 return Some(Ok(Token {
-                                    token: TokenType::Literal, // TODO: Add dot token
-                                    value: aggregation,
+                                    token: TokenType::Literal(aggregation.into()), // TODO: Add dot token
                                     start,
                                     end,
                                 }));
@@ -74,8 +73,7 @@ impl<'a> Iterator for AggregatedIterator<'a> {
                             Some('.') => {
                                 if dot {
                                     return Some(Ok(Token {
-                                        token: TokenType::Literal,
-                                        value: aggregation,
+                                        token: TokenType::Literal(aggregation.into()),
                                         start,
                                         end: self.loc,
                                     }));
@@ -92,8 +90,7 @@ impl<'a> Iterator for AggregatedIterator<'a> {
                                 self.loc.1 += 1;
 
                                 return Some(Ok(Token {
-                                    token: TokenType::Literal,
-                                    value: aggregation,
+                                    token: TokenType::Literal(aggregation.into()),
                                     start,
                                     end,
                                 }));
@@ -118,10 +115,9 @@ impl<'a> Iterator for AggregatedIterator<'a> {
 
                     return Some(Ok(Token {
                         token: match aggregation.as_str() {
-                            "fn" | "vr" | "rt" => TokenType::Keyword,
-                            _ => TokenType::Identifier,
+                            "fn" | "vr" | "rt" => TokenType::Keyword(aggregation.into()),
+                            _ => TokenType::Identifier(aggregation.into()),
                         },
-                        value: aggregation,
                         start,
                         end,
                     }));
@@ -131,9 +127,16 @@ impl<'a> Iterator for AggregatedIterator<'a> {
 
                     self.loc.1 += 1;
 
+                    let value = self.iter.next().unwrap();
                     return Some(Ok(Token {
-                        token: TokenType::Operator,
-                        value: self.iter.next().unwrap().to_string(),
+                        token: TokenType::Operator(match value {
+                            '+' => nilang_types::nodes::Operator::Add,
+                            '-' => nilang_types::nodes::Operator::Subtract,
+                            '*' => nilang_types::nodes::Operator::Multiply,
+                            '/' => nilang_types::nodes::Operator::Divide,
+                            '%' => nilang_types::nodes::Operator::Modulo,
+                            _ => unreachable!(),
+                        }),
                         start,
                         end: start,
                     }));
@@ -143,9 +146,9 @@ impl<'a> Iterator for AggregatedIterator<'a> {
 
                     self.loc.1 += 1;
 
+                    self.iter.next();
                     return Some(Ok(Token {
                         token: TokenType::OpeningParenthesis,
-                        value: self.iter.next().unwrap().to_string(),
                         start,
                         end: start,
                     }));
@@ -155,9 +158,9 @@ impl<'a> Iterator for AggregatedIterator<'a> {
 
                     self.loc.1 += 1;
 
+                    self.iter.next();
                     return Some(Ok(Token {
                         token: TokenType::ClosingParenthesis,
-                        value: self.iter.next().unwrap().to_string(),
                         start,
                         end: start,
                     }));
@@ -167,9 +170,9 @@ impl<'a> Iterator for AggregatedIterator<'a> {
 
                     self.loc.1 += 1;
 
+                    self.iter.next();
                     return Some(Ok(Token {
                         token: TokenType::OpeningBrace,
-                        value: self.iter.next().unwrap().to_string(),
                         start,
                         end: start,
                     }));
@@ -179,9 +182,9 @@ impl<'a> Iterator for AggregatedIterator<'a> {
 
                     self.loc.1 += 1;
 
+                    self.iter.next();
                     return Some(Ok(Token {
                         token: TokenType::ClosingBrace,
-                        value: self.iter.next().unwrap().to_string(),
                         start,
                         end: start,
                     }));
@@ -191,9 +194,9 @@ impl<'a> Iterator for AggregatedIterator<'a> {
 
                     self.loc.1 += 1;
 
+                    self.iter.next();
                     return Some(Ok(Token {
                         token: TokenType::Equals,
-                        value: self.iter.next().unwrap().to_string(),
                         start,
                         end: start,
                     }));
@@ -203,9 +206,9 @@ impl<'a> Iterator for AggregatedIterator<'a> {
 
                     self.loc.1 += 1;
 
+                    self.iter.next();
                     return Some(Ok(Token {
                         token: TokenType::Semicolon,
-                        value: self.iter.next().unwrap().to_string(),
                         start,
                         end: start,
                     }));
@@ -215,9 +218,9 @@ impl<'a> Iterator for AggregatedIterator<'a> {
 
                     self.loc.1 += 1;
 
+                    self.iter.next();
                     return Some(Ok(Token {
                         token: TokenType::Comma,
-                        value: self.iter.next().unwrap().to_string(),
                         start,
                         end: start,
                     }));

@@ -29,18 +29,18 @@ where
 {
     Ok(match tokens.peek() {
         Some(Ok(Token { token, start, .. })) => match token {
-            TokenType::Literal => parse_literal(tokens)?,
+            TokenType::Literal(_) => parse_literal(tokens)?,
             TokenType::OpeningParenthesis => parse_parenthesis(tokens)?,
             TokenType::OpeningBrace => parse_scope(tokens)?,
-            TokenType::Keyword => parse_keyword(tokens)?,
-            TokenType::Identifier => parse_identifier(tokens)?,
-            TokenType::Operator
+            TokenType::Keyword(_) => parse_keyword(tokens)?,
+            TokenType::Identifier(_) => parse_identifier(tokens)?,
+            TokenType::Operator(_)
             | TokenType::ClosingParenthesis
             | TokenType::ClosingBrace
             | TokenType::Equals
             | TokenType::Semicolon
             | TokenType::Comma => Err(ParserErrors::UnexpectedToken {
-                token: *token,
+                token: token.clone(),
                 loc: *start,
             })?,
         },
