@@ -1,6 +1,6 @@
 use std::iter::Peekable;
 
-use errors::ParserErrors;
+use errors::{LexerErrors, ParserErrors};
 use nilang_types::{
     nodes::Node,
     tokens::{Token, TokenType},
@@ -8,101 +8,155 @@ use nilang_types::{
 
 use super::parse;
 
-pub fn parse_function_declaration<'a, I>(
-    tokens: &mut Peekable<I>,
-    Token { end, .. }: &Token,
-) -> eyre::Result<Node>
+pub fn parse_function_declaration<I>(tokens: &mut Peekable<I>) -> Result<Node, ParserErrors>
 where
-    I: Iterator<Item = &'a Token>,
+    I: Iterator<Item = Result<Token, LexerErrors>>,
 {
-    Ok(Node::FunctionDeclaration {
-        name: match tokens.next() {
-            Some(Token {
-                token: TokenType::Identifier,
-                value,
-                ..
-            }) => value.to_owned(),
-            _ => Err(ParserErrors::ExpectedTokens {
-                tokens: Vec::from([TokenType::Identifier]),
-                loc: (end.0, end.1 + 1),
-            })?,
-        },
-        parameters: {
-            if !matches!(
-                tokens.next(),
-                Some(Token {
-                    token: TokenType::OpeningParenthesis,
-                    ..
-                })
-            ) {
+    match tokens.next() {
+        Some(Ok(Token {
+            token: TokenType::Keyword,
+            value,
+            ..
+        })) => {
+            if value != "fn" {
                 Err(ParserErrors::ExpectedTokens {
-                    tokens: Vec::from([TokenType::OpeningParenthesis]),
-                    loc: (end.0, end.1 + 1),
-                })?;
-            }
-
-            let mut parameters = Vec::new();
-
-            loop {
-                match tokens.next() {
-                    Some(Token {
-                        token: TokenType::Identifier,
-                        value,
-                        ..
-                    }) => {
-                        parameters.push(value.to_owned());
-
-                        match tokens.next() {
-                            Some(Token {
-                                token: TokenType::ClosingParenthesis,
-                                ..
-                            }) => break,
-                            Some(Token {
-                                token: TokenType::Comma,
-                                ..
-                            }) => {}
-                            Some(Token { start, .. }) => Err(ParserErrors::ExpectedTokens {
-                                tokens: Vec::from([
-                                    TokenType::Comma,
-                                    TokenType::ClosingParenthesis,
-                                ]),
-                                loc: *start,
-                            })?,
-                            None => Err(ParserErrors::EndOfInput {
-                                loc: (usize::MAX, usize::MAX),
-                            })?,
-                        }
-                    }
-                    Some(Token {
-                        token: TokenType::ClosingParenthesis,
-                        ..
-                    }) => break,
-                    Some(Token { start, .. }) => Err(ParserErrors::ExpectedTokens {
-                        tokens: Vec::from([
-                            TokenType::Identifier,
-                            TokenType::Literal,
-                            TokenType::ClosingParenthesis,
-                        ]),
-                        loc: *start,
-                    })?,
-                    None => Err(ParserErrors::EndOfInput {
-                        loc: (usize::MAX, usize::MAX),
-                    })?,
-                }
-            }
-
-            parameters
-        },
-        body: Box::new({
-            if let scope @ Node::Scope(_) = parse(&mut Vec::new(), tokens)? {
-                scope
-            } else {
-                Err(ParserErrors::ExpectedTokens {
-                    tokens: Vec::from([TokenType::OpeningBrace]),
-                    loc: (end.0, end.1 + 1),
+                    tokens: Vec::from([TokenType::Keyword]),
+                    loc: (0, 1),
                 })?
             }
-        }),
+        }
+        Some(Ok(Token { start, .. })) => Err(ParserErrors::ExpectedTokens {
+            tokens: Vec::from([TokenType::Keyword]),
+            loc: start,
+        })?,
+        Some(Err(e)) => Err(ParserErrors::LexerError(e))?,
+        None => Err(ParserErrors::EndOfInput {
+            loc: (usize::MAX, usize::MAX),
+        })?,
+    };
+
+    let name = match tokens.next() {
+        Some(Ok(Token {
+            token: TokenType::Identifier,
+            value,
+            ..
+        })) => value.to_owned(),
+        Some(Ok(Token { start, .. })) => Err(ParserErrors::ExpectedTokens {
+            tokens: Vec::from([TokenType::Identifier]),
+            loc: start,
+        })?,
+        Some(Err(e)) => Err(ParserErrors::LexerError(e))?,
+        None => Err(ParserErrors::EndOfInput {
+            loc: (usize::MAX, usize::MAX),
+        })?,
+    };
+
+    match tokens.next() {
+        Some(Ok(Token {
+            token: TokenType::OpeningParenthesis,
+            ..
+        })) => {}
+        Some(Ok(Token { start, .. })) => Err(ParserErrors::ExpectedTokens {
+            tokens: Vec::from([TokenType::OpeningParenthesis]),
+            loc: start,
+        })?,
+        Some(Err(e)) => Err(ParserErrors::LexerError(e))?,
+        None => Err(ParserErrors::EndOfInput {
+            loc: (usize::MAX, usize::MAX),
+        })?,
+    };
+
+    let parameters = {
+        let mut parameters = Vec::new();
+
+        loop {
+            match tokens.next() {
+                Some(Ok(Token {
+                    token: TokenType::Identifier,
+                    value,
+                    ..
+                })) => {
+                    parameters.push(value.to_owned());
+
+                    match tokens.next() {
+                        Some(Ok(Token {
+                            token: TokenType::ClosingParenthesis,
+                            ..
+                        })) => break,
+                        Some(Ok(Token {
+                            token: TokenType::Comma,
+                            ..
+                        })) => {}
+                        Some(Ok(Token { start, .. })) => Err(ParserErrors::ExpectedTokens {
+                            tokens: Vec::from([TokenType::Comma, TokenType::ClosingParenthesis]),
+                            loc: start,
+                        })?,
+                        Some(_) | None => Err(ParserErrors::EndOfInput {
+                            loc: (usize::MAX, usize::MAX),
+                        })?,
+                    }
+                }
+                Some(Ok(Token {
+                    token: TokenType::ClosingParenthesis,
+                    ..
+                })) => break,
+                Some(Ok(Token { start, .. })) => Err(ParserErrors::ExpectedTokens {
+                    tokens: Vec::from([TokenType::Identifier, TokenType::ClosingParenthesis]),
+                    loc: start,
+                })?,
+                Some(_) | None => Err(ParserErrors::EndOfInput {
+                    loc: (usize::MAX, usize::MAX),
+                })?,
+            }
+        }
+
+        parameters
+    };
+
+    match tokens.next() {
+        Some(Ok(Token {
+            token: TokenType::OpeningBrace,
+            ..
+        })) => {}
+        Some(Ok(Token { start, .. })) => Err(ParserErrors::ExpectedTokens {
+            tokens: Vec::from([TokenType::OpeningBrace]),
+            loc: start,
+        })?,
+        Some(Err(e)) => Err(ParserErrors::LexerError(e))?,
+        None => Err(ParserErrors::EndOfInput {
+            loc: (usize::MAX, usize::MAX),
+        })?,
+    };
+
+    let body = {
+        let mut program = Vec::new();
+
+        loop {
+            match tokens.peek() {
+                Some(Ok(Token {
+                    token: TokenType::ClosingBrace,
+                    ..
+                })) => {
+                    tokens.next();
+                    break;
+                }
+                Some(Ok(Token { .. })) => {
+                    program.push(parse(tokens)?);
+                }
+                Some(Err(e)) => Err(ParserErrors::LexerError(e.clone()))?,
+                None => Err(ParserErrors::EndOfInput {
+                    loc: (usize::MAX, usize::MAX),
+                })?,
+            }
+        }
+
+        program
+    };
+
+    Ok(Node::FunctionDeclaration {
+        name,
+        parameters,
+        body: Box::new(Node::Scope(body)),
     })
 }
 
@@ -113,68 +167,70 @@ mod tests {
         tokens::{Token, TokenType},
     };
 
+    use super::parse_function_declaration;
+
     #[test]
-    fn parse_function_declaration() {
+    fn test_parse_function_declaration() {
         assert_eq!(
-            &super::parse_function_declaration(
+            &parse_function_declaration(
                 &mut [
-                    Token {
+                    Ok(Token {
+                        token: TokenType::Keyword,
+                        value: "fn".to_string(),
+                        start: (0, 0),
+                        end: (0, 1),
+                    }),
+                    Ok(Token {
                         token: TokenType::Identifier,
                         value: "main".to_string(),
                         start: (0, 3),
                         end: (0, 6),
-                    },
-                    Token {
+                    }),
+                    Ok(Token {
                         token: TokenType::OpeningParenthesis,
                         value: "(".to_string(),
                         start: (0, 7),
                         end: (0, 7),
-                    },
-                    Token {
+                    }),
+                    Ok(Token {
                         token: TokenType::ClosingParenthesis,
                         value: ")".to_string(),
                         start: (0, 8),
                         end: (0, 8),
-                    },
-                    Token {
+                    }),
+                    Ok(Token {
                         token: TokenType::OpeningBrace,
                         value: "{".to_string(),
                         start: (0, 9),
                         end: (0, 9),
-                    },
-                    Token {
+                    }),
+                    Ok(Token {
                         token: TokenType::Keyword,
                         value: "rt".to_string(),
                         start: (0, 11),
                         end: (0, 12),
-                    },
-                    Token {
+                    }),
+                    Ok(Token {
                         token: TokenType::Literal,
                         value: "6".to_string(),
                         start: (0, 14),
                         end: (0, 14),
-                    },
-                    Token {
+                    }),
+                    Ok(Token {
                         token: TokenType::Semicolon,
                         value: ";".to_string(),
                         start: (0, 15),
                         end: (0, 15),
-                    },
-                    Token {
+                    }),
+                    Ok(Token {
                         token: TokenType::ClosingBrace,
                         value: "}".to_string(),
                         start: (0, 16),
                         end: (0, 16),
-                    },
+                    })
                 ]
-                .iter()
+                .into_iter()
                 .peekable(),
-                &Token {
-                    token: TokenType::Keyword,
-                    value: "fn".to_string(),
-                    start: (0, 0),
-                    end: (0, 1),
-                },
             )
             .unwrap(),
             &Node::FunctionDeclaration {

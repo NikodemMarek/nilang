@@ -1,67 +1,95 @@
 use std::iter::Peekable;
 
-use errors::ParserErrors;
+use errors::{LexerErrors, ParserErrors};
 use nilang_types::{
     nodes::Node,
     tokens::{Token, TokenType},
 };
 
-use crate::parsers::operation_parser::parse_operation_greedy;
+use super::{
+    identifier_parser::parse_identifier, literal_parser::parse_literal,
+    operation_parser::parse_operation_if_operator_follows, parenthesis_parser::parse_parenthesis,
+};
 
-use super::parse;
-
-pub fn parse_return<'a, I>(
-    program: &mut Vec<Node>,
-    tokens: &mut Peekable<I>,
-    Token { .. }: &Token,
-) -> eyre::Result<Node>
+pub fn parse_return<I>(tokens: &mut Peekable<I>) -> Result<Node, ParserErrors>
 where
-    I: Iterator<Item = &'a Token>,
+    I: Iterator<Item = Result<Token, LexerErrors>>,
 {
-    Ok(Node::Return(Box::new({
-        let tree = parse(program, tokens)?;
-
-        match tokens.peek() {
-            Some(Token {
-                token: TokenType::Semicolon,
-                ..
-            }) => {
-                tokens.next();
-                tree
+    match tokens.next() {
+        Some(Ok(Token {
+            token: TokenType::Keyword,
+            value,
+            ..
+        })) => {
+            if value != "rt" {
+                Err(ParserErrors::ExpectedTokens {
+                    tokens: Vec::from([TokenType::Keyword]),
+                    loc: (0, 1),
+                })?
             }
-            Some(Token {
-                token: TokenType::Operator,
-                ..
-            }) => {
-                let token = tokens.next().unwrap();
-                let operation = parse_operation_greedy(&mut Vec::from([tree]), tokens, token)?;
-
-                match tokens.peek() {
-                    Some(Token {
-                        token: TokenType::Semicolon,
-                        ..
-                    }) => {
-                        tokens.next();
-                        operation
-                    }
-                    Some(Token { end, .. }) => Err(ParserErrors::ExpectedTokens {
-                        tokens: Vec::from([TokenType::Semicolon]),
-                        loc: (end.0, end.1 + 1),
-                    })?,
-                    None => Err(ParserErrors::EndOfInput {
-                        loc: (usize::MAX, usize::MAX),
-                    })?,
-                }
-            }
-            Some(Token { end, .. }) => Err(ParserErrors::ExpectedTokens {
-                tokens: Vec::from([TokenType::Semicolon]),
-                loc: (end.0, end.1 + 1),
-            })?,
-            None => Err(ParserErrors::EndOfInput {
-                loc: (usize::MAX, usize::MAX),
-            })?,
         }
-    })))
+        Some(Ok(Token { start, .. })) => Err(ParserErrors::ExpectedTokens {
+            tokens: Vec::from([TokenType::Keyword]),
+            loc: start,
+        })?,
+        Some(Err(e)) => Err(ParserErrors::LexerError(e))?,
+        None => Err(ParserErrors::EndOfInput {
+            loc: (usize::MAX, usize::MAX),
+        })?,
+    };
+
+    let value = match tokens.peek() {
+        Some(Ok(Token {
+            token: TokenType::Literal,
+            ..
+        })) => {
+            let literal = parse_literal(tokens);
+            parse_operation_if_operator_follows(tokens, literal?)?
+        }
+        Some(Ok(Token {
+            token: TokenType::Identifier,
+            ..
+        })) => {
+            let identifier = parse_identifier(tokens);
+            parse_operation_if_operator_follows(tokens, identifier?)?
+        }
+        Some(Ok(Token {
+            token: TokenType::OpeningParenthesis,
+            ..
+        })) => {
+            let parenthesis = parse_parenthesis(tokens);
+            parse_operation_if_operator_follows(tokens, parenthesis?)?
+        }
+        Some(Ok(Token { end, .. })) => Err(ParserErrors::ExpectedTokens {
+            tokens: Vec::from([
+                TokenType::Literal,
+                TokenType::Identifier,
+                TokenType::OpeningParenthesis,
+            ]),
+            loc: *end,
+        })?,
+        Some(Err(e)) => Err(ParserErrors::LexerError(e.clone()))?,
+        None => Err(ParserErrors::EndOfInput {
+            loc: (usize::MAX, usize::MAX),
+        })?,
+    };
+
+    match tokens.next() {
+        Some(Ok(Token {
+            token: TokenType::Semicolon,
+            ..
+        })) => {}
+        Some(Ok(Token { start, .. })) => Err(ParserErrors::ExpectedTokens {
+            tokens: Vec::from([TokenType::Semicolon]),
+            loc: start,
+        })?,
+        Some(Err(e)) => Err(ParserErrors::LexerError(e))?,
+        None => Err(ParserErrors::EndOfInput {
+            loc: (usize::MAX, usize::MAX),
+        })?,
+    };
+
+    Ok(Node::Return(Box::new(value)))
 }
 
 #[cfg(test)]
@@ -74,84 +102,84 @@ mod tests {
     use crate::parsers::return_parser::parse_return;
 
     #[test]
-    fn parse_return_statement() {
-        let tokens = [
-            Token {
-                token: TokenType::Literal,
-                value: "6".to_string(),
-                start: (0, 3),
-                end: (0, 3),
-            },
-            Token {
-                token: TokenType::Semicolon,
-                value: ";".to_string(),
-                start: (0, 4),
-                end: (0, 4),
-            },
-        ];
+    fn test_parse_return() {
         assert_eq!(
             parse_return(
-                &mut Vec::new(),
-                &mut tokens.iter().peekable(),
-                &Token {
-                    token: TokenType::Identifier,
-                    value: "rt".to_string(),
-                    start: (0, 0),
-                    end: (0, 1),
-                },
+                &mut [
+                    Ok(Token {
+                        token: TokenType::Keyword,
+                        value: "rt".to_string(),
+                        start: (0, 0),
+                        end: (0, 1),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Literal,
+                        value: "6".to_string(),
+                        start: (0, 3),
+                        end: (0, 3),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Semicolon,
+                        value: ";".to_string(),
+                        start: (0, 4),
+                        end: (0, 4),
+                    }),
+                ]
+                .into_iter()
+                .peekable(),
             )
             .unwrap(),
             Node::Return(Box::new(Node::Number(6.)))
         );
 
-        let tokens = [
-            Token {
-                token: TokenType::OpeningParenthesis,
-                value: "(".to_string(),
-                start: (0, 3),
-                end: (0, 3),
-            },
-            Token {
-                token: TokenType::Literal,
-                value: "6".to_string(),
-                start: (0, 4),
-                end: (0, 4),
-            },
-            Token {
-                token: TokenType::Operator,
-                value: "+".to_string(),
-                start: (0, 5),
-                end: (0, 5),
-            },
-            Token {
-                token: TokenType::Literal,
-                value: "9".to_string(),
-                start: (0, 6),
-                end: (0, 6),
-            },
-            Token {
-                token: TokenType::ClosingParenthesis,
-                value: ")".to_string(),
-                start: (0, 7),
-                end: (0, 7),
-            },
-            Token {
-                token: TokenType::Semicolon,
-                value: ";".to_string(),
-                start: (0, 8),
-                end: (0, 8),
-            },
-        ];
         assert_eq!(
             parse_return(
-                &mut Vec::new(),
-                &mut tokens.iter().peekable(),
-                &Token {
-                    token: TokenType::Identifier,
-                    value: "rt".to_string(),
-                    start: (0, 0),
-                    end: (0, 1),
-                },
+                &mut [
+                    Ok(Token {
+                        token: TokenType::Keyword,
+                        value: "rt".to_string(),
+                        start: (0, 0),
+                        end: (0, 1),
+                    }),
+                    Ok(Token {
+                        token: TokenType::OpeningParenthesis,
+                        value: "(".to_string(),
+                        start: (0, 3),
+                        end: (0, 3),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Literal,
+                        value: "6".to_string(),
+                        start: (0, 4),
+                        end: (0, 4),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Operator,
+                        value: "+".to_string(),
+                        start: (0, 5),
+                        end: (0, 5),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Literal,
+                        value: "9".to_string(),
+                        start: (0, 6),
+                        end: (0, 6),
+                    }),
+                    Ok(Token {
+                        token: TokenType::ClosingParenthesis,
+                        value: ")".to_string(),
+                        start: (0, 7),
+                        end: (0, 7),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Semicolon,
+                        value: ";".to_string(),
+                        start: (0, 8),
+                        end: (0, 8),
+                    }),
+                ]
+                .into_iter()
+                .peekable(),
             )
             .unwrap(),
             Node::Return(Box::new(Node::Operation {
@@ -161,42 +189,42 @@ mod tests {
             }))
         );
 
-        let tokens = [
-            Token {
-                token: TokenType::Literal,
-                value: "6".to_string(),
-                start: (0, 3),
-                end: (0, 3),
-            },
-            Token {
-                token: TokenType::Operator,
-                value: "+".to_string(),
-                start: (0, 4),
-                end: (0, 4),
-            },
-            Token {
-                token: TokenType::Literal,
-                value: "9".to_string(),
-                start: (0, 5),
-                end: (0, 5),
-            },
-            Token {
-                token: TokenType::Semicolon,
-                value: ";".to_string(),
-                start: (0, 6),
-                end: (0, 6),
-            },
-        ];
         assert_eq!(
             parse_return(
-                &mut Vec::new(),
-                &mut tokens.iter().peekable(),
-                &Token {
-                    token: TokenType::Identifier,
-                    value: "rt".to_string(),
-                    start: (0, 0),
-                    end: (0, 1),
-                }
+                &mut [
+                    Ok(Token {
+                        token: TokenType::Keyword,
+                        value: "rt".to_string(),
+                        start: (0, 0),
+                        end: (0, 1),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Literal,
+                        value: "6".to_string(),
+                        start: (0, 3),
+                        end: (0, 3),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Operator,
+                        value: "+".to_string(),
+                        start: (0, 4),
+                        end: (0, 4),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Literal,
+                        value: "9".to_string(),
+                        start: (0, 5),
+                        end: (0, 5),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Semicolon,
+                        value: ";".to_string(),
+                        start: (0, 6),
+                        end: (0, 6),
+                    }),
+                ]
+                .into_iter()
+                .peekable(),
             )
             .unwrap(),
             Node::Return(Box::new(Node::Operation {
@@ -206,54 +234,54 @@ mod tests {
             }))
         );
 
-        let tokens = [
-            Token {
-                token: TokenType::Literal,
-                value: "6".to_string(),
-                start: (0, 3),
-                end: (0, 3),
-            },
-            Token {
-                token: TokenType::Operator,
-                value: "+".to_string(),
-                start: (0, 4),
-                end: (0, 4),
-            },
-            Token {
-                token: TokenType::Literal,
-                value: "9".to_string(),
-                start: (0, 5),
-                end: (0, 5),
-            },
-            Token {
-                token: TokenType::Operator,
-                value: "+".to_string(),
-                start: (0, 6),
-                end: (0, 6),
-            },
-            Token {
-                token: TokenType::Literal,
-                value: "5".to_string(),
-                start: (0, 7),
-                end: (0, 7),
-            },
-            Token {
-                token: TokenType::Semicolon,
-                value: ";".to_string(),
-                start: (0, 8),
-                end: (0, 8),
-            },
-        ];
         assert_eq!(
             parse_return(
-                &mut Vec::new(),
-                &mut tokens.iter().peekable(),
-                &Token {
-                    token: TokenType::Identifier,
-                    value: "rt".to_string(),
-                    start: (0, 0),
-                    end: (0, 1),
-                }
+                &mut [
+                    Ok(Token {
+                        token: TokenType::Keyword,
+                        value: "rt".to_string(),
+                        start: (0, 0),
+                        end: (0, 1),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Literal,
+                        value: "6".to_string(),
+                        start: (0, 3),
+                        end: (0, 3),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Operator,
+                        value: "+".to_string(),
+                        start: (0, 4),
+                        end: (0, 4),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Literal,
+                        value: "9".to_string(),
+                        start: (0, 5),
+                        end: (0, 5),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Operator,
+                        value: "+".to_string(),
+                        start: (0, 6),
+                        end: (0, 6),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Literal,
+                        value: "5".to_string(),
+                        start: (0, 7),
+                        end: (0, 7),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Semicolon,
+                        value: ";".to_string(),
+                        start: (0, 8),
+                        end: (0, 8),
+                    }),
+                ]
+                .into_iter()
+                .peekable(),
             )
             .unwrap(),
             Node::Return(Box::new(Node::Operation {

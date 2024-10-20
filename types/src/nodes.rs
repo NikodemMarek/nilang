@@ -1,5 +1,6 @@
 #[derive(Debug, Clone, PartialEq)]
 pub enum Node {
+    Program(Vec<Node>),
     FunctionDeclaration {
         name: String,
         parameters: Vec<String>,

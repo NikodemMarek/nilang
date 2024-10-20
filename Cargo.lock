@@ -64,7 +64,6 @@ name = "nilang-parser"
 version = "0.1.0"
 dependencies = [
  "errors",
- "eyre",
  "nilang-types",
 ]
 

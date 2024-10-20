@@ -39,56 +39,60 @@ mod tests {
 
     #[test]
     fn variable_declaration_with_number() {
-        let node = Node::VariableDeclaration {
-            name: String::from("a"),
-            value: Box::new(Node::Number(42.)),
-        };
-        let code = transform_variable_declaration(&node, &mut super::Scope::default());
-
         assert_eq!(
-            code.unwrap(),
-            Vec::from([String::from("movq $42, -8(%rbp)")])
+            transform_variable_declaration(
+                &(Node::VariableDeclaration {
+                    name: String::from("a"),
+                    value: Box::new(Node::Number(42.)),
+                }),
+                &mut super::Scope::default(),
+            )
+            .unwrap(),
+            [String::from("movq $42, -8(%rbp)")]
         );
     }
 
     #[test]
     fn variable_declaration_with_reference() {
-        let node = Node::VariableDeclaration {
-            name: String::from("a"),
-            value: Box::new(Node::VariableReference(String::from("b"))),
-        };
         let mut scope = super::Scope::default();
         let _ = scope.insert("b");
-        let code = transform_variable_declaration(&node, &mut scope);
 
         assert_eq!(
-            code.unwrap(),
-            Vec::from([
+            transform_variable_declaration(
+                &(Node::VariableDeclaration {
+                    name: String::from("a"),
+                    value: Box::new(Node::VariableReference(String::from("b"))),
+                }),
+                &mut scope,
+            )
+            .unwrap(),
+            [
                 String::from("movq -8(%rbp), %rax"),
                 String::from("movq %rax, -16(%rbp)")
-            ])
+            ]
         );
     }
 
     #[test]
     fn variable_declaration_with_operation() {
-        let node = Node::VariableDeclaration {
-            name: String::from("a"),
-            value: Box::new(Node::Operation {
-                operator: Operator::Add,
-                a: Box::new(Node::Number(1.)),
-                b: Box::new(Node::Number(2.)),
-            }),
-        };
-        let code = transform_variable_declaration(&node, &mut super::Scope::default());
-
         assert_eq!(
-            code.unwrap(),
-            Vec::from([
+            transform_variable_declaration(
+                &(Node::VariableDeclaration {
+                    name: String::from("a"),
+                    value: Box::new(Node::Operation {
+                        operator: Operator::Add,
+                        a: Box::new(Node::Number(1.)),
+                        b: Box::new(Node::Number(2.)),
+                    }),
+                }),
+                &mut super::Scope::default(),
+            )
+            .unwrap(),
+            [
                 String::from("movq $1, %rax"),
                 String::from("add $2, %rax"),
                 String::from("movq %rax, -8(%rbp)")
-            ])
+            ]
         );
     }
 }

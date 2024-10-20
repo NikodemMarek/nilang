@@ -28,14 +28,15 @@ pub fn space_bottom(lines: &[String]) -> Vec<String> {
 
 #[cfg(test)]
 mod tests {
-    #[test]
-    fn generate_function() {
-        let name = "main";
-        let code = Vec::from([String::from("push $6"), String::from("pop %rax")]);
-        let result = super::generate_function(name, &code);
+    use crate::utils::{generate_function, pad_lines, space_bottom};
 
+    #[test]
+    fn test_generate_function() {
         assert_eq!(
-            result,
+            generate_function(
+                "main",
+                &Vec::from([String::from("push $6"), String::from("pop %rax")]),
+            ),
             Vec::from([
                 String::from(".globl _main"),
                 String::from("_main:"),
@@ -48,17 +49,18 @@ mod tests {
     }
 
     #[test]
-    fn pad_lines() {
-        let lines = Vec::from([
-            String::from("push %rax"),
-            String::from("    pop %rax"),
-            String::new(),
-            String::from("    "),
-        ]);
-        let result = super::pad_lines(lines.iter(), 4);
-
+    fn test_pad_lines() {
         assert_eq!(
-            result,
+            pad_lines(
+                Vec::from([
+                    String::from("push %rax"),
+                    String::from("    pop %rax"),
+                    String::new(),
+                    String::from("    "),
+                ])
+                .iter(),
+                4,
+            ),
             Vec::from([
                 String::from("    push %rax"),
                 String::from("        pop %rax"),
@@ -69,12 +71,12 @@ mod tests {
     }
 
     #[test]
-    fn space_bottom() {
-        let lines = Vec::from([String::from("push %rax"), String::from("pop %rax")]);
-        let result = super::space_bottom(&lines);
-
+    fn test_space_bottom() {
         assert_eq!(
-            result,
+            space_bottom(&Vec::from([
+                String::from("push %rax"),
+                String::from("pop %rax"),
+            ])),
             Vec::from([
                 String::from("push %rax"),
                 String::from("pop %rax"),

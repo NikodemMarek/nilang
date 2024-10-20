@@ -1,6 +1,6 @@
 use std::iter::Peekable;
 
-use errors::ParserErrors;
+use errors::{LexerErrors, ParserErrors};
 use nilang_types::{
     nodes::{Node, Operator},
     tokens::{Token, TokenType},
@@ -8,36 +8,58 @@ use nilang_types::{
 
 use super::parse;
 
-pub fn parse_operation_greedy<'a, I>(
-    program: &mut Vec<Node>,
+pub fn parse_operation_if_operator_follows<I>(
     tokens: &mut Peekable<I>,
-    token: &Token,
-) -> eyre::Result<Node>
+    node: Node,
+) -> Result<Node, ParserErrors>
 where
-    I: Iterator<Item = &'a Token>,
+    I: Iterator<Item = Result<Token, LexerErrors>>,
 {
-    let operation = parse_operation(program, tokens, token)?;
-
-    if let Some(Token {
-        token: TokenType::Operator,
-        ..
-    }) = tokens.peek()
-    {
-        let operator = tokens.next().unwrap();
-        parse_operation_greedy(&mut Vec::from([operation]), tokens, operator)
-    } else {
-        Ok(operation)
-    }
+    Ok(
+        if let Some(Ok(Token {
+            token: TokenType::Operator,
+            ..
+        })) = tokens.peek()
+        {
+            let operation = parse_operation(tokens, node, true);
+            parse_operation_if_operator_follows(tokens, operation?)?
+        } else {
+            node
+        },
+    )
 }
 
-pub fn parse_operation<'a, I>(
-    program: &mut Vec<Node>,
+pub fn parse_operation_if_operator_follows_no_rearrange<I>(
     tokens: &mut Peekable<I>,
-    Token { value, start, .. }: &Token,
-) -> eyre::Result<Node>
+    node: Node,
+) -> Result<Node, ParserErrors>
 where
-    I: Iterator<Item = &'a Token>,
+    I: Iterator<Item = Result<Token, LexerErrors>>,
 {
+    Ok(
+        if let Some(Ok(Token {
+            token: TokenType::Operator,
+            ..
+        })) = tokens.peek()
+        {
+            let operation = parse_operation(tokens, node, false);
+            parse_operation_if_operator_follows(tokens, operation?)?
+        } else {
+            node
+        },
+    )
+}
+
+fn parse_operation<I>(
+    tokens: &mut Peekable<I>,
+    preceeding: Node,
+    rearrange: bool,
+) -> Result<Node, ParserErrors>
+where
+    I: Iterator<Item = Result<Token, LexerErrors>>,
+{
+    let Token { value, start, .. } = tokens.next().unwrap().unwrap();
+
     let operator = match value.as_str() {
         "+" => Operator::Add,
         "-" => Operator::Subtract,
@@ -47,57 +69,44 @@ where
         _ => Err(ParserErrors::ThisNeverHappens)?,
     };
 
-    let preceeding = match program.pop() {
-        Some(node) => node,
-        None => Err(ParserErrors::ExpectedTokens {
-            tokens: Vec::from([TokenType::Literal, TokenType::Keyword]),
-            loc: (start.0, start.1 - 1),
-        })?,
-    };
     Ok(match preceeding {
         a @ Node::Number(_) => Node::Operation {
             operator,
             a: Box::new(a),
-            b: Box::new(parse(program, tokens)?),
+            b: Box::new(parse(tokens)?),
         },
         a @ Node::VariableReference(_) | a @ Node::FunctionCall { .. } => Node::Operation {
             operator,
             a: Box::new(a),
-            b: Box::new(parse(program, tokens)?),
+            b: Box::new(parse(tokens)?),
         },
-        a @ Node::Operation { .. } => extend_operation(a, operator, parse(program, tokens)?)?,
-        Node::Return(value) => Node::Return(Box::new(match *value {
-            a @ Node::Number(_)
-            | a @ Node::VariableReference(_)
-            | a @ Node::FunctionCall { .. } => Node::Operation {
-                operator,
-                a: Box::new(a),
-                b: Box::new(parse(program, tokens)?),
-            },
-            a @ Node::Operation { .. } => extend_operation(a, operator, parse(program, tokens)?)?,
-            a @ Node::Scope(_) => Node::Operation {
-                operator,
-                a: Box::new(a),
-                b: Box::new(parse(program, tokens)?),
-            },
-            Node::Return(_)
-            | Node::FunctionDeclaration { .. }
-            | Node::VariableDeclaration { .. } => Err(ParserErrors::ThisNeverHappens)?,
-        })),
+        a @ Node::Operation { .. } => {
+            let following = parse(tokens)?;
+            if rearrange {
+                extend_operation(a, operator, following)?
+            } else {
+                Node::Operation {
+                    operator,
+                    a: Box::new(a),
+                    b: Box::new(following),
+                }
+            }
+        }
         a @ Node::Scope(_) => Node::Operation {
             operator,
             a: Box::new(a),
-            b: Box::new(parse(program, tokens)?),
+            b: Box::new(parse(tokens)?),
         },
-        Node::FunctionDeclaration { .. } | Node::VariableDeclaration { .. } => {
-            Err(ParserErrors::InvalidOperand {
-                loc: (start.0, start.1 - 1),
-            })?
-        }
+        Node::Return(_)
+        | Node::FunctionDeclaration { .. }
+        | Node::VariableDeclaration { .. }
+        | Node::Program(_) => Err(ParserErrors::InvalidOperand {
+            loc: (start.0, start.1 - 1),
+        })?,
     })
 }
 
-fn extend_operation(operation: Node, operator: Operator, node: Node) -> eyre::Result<Node> {
+fn extend_operation(operation: Node, operator: Operator, node: Node) -> Result<Node, ParserErrors> {
     if let Node::Operation {
         operator: prev_operator,
         a: prev_a,
@@ -159,41 +168,42 @@ mod tests {
     };
 
     use crate::parsers::operation_parser::{
-        extend_operation, parse_operation, parse_operation_greedy,
+        extend_operation, parse_operation, parse_operation_if_operator_follows,
     };
 
     #[test]
-    fn parse_operations_greedy() {
-        let tokens = [
-            Token {
-                token: TokenType::Literal,
-                value: "9".to_string(),
-                start: (0, 2),
-                end: (0, 2),
-            },
-            Token {
-                token: TokenType::Operator,
-                value: "+".to_string(),
-                start: (0, 3),
-                end: (0, 3),
-            },
-            Token {
-                token: TokenType::Literal,
-                value: "5".to_string(),
-                start: (0, 4),
-                end: (0, 4),
-            },
-        ];
+    fn test_parse_operation_if_operator_follows() {
         assert_eq!(
-            parse_operation_greedy(
-                &mut Vec::from([Node::Number(6.)]),
-                &mut tokens.iter().peekable(),
-                &Token {
-                    token: TokenType::Operator,
-                    value: "+".to_string(),
-                    start: (0, 1),
-                    end: (0, 1),
-                }
+            parse_operation_if_operator_follows(
+                &mut [
+                    Ok(Token {
+                        token: TokenType::Operator,
+                        value: "+".to_string(),
+                        start: (0, 1),
+                        end: (0, 1),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Literal,
+                        value: "9".to_string(),
+                        start: (0, 2),
+                        end: (0, 2),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Operator,
+                        value: "+".to_string(),
+                        start: (0, 3),
+                        end: (0, 3),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Literal,
+                        value: "5".to_string(),
+                        start: (0, 4),
+                        end: (0, 4),
+                    }),
+                ]
+                .into_iter()
+                .peekable(),
+                Node::Number(6.)
             )
             .unwrap(),
             Node::Operation {
@@ -209,23 +219,27 @@ mod tests {
     }
 
     #[test]
-    fn parse_simple_operations() {
-        let tokens = [Token {
-            token: TokenType::Literal,
-            value: "9".to_string(),
-            start: (0, 2),
-            end: (0, 2),
-        }];
+    fn test_simple_operations() {
         assert_eq!(
             parse_operation(
-                &mut Vec::from([Node::Number(6.)]),
-                &mut tokens.iter().peekable(),
-                &Token {
-                    token: TokenType::Operator,
-                    value: "+".to_string(),
-                    start: (0, 1),
-                    end: (0, 1),
-                },
+                &mut [
+                    Ok(Token {
+                        token: TokenType::Operator,
+                        value: "+".to_string(),
+                        start: (0, 1),
+                        end: (0, 1),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Literal,
+                        value: "9".to_string(),
+                        start: (0, 2),
+                        end: (0, 2),
+                    })
+                ]
+                .into_iter()
+                .peekable(),
+                Node::Number(6.),
+                true
             )
             .unwrap(),
             Node::Operation {
@@ -235,22 +249,26 @@ mod tests {
             }
         );
 
-        let tokens = [Token {
-            token: TokenType::Literal,
-            value: "7.5".to_string(),
-            start: (0, 2),
-            end: (0, 4),
-        }];
         assert_eq!(
             parse_operation(
-                &mut Vec::from([Node::Number(5.)]),
-                &mut tokens.iter().peekable(),
-                &Token {
-                    token: TokenType::Operator,
-                    value: "-".to_string(),
-                    start: (0, 1),
-                    end: (0, 1),
-                },
+                &mut [
+                    Ok(Token {
+                        token: TokenType::Operator,
+                        value: "-".to_string(),
+                        start: (0, 1),
+                        end: (0, 1),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Literal,
+                        value: "7.5".to_string(),
+                        start: (0, 2),
+                        end: (0, 4),
+                    })
+                ]
+                .into_iter()
+                .peekable(),
+                Node::Number(5.),
+                true
             )
             .unwrap(),
             Node::Operation {
@@ -260,22 +278,26 @@ mod tests {
             }
         );
 
-        let tokens = [Token {
-            token: TokenType::Literal,
-            value: "4".to_string(),
-            start: (0, 4),
-            end: (0, 4),
-        }];
         assert_eq!(
             parse_operation(
-                &mut Vec::from([Node::Number(0.3)]),
-                &mut tokens.iter().peekable(),
-                &Token {
-                    token: TokenType::Operator,
-                    value: "*".to_string(),
-                    start: (0, 3),
-                    end: (0, 3),
-                },
+                &mut [
+                    Ok(Token {
+                        token: TokenType::Operator,
+                        value: "*".to_string(),
+                        start: (0, 1),
+                        end: (0, 1),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Literal,
+                        value: "4".to_string(),
+                        start: (0, 4),
+                        end: (0, 4),
+                    })
+                ]
+                .into_iter()
+                .peekable(),
+                Node::Number(0.3),
+                true
             )
             .unwrap(),
             Node::Operation {
@@ -285,22 +307,26 @@ mod tests {
             }
         );
 
-        let tokens = [Token {
-            token: TokenType::Literal,
-            value: "1".to_string(),
-            start: (0, 2),
-            end: (0, 2),
-        }];
         assert_eq!(
             parse_operation(
-                &mut Vec::from([Node::Number(2.)]),
-                &mut tokens.iter().peekable(),
-                &Token {
-                    token: TokenType::Operator,
-                    value: "/".to_string(),
-                    start: (0, 1),
-                    end: (0, 1),
-                },
+                &mut [
+                    Ok(Token {
+                        token: TokenType::Operator,
+                        value: "/".to_string(),
+                        start: (0, 1),
+                        end: (0, 1),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Literal,
+                        value: "1".to_string(),
+                        start: (0, 2),
+                        end: (0, 2),
+                    })
+                ]
+                .into_iter()
+                .peekable(),
+                Node::Number(2.),
+                true
             )
             .unwrap(),
             Node::Operation {
@@ -310,22 +336,26 @@ mod tests {
             }
         );
 
-        let tokens = [Token {
-            token: TokenType::Literal,
-            value: "1.5".to_string(),
-            start: (0, 2),
-            end: (0, 4),
-        }];
         assert_eq!(
             parse_operation(
-                &mut Vec::from([Node::Number(5.)]),
-                &mut tokens.iter().peekable(),
-                &Token {
-                    token: TokenType::Operator,
-                    value: "%".to_string(),
-                    start: (0, 1),
-                    end: (0, 1),
-                },
+                &mut [
+                    Ok(Token {
+                        token: TokenType::Operator,
+                        value: "%".to_string(),
+                        start: (0, 1),
+                        end: (0, 1),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Literal,
+                        value: "1.5".to_string(),
+                        start: (0, 2),
+                        end: (0, 4),
+                    })
+                ]
+                .into_iter()
+                .peekable(),
+                Node::Number(5.),
+                true
             )
             .unwrap(),
             Node::Operation {
@@ -338,36 +368,37 @@ mod tests {
 
     #[test]
     fn parse_complex_operations() {
-        let tokens = [
-            Token {
-                token: TokenType::Literal,
-                value: "9".to_string(),
-                start: (0, 2),
-                end: (0, 2),
-            },
-            Token {
-                token: TokenType::Operator,
-                value: "+".to_string(),
-                start: (0, 3),
-                end: (0, 3),
-            },
-            Token {
-                token: TokenType::Literal,
-                value: "5".to_string(),
-                start: (0, 4),
-                end: (0, 4),
-            },
-        ];
         assert_eq!(
-            parse_operation_greedy(
-                &mut Vec::from([Node::Number(6.)]),
-                &mut tokens.iter().peekable(),
-                &Token {
-                    token: TokenType::Operator,
-                    value: "+".to_string(),
-                    start: (0, 1),
-                    end: (0, 1),
-                }
+            parse_operation_if_operator_follows(
+                &mut [
+                    Ok(Token {
+                        token: TokenType::Operator,
+                        value: "+".to_string(),
+                        start: (0, 1),
+                        end: (0, 1),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Literal,
+                        value: "9".to_string(),
+                        start: (0, 2),
+                        end: (0, 2),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Operator,
+                        value: "+".to_string(),
+                        start: (0, 3),
+                        end: (0, 3),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Literal,
+                        value: "5".to_string(),
+                        start: (0, 4),
+                        end: (0, 4),
+                    }),
+                ]
+                .into_iter()
+                .peekable(),
+                Node::Number(6.),
             )
             .unwrap(),
             Node::Operation {
@@ -381,36 +412,37 @@ mod tests {
             }
         );
 
-        let tokens = [
-            Token {
-                token: TokenType::Literal,
-                value: "9".to_string(),
-                start: (0, 2),
-                end: (0, 2),
-            },
-            Token {
-                token: TokenType::Operator,
-                value: "-".to_string(),
-                start: (0, 3),
-                end: (0, 3),
-            },
-            Token {
-                token: TokenType::Literal,
-                value: "5".to_string(),
-                start: (0, 4),
-                end: (0, 4),
-            },
-        ];
         assert_eq!(
-            parse_operation_greedy(
-                &mut Vec::from([Node::Number(6.)]),
-                &mut tokens.iter().peekable(),
-                &Token {
-                    token: TokenType::Operator,
-                    value: "+".to_string(),
-                    start: (0, 1),
-                    end: (0, 1),
-                }
+            parse_operation_if_operator_follows(
+                &mut [
+                    Ok(Token {
+                        token: TokenType::Operator,
+                        value: "+".to_string(),
+                        start: (0, 1),
+                        end: (0, 1),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Literal,
+                        value: "9".to_string(),
+                        start: (0, 2),
+                        end: (0, 2),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Operator,
+                        value: "-".to_string(),
+                        start: (0, 3),
+                        end: (0, 3),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Literal,
+                        value: "5".to_string(),
+                        start: (0, 4),
+                        end: (0, 4),
+                    }),
+                ]
+                .into_iter()
+                .peekable(),
+                Node::Number(6.),
             )
             .unwrap(),
             Node::Operation {
@@ -424,36 +456,37 @@ mod tests {
             }
         );
 
-        let tokens = [
-            Token {
-                token: TokenType::Literal,
-                value: ".5".to_string(),
-                start: (0, 2),
-                end: (0, 3),
-            },
-            Token {
-                token: TokenType::Operator,
-                value: "*".to_string(),
-                start: (0, 4),
-                end: (0, 4),
-            },
-            Token {
-                token: TokenType::Literal,
-                value: "7".to_string(),
-                start: (0, 5),
-                end: (0, 5),
-            },
-        ];
         assert_eq!(
-            parse_operation_greedy(
-                &mut Vec::from([Node::Number(6.)]),
-                &mut tokens.iter().peekable(),
-                &Token {
-                    token: TokenType::Operator,
-                    value: "*".to_string(),
-                    start: (0, 1),
-                    end: (0, 1),
-                }
+            parse_operation_if_operator_follows(
+                &mut [
+                    Ok(Token {
+                        token: TokenType::Operator,
+                        value: "*".to_string(),
+                        start: (0, 1),
+                        end: (0, 1),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Literal,
+                        value: ".5".to_string(),
+                        start: (0, 2),
+                        end: (0, 3),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Operator,
+                        value: "*".to_string(),
+                        start: (0, 4),
+                        end: (0, 4),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Literal,
+                        value: "7".to_string(),
+                        start: (0, 5),
+                        end: (0, 5),
+                    }),
+                ]
+                .into_iter()
+                .peekable(),
+                Node::Number(6.),
             )
             .unwrap(),
             Node::Operation {
@@ -467,36 +500,37 @@ mod tests {
             }
         );
 
-        let tokens = [
-            Token {
-                token: TokenType::Literal,
-                value: ".5".to_string(),
-                start: (0, 2),
-                end: (0, 3),
-            },
-            Token {
-                token: TokenType::Operator,
-                value: "/".to_string(),
-                start: (0, 4),
-                end: (0, 4),
-            },
-            Token {
-                token: TokenType::Literal,
-                value: "7".to_string(),
-                start: (0, 5),
-                end: (0, 5),
-            },
-        ];
         assert_eq!(
-            parse_operation_greedy(
-                &mut Vec::from([Node::Number(6.)]),
-                &mut tokens.iter().peekable(),
-                &Token {
-                    token: TokenType::Operator,
-                    value: "*".to_string(),
-                    start: (0, 1),
-                    end: (0, 1),
-                },
+            parse_operation_if_operator_follows(
+                &mut [
+                    Ok(Token {
+                        token: TokenType::Operator,
+                        value: "*".to_string(),
+                        start: (0, 1),
+                        end: (0, 1),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Literal,
+                        value: ".5".to_string(),
+                        start: (0, 2),
+                        end: (0, 3),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Operator,
+                        value: "/".to_string(),
+                        start: (0, 4),
+                        end: (0, 4),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Literal,
+                        value: "7".to_string(),
+                        start: (0, 5),
+                        end: (0, 5),
+                    }),
+                ]
+                .into_iter()
+                .peekable(),
+                Node::Number(6.),
             )
             .unwrap(),
             Node::Operation {
@@ -510,36 +544,37 @@ mod tests {
             }
         );
 
-        let tokens = [
-            Token {
-                token: TokenType::Literal,
-                value: ".5".to_string(),
-                start: (0, 2),
-                end: (0, 3),
-            },
-            Token {
-                token: TokenType::Operator,
-                value: "+".to_string(),
-                start: (0, 4),
-                end: (0, 4),
-            },
-            Token {
-                token: TokenType::Literal,
-                value: "7".to_string(),
-                start: (0, 5),
-                end: (0, 5),
-            },
-        ];
         assert_eq!(
-            parse_operation_greedy(
-                &mut Vec::from([Node::Number(6.)]),
-                &mut tokens.iter().peekable(),
-                &Token {
-                    token: TokenType::Operator,
-                    value: "*".to_string(),
-                    start: (0, 1),
-                    end: (0, 1),
-                },
+            parse_operation_if_operator_follows(
+                &mut [
+                    Ok(Token {
+                        token: TokenType::Operator,
+                        value: "*".to_string(),
+                        start: (0, 1),
+                        end: (0, 1),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Literal,
+                        value: ".5".to_string(),
+                        start: (0, 2),
+                        end: (0, 3),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Operator,
+                        value: "+".to_string(),
+                        start: (0, 4),
+                        end: (0, 4),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Literal,
+                        value: "7".to_string(),
+                        start: (0, 5),
+                        end: (0, 5),
+                    }),
+                ]
+                .into_iter()
+                .peekable(),
+                Node::Number(6.),
             )
             .unwrap(),
             Node::Operation {
@@ -553,48 +588,49 @@ mod tests {
             }
         );
 
-        let tokens = [
-            Token {
-                token: TokenType::Literal,
-                value: ".5".to_string(),
-                start: (0, 2),
-                end: (0, 3),
-            },
-            Token {
-                token: TokenType::Operator,
-                value: "+".to_string(),
-                start: (0, 4),
-                end: (0, 4),
-            },
-            Token {
-                token: TokenType::Literal,
-                value: "7".to_string(),
-                start: (0, 5),
-                end: (0, 5),
-            },
-            Token {
-                token: TokenType::Operator,
-                value: "*".to_string(),
-                start: (0, 6),
-                end: (0, 6),
-            },
-            Token {
-                token: TokenType::Literal,
-                value: "3".to_string(),
-                start: (0, 7),
-                end: (0, 7),
-            },
-        ];
         assert_eq!(
-            parse_operation_greedy(
-                &mut Vec::from([Node::Number(6.)]),
-                &mut tokens.iter().peekable(),
-                &Token {
-                    token: TokenType::Operator,
-                    value: "/".to_string(),
-                    start: (0, 1),
-                    end: (0, 1),
-                },
+            parse_operation_if_operator_follows(
+                &mut [
+                    Ok(Token {
+                        token: TokenType::Operator,
+                        value: "/".to_string(),
+                        start: (0, 1),
+                        end: (0, 1),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Literal,
+                        value: ".5".to_string(),
+                        start: (0, 2),
+                        end: (0, 3),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Operator,
+                        value: "+".to_string(),
+                        start: (0, 4),
+                        end: (0, 4),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Literal,
+                        value: "7".to_string(),
+                        start: (0, 5),
+                        end: (0, 5),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Operator,
+                        value: "*".to_string(),
+                        start: (0, 6),
+                        end: (0, 6),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Literal,
+                        value: "3".to_string(),
+                        start: (0, 7),
+                        end: (0, 7),
+                    }),
+                ]
+                .into_iter()
+                .peekable(),
+                Node::Number(6.),
             )
             .unwrap(),
             Node::Operation {
@@ -612,48 +648,49 @@ mod tests {
             }
         );
 
-        let tokens = [
-            Token {
-                token: TokenType::Literal,
-                value: "5.5".to_string(),
-                start: (0, 3),
-                end: (0, 5),
-            },
-            Token {
-                token: TokenType::Operator,
-                value: "*".to_string(),
-                start: (0, 6),
-                end: (0, 6),
-            },
-            Token {
-                token: TokenType::Literal,
-                value: "8".to_string(),
-                start: (0, 7),
-                end: (0, 7),
-            },
-            Token {
-                token: TokenType::Operator,
-                value: "+".to_string(),
-                start: (0, 8),
-                end: (0, 8),
-            },
-            Token {
-                token: TokenType::Literal,
-                value: ".7".to_string(),
-                start: (0, 9),
-                end: (0, 11),
-            },
-        ];
         assert_eq!(
-            parse_operation_greedy(
-                &mut Vec::from([Node::Number(0.2)]),
-                &mut tokens.iter().peekable(),
-                &Token {
-                    token: TokenType::Operator,
-                    value: "-".to_string(),
-                    start: (0, 2),
-                    end: (0, 2),
-                }
+            parse_operation_if_operator_follows(
+                &mut [
+                    Ok(Token {
+                        token: TokenType::Operator,
+                        value: "-".to_string(),
+                        start: (0, 2),
+                        end: (0, 2),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Literal,
+                        value: "5.5".to_string(),
+                        start: (0, 3),
+                        end: (0, 5),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Operator,
+                        value: "*".to_string(),
+                        start: (0, 6),
+                        end: (0, 6),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Literal,
+                        value: "8".to_string(),
+                        start: (0, 7),
+                        end: (0, 7),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Operator,
+                        value: "+".to_string(),
+                        start: (0, 8),
+                        end: (0, 8),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Literal,
+                        value: ".7".to_string(),
+                        start: (0, 9),
+                        end: (0, 11),
+                    }),
+                ]
+                .into_iter()
+                .peekable(),
+                Node::Number(0.2),
             )
             .unwrap(),
             Node::Operation {
@@ -673,7 +710,7 @@ mod tests {
     }
 
     #[test]
-    fn extend_complex_operation() {
+    fn test_extend_complex_operation() {
         assert_eq!(
             extend_operation(
                 Node::Operation {

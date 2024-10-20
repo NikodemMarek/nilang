@@ -1,7 +1,10 @@
 use nilang_types::tokens::TokenType;
 
+use crate::LexerErrors;
+
 #[derive(Debug, Clone)]
 pub enum ParserErrors {
+    LexerError(LexerErrors),
     ThisNeverHappens,
     EndOfInput {
         loc: (usize, usize),
@@ -43,14 +46,15 @@ impl std::fmt::Display for ParserErrors {
 
 impl std::error::Error for ParserErrors {}
 
-impl Into<((usize, usize), (usize, usize), String)> for &ParserErrors {
-    fn into(self) -> ((usize, usize), (usize, usize), String) {
-        match self {
+impl From<&ParserErrors> for ((usize, usize), (usize, usize), String) {
+    fn from(val: &ParserErrors) -> Self {
+        match val {
             ParserErrors::ThisNeverHappens => (
                 (0, 0),
                 (0, 0),
                 String::from("This does not happen, what the fuck are you doing?"),
             ),
+            ParserErrors::LexerError(err) => err.into(),
             ParserErrors::EndOfInput { loc } => {
                 (*loc, *loc, String::from("Unexpected end of input"))
             }

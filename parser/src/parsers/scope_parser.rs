@@ -1,6 +1,6 @@
 use std::iter::Peekable;
 
-use errors::ParserErrors;
+use errors::{LexerErrors, ParserErrors};
 use nilang_types::{
     nodes::Node,
     tokens::{Token, TokenType},
@@ -8,17 +8,17 @@ use nilang_types::{
 
 use super::parse;
 
-pub fn parse_scope<'a, I>(tokens: &mut Peekable<I>) -> eyre::Result<Node>
+pub fn parse_scope<I>(tokens: &mut Peekable<I>) -> Result<Node, ParserErrors>
 where
-    I: Iterator<Item = &'a Token>,
+    I: Iterator<Item = Result<Token, LexerErrors>>,
 {
     let scope_start = match tokens.peek() {
-        Some(Token { start, .. }) => (start.0, start.1 - 1),
-        None => Err(ParserErrors::ThisNeverHappens)?,
+        Some(Ok(Token { start, .. })) => (start.0, start.1 - 1),
+        Some(_) | None => Err(ParserErrors::ThisNeverHappens)?,
     };
 
     let mut in_scope = Vec::new();
-    while let Some(token) = tokens.peek() {
+    while let Some(Ok(token)) = tokens.peek() {
         if let Token {
             token: TokenType::ClosingBrace,
             start,
@@ -35,7 +35,7 @@ where
             tokens.next();
             break;
         } else {
-            let node = parse(&mut in_scope, tokens)?;
+            let node = parse(tokens)?;
             in_scope.push(node);
         }
     }

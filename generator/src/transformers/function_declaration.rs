@@ -45,19 +45,20 @@ mod tests {
     use crate::transformers::{function_declaration::transform_function_declaration, scope::Scope};
 
     #[test]
-    fn function() {
-        let node = Node::FunctionDeclaration {
-            name: String::from("main"),
-            parameters: Vec::new(),
-            body: Box::new(Node::Scope(Vec::from([Node::Return(Box::new(
-                Node::Number(6.),
-            ))]))),
-        };
-        let code = transform_function_declaration(&node, &mut Scope::default());
-
+    fn test_function_declaration() {
         assert_eq!(
-            code.unwrap(),
-            Vec::from([
+            transform_function_declaration(
+                &(Node::FunctionDeclaration {
+                    name: String::from("main"),
+                    parameters: Vec::new(),
+                    body: Box::new(Node::Scope(Vec::from([Node::Return(Box::new(
+                        Node::Number(6.),
+                    ))]))),
+                }),
+                &mut Scope::default(),
+            )
+            .unwrap(),
+            [
                 String::from(".globl _main"),
                 String::from("_main:"),
                 String::from("    pushq %rbp"),
@@ -66,7 +67,7 @@ mod tests {
                 String::from("    leave"),
                 String::from("    ret"),
                 String::new(),
-            ])
+            ]
         );
     }
 }

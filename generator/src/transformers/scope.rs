@@ -67,22 +67,19 @@ pub fn transform_scope(a: &Node, scope: &mut Scope) -> eyre::Result<Vec<String>>
 
 #[cfg(test)]
 mod tests {
-    use crate::transformers::scope::transform_scope;
     use nilang_types::nodes::Node;
+
+    use crate::transformers::scope::transform_scope;
 
     #[test]
     fn scope_with_return() {
-        let node = Node::Scope(vec![Node::Return(Box::new(Node::Number(42.)))]);
-        let code = transform_scope(&node, &mut super::Scope::default());
-
         assert_eq!(
-            &code.unwrap(),
-            &[
-                String::from("pushq %rbp"),
-                String::from("movq %rsp, %rbp"),
-                String::from("movq $42, %rbx"),
-                String::from("leave")
-            ]
+            transform_scope(
+                &Node::Scope(vec![Node::Return(Box::new(Node::Number(42.)))]),
+                &mut super::Scope::default(),
+            )
+            .unwrap(),
+            [String::from("movq $42, %rbx")]
         );
     }
 }

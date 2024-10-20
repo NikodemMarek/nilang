@@ -1,152 +1,108 @@
-use std::{iter::Peekable, usize};
+use std::iter::Peekable;
 
-use errors::ParserErrors;
+use errors::{LexerErrors, ParserErrors};
 use nilang_types::{
     nodes::Node,
     tokens::{Token, TokenType},
 };
 
-use super::{literal_parser::parse_literal, operation_parser::parse_operation_greedy};
+use super::{
+    function_arguments_parser::parse_function_arguments,
+    operation_parser::parse_operation_if_operator_follows,
+};
 
-pub fn parse_identifier<'a, I>(
-    tokens: &mut Peekable<I>,
-    Token {
-        token, value: name, ..
-    }: &Token,
-) -> eyre::Result<Node>
+pub fn parse_identifier<I>(tokens: &mut Peekable<I>) -> Result<Node, ParserErrors>
 where
-    I: Iterator<Item = &'a Token>,
+    I: Iterator<Item = Result<Token, LexerErrors>>,
 {
-    if let TokenType::Identifier = token {
-        Ok(match tokens.peek() {
-            Some(Token {
-                token: TokenType::OpeningParenthesis,
-                ..
-            }) => {
-                tokens.next();
+    let Token { value, .. } = tokens.next().unwrap().unwrap();
 
-                let mut arguments = Vec::new();
+    Ok(match tokens.peek() {
+        Some(Ok(Token {
+            token: TokenType::OpeningParenthesis,
+            ..
+        })) => {
+            let function_arguments = parse_function_arguments(tokens);
+            parse_operation_if_operator_follows(
+                tokens,
+                Node::FunctionCall {
+                    name: value.to_owned(),
+                    arguments: function_arguments?,
+                },
+            )?
+        }
+        Some(Ok(_)) => {
+            parse_operation_if_operator_follows(tokens, Node::VariableReference(value.to_owned()))?
+        }
+        Some(Err(e)) => Err(ParserErrors::LexerError(e.clone()))?,
+        None => Err(ParserErrors::EndOfInput {
+            loc: (usize::MAX, usize::MAX),
+        })?,
+    })
+}
 
-                loop {
-                    match tokens.next() {
-                        Some(Token {
-                            token: TokenType::ClosingParenthesis,
-                            ..
-                        }) => {
-                            return Ok(Node::FunctionCall {
-                                name: name.to_owned(),
-                                arguments,
-                            });
-                        }
-                        Some(
-                            literal @ Token {
-                                token: TokenType::Identifier,
-                                ..
-                            },
-                        ) => {
-                            arguments.push(parse_identifier(tokens, literal)?);
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_parse_identifier() {
+        use crate::parsers::identifier_parser::parse_identifier;
+        use nilang_types::{
+            nodes::Node,
+            tokens::{Token, TokenType},
+        };
+        assert_eq!(
+            parse_identifier(
+                &mut [
+                    Ok(Token {
+                        token: TokenType::Identifier,
+                        value: "x".to_string(),
+                        start: (0, 0),
+                        end: (0, 0),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Semicolon,
+                        value: ";".to_string(),
+                        start: (0, 1),
+                        end: (0, 1),
+                    })
+                ]
+                .into_iter()
+                .peekable()
+            )
+            .unwrap(),
+            Node::VariableReference("x".to_string())
+        );
 
-                            match tokens.peek() {
-                                Some(Token {
-                                    token: TokenType::Operator,
-                                    ..
-                                }) => {
-                                    let mut program = Vec::from([arguments.pop().unwrap()]);
-                                    let next = tokens.next().unwrap();
-                                    arguments.push(parse_operation_greedy(
-                                        &mut program,
-                                        tokens,
-                                        next,
-                                    )?);
-                                }
-                                Some(Token {
-                                    token: TokenType::Comma,
-                                    ..
-                                }) => {
-                                    tokens.next();
-                                }
-                                Some(Token {
-                                    token: TokenType::ClosingParenthesis,
-                                    ..
-                                }) => {
-                                    tokens.next();
-                                    return Ok(Node::FunctionCall {
-                                        name: name.to_owned(),
-                                        arguments,
-                                    });
-                                }
-                                Some(Token { token, start, .. }) => {
-                                    Err(ParserErrors::UnexpectedToken {
-                                        token: *token,
-                                        loc: *start,
-                                    })?
-                                }
-                                None => Err(ParserErrors::EndOfInput {
-                                    loc: (usize::MAX, usize::MAX),
-                                })?,
-                            }
-                        }
-                        Some(
-                            token @ Token {
-                                token: TokenType::Literal,
-                                ..
-                            },
-                        ) => {
-                            arguments.push(parse_literal(token)?);
-
-                            match tokens.peek() {
-                                Some(Token {
-                                    token: TokenType::Operator,
-                                    ..
-                                }) => {
-                                    let mut program = Vec::from([arguments.pop().unwrap()]);
-                                    let next = tokens.next().unwrap();
-                                    arguments.push(parse_operation_greedy(
-                                        &mut program,
-                                        tokens,
-                                        next,
-                                    )?);
-                                }
-                                Some(Token {
-                                    token: TokenType::Comma,
-                                    ..
-                                }) => {
-                                    tokens.next();
-                                }
-                                Some(Token {
-                                    token: TokenType::ClosingParenthesis,
-                                    ..
-                                }) => {
-                                    tokens.next().unwrap();
-                                    return Ok(Node::FunctionCall {
-                                        name: name.to_owned(),
-                                        arguments,
-                                    });
-                                }
-                                Some(Token { token, start, .. }) => {
-                                    Err(ParserErrors::UnexpectedToken {
-                                        token: *token,
-                                        loc: *start,
-                                    })?
-                                }
-                                None => Err(ParserErrors::EndOfInput {
-                                    loc: (usize::MAX, usize::MAX),
-                                })?,
-                            }
-                        }
-                        Some(Token { token, start, .. }) => Err(ParserErrors::UnexpectedToken {
-                            token: *token,
-                            loc: *start,
-                        })?,
-                        None => Err(ParserErrors::EndOfInput {
-                            loc: (usize::MAX, usize::MAX),
-                        })?,
-                    }
-                }
+        assert_eq!(
+            parse_identifier(
+                &mut [
+                    Ok(Token {
+                        token: TokenType::Identifier,
+                        value: "x".to_string(),
+                        start: (0, 0),
+                        end: (0, 0),
+                    }),
+                    Ok(Token {
+                        token: TokenType::OpeningParenthesis,
+                        value: "(".to_string(),
+                        start: (0, 1),
+                        end: (0, 1),
+                    }),
+                    Ok(Token {
+                        token: TokenType::ClosingParenthesis,
+                        value: ")".to_string(),
+                        start: (0, 2),
+                        end: (0, 2),
+                    }),
+                ]
+                .into_iter()
+                .peekable()
+            )
+            .unwrap(),
+            Node::FunctionCall {
+                name: "x".to_string(),
+                arguments: Vec::new()
             }
-            _ => Node::VariableReference(name.to_owned()),
-        })
-    } else {
-        Err(ParserErrors::ThisNeverHappens)?
+        );
     }
 }

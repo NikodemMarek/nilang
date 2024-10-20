@@ -8,5 +8,3 @@ edition = "2021"
 [dependencies]
 errors = { version = "0.1.0", path = "../errors" }
 nilang-types = { version = "0.1.0", path = "../types" }
-
-eyre = "0.6.12"

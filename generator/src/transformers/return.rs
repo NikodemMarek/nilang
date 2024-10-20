@@ -13,7 +13,7 @@ pub fn transform_return(a: &Node, scope: &mut Scope) -> eyre::Result<Vec<String>
             )])),
             Node::FunctionDeclaration { .. } | Node::Scope(_) => todo!(),
             node @ Node::FunctionCall { .. } => transform_function_call(&node, scope),
-            Node::VariableDeclaration { .. } | Node::Return(_) => {
+            Node::VariableDeclaration { .. } | Node::Return(_) | Node::Program(_) => {
                 panic!("Unexpected node: {:?}", a)
             }
         }
@@ -30,34 +30,44 @@ mod tests {
 
     #[test]
     fn return_number() {
-        let node = Node::Return(Box::new(Node::Number(42.)));
-        let code = transform_return(&node, &mut super::Scope::default());
-
-        assert_eq!(code.unwrap(), Vec::from([String::from("movq $42, %rbx")]));
+        assert_eq!(
+            transform_return(
+                &Node::Return(Box::new(Node::Number(42.))),
+                &mut super::Scope::default(),
+            )
+            .unwrap(),
+            [String::from("movq $42, %rbx")]
+        );
     }
 
     #[test]
     fn return_variable_reference() {
-        let node = Node::Return(Box::new(Node::VariableReference(String::from("a"))));
         let mut scope = super::Scope::default();
         let _ = scope.insert("a");
-        let code = transform_return(&node, &mut scope);
 
         assert_eq!(
-            code.unwrap(),
-            Vec::from([String::from("movq -8(%rbp), %rbx")])
+            transform_return(
+                &Node::Return(Box::new(Node::VariableReference(String::from("a")))),
+                &mut scope,
+            )
+            .unwrap(),
+            [String::from("movq -8(%rbp), %rbx")]
         );
     }
 
     #[test]
     fn return_operation() {
-        let node = Node::Return(Box::new(Node::Operation {
-            operator: Operator::Add,
-            a: Box::new(Node::Number(1.)),
-            b: Box::new(Node::Number(2.)),
-        }));
-        let code = transform_return(&node, &mut super::Scope::default());
-
-        assert_eq!(code.unwrap(), Vec::from(["movq $1, %rbx", "add $2, %rbx"]));
+        assert_eq!(
+            transform_return(
+                &Node::Return(Box::new(Node::Operation {
+                    operator: Operator::Add,
+                    a: Box::new(Node::Number(1.)),
+                    b: Box::new(Node::Number(2.)),
+                })),
+                &mut super::Scope::default(),
+            )
+            .unwrap(),
+            ["movq $1, %rbx", "add $2, %rbx"]
+        );
     }
 }

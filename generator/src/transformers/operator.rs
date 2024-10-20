@@ -137,60 +137,68 @@ mod tests {
 
     #[test]
     fn add_numbers() {
-        let node = Node::Operation {
-            operator: Operator::Add,
-            a: Box::new(Node::Number(1.)),
-            b: Box::new(Node::Number(2.)),
-        };
-        let code = transform_operation(&node, &mut Scope::default(), "%rax");
-
         assert_eq!(
-            code.unwrap(),
+            transform_operation(
+                &(Node::Operation {
+                    operator: Operator::Add,
+                    a: Box::new(Node::Number(1.)),
+                    b: Box::new(Node::Number(2.)),
+                }),
+                &mut Scope::default(),
+                "%rax",
+            )
+            .unwrap(),
             [String::from("movq $1, %rax"), String::from("add $2, %rax"),]
         );
     }
 
     #[test]
     fn subtract_numbers() {
-        let node = Node::Operation {
-            operator: Operator::Subtract,
-            a: Box::new(Node::Number(1.)),
-            b: Box::new(Node::Number(2.)),
-        };
-        let code = transform_operation(&node, &mut Scope::default(), "%rax");
-
         assert_eq!(
-            code.unwrap(),
+            transform_operation(
+                &(Node::Operation {
+                    operator: Operator::Subtract,
+                    a: Box::new(Node::Number(1.)),
+                    b: Box::new(Node::Number(2.)),
+                }),
+                &mut Scope::default(),
+                "%rax",
+            )
+            .unwrap(),
             [String::from("movq $1, %rax"), String::from("sub $2, %rax"),]
         );
     }
 
     #[test]
     fn multiply_numbers() {
-        let node = Node::Operation {
-            operator: Operator::Multiply,
-            a: Box::new(Node::Number(1.)),
-            b: Box::new(Node::Number(2.)),
-        };
-        let code = transform_operation(&node, &mut Scope::default(), "%rax");
-
         assert_eq!(
-            code.unwrap(),
+            transform_operation(
+                &(Node::Operation {
+                    operator: Operator::Multiply,
+                    a: Box::new(Node::Number(1.)),
+                    b: Box::new(Node::Number(2.)),
+                }),
+                &mut Scope::default(),
+                "%rax",
+            )
+            .unwrap(),
             [String::from("movq $1, %rax"), String::from("imul $2, %rax"),]
         );
     }
 
     #[test]
     fn divide_numbers() {
-        let node = Node::Operation {
-            operator: Operator::Divide,
-            a: Box::new(Node::Number(1.)),
-            b: Box::new(Node::Number(2.)),
-        };
-        let code = transform_operation(&node, &mut Scope::default(), "%rax");
-
         assert_eq!(
-            code.unwrap(),
+            transform_operation(
+                &(Node::Operation {
+                    operator: Operator::Divide,
+                    a: Box::new(Node::Number(1.)),
+                    b: Box::new(Node::Number(2.)),
+                }),
+                &mut Scope::default(),
+                "%rax",
+            )
+            .unwrap(),
             [
                 String::from("movq $1, %rax"),
                 String::from("movq $2, %rbx"),
@@ -203,15 +211,17 @@ mod tests {
 
     #[test]
     fn modulo_numbers() {
-        let node = Node::Operation {
-            operator: Operator::Modulo,
-            a: Box::new(Node::Number(1.)),
-            b: Box::new(Node::Number(2.)),
-        };
-        let code = transform_operation(&node, &mut Scope::default(), "%rax");
-
         assert_eq!(
-            code.unwrap(),
+            transform_operation(
+                &(Node::Operation {
+                    operator: Operator::Modulo,
+                    a: Box::new(Node::Number(1.)),
+                    b: Box::new(Node::Number(2.)),
+                }),
+                &mut Scope::default(),
+                "%rax",
+            )
+            .unwrap(),
             [
                 String::from("movq $1, %rax"),
                 String::from("movq $2, %rbx"),
@@ -224,17 +234,20 @@ mod tests {
 
     #[test]
     fn number_variable_reference() {
-        let node = Node::Operation {
-            operator: Operator::Add,
-            a: Box::new(Node::Number(1.)),
-            b: Box::new(Node::VariableReference(String::from("a"))),
-        };
         let mut scope = Scope::default();
         let _ = scope.insert("a");
-        let code = transform_operation(&node, &mut scope, "%rax");
 
         assert_eq!(
-            code.unwrap(),
+            transform_operation(
+                &(Node::Operation {
+                    operator: Operator::Add,
+                    a: Box::new(Node::Number(1.)),
+                    b: Box::new(Node::VariableReference(String::from("a"))),
+                }),
+                &mut scope,
+                "%rax",
+            )
+            .unwrap(),
             [
                 String::from("movq $1, %rax"),
                 String::from("add -8(%rbp), %rax"),
@@ -244,17 +257,20 @@ mod tests {
 
     #[test]
     fn variable_reference_number() {
-        let node = Node::Operation {
-            operator: Operator::Add,
-            a: Box::new(Node::VariableReference(String::from("a"))),
-            b: Box::new(Node::Number(2.)),
-        };
         let mut scope = Scope::default();
         let _ = scope.insert("a");
-        let code = transform_operation(&node, &mut scope, "%rax");
 
         assert_eq!(
-            code.unwrap(),
+            transform_operation(
+                &(Node::Operation {
+                    operator: Operator::Add,
+                    a: Box::new(Node::VariableReference(String::from("a"))),
+                    b: Box::new(Node::Number(2.)),
+                }),
+                &mut scope,
+                "%rax",
+            )
+            .unwrap(),
             [
                 String::from("movq -8(%rbp), %rax"),
                 String::from("add $2, %rax"),
@@ -264,18 +280,21 @@ mod tests {
 
     #[test]
     fn variable_reference_variable_reference() {
-        let node = Node::Operation {
-            operator: Operator::Add,
-            a: Box::new(Node::VariableReference(String::from("a"))),
-            b: Box::new(Node::VariableReference(String::from("b"))),
-        };
         let mut scope = Scope::default();
         let _ = scope.insert("a");
         let _ = scope.insert("b");
-        let code = transform_operation(&node, &mut scope, "%rax");
 
         assert_eq!(
-            code.unwrap(),
+            transform_operation(
+                &(Node::Operation {
+                    operator: Operator::Add,
+                    a: Box::new(Node::VariableReference(String::from("a"))),
+                    b: Box::new(Node::VariableReference(String::from("b"))),
+                }),
+                &mut scope,
+                "%rax",
+            )
+            .unwrap(),
             [
                 String::from("movq -8(%rbp), %rax"),
                 String::from("add -16(%rbp), %rax"),
@@ -285,19 +304,21 @@ mod tests {
 
     #[test]
     fn number_operation() {
-        let node = Node::Operation {
-            operator: Operator::Add,
-            a: Box::new(Node::Operation {
-                operator: Operator::Multiply,
-                a: Box::new(Node::Number(1.)),
-                b: Box::new(Node::Number(2.)),
-            }),
-            b: Box::new(Node::Number(3.)),
-        };
-        let code = transform_operation(&node, &mut Scope::default(), "%rax");
-
         assert_eq!(
-            code.unwrap(),
+            transform_operation(
+                &(Node::Operation {
+                    operator: Operator::Add,
+                    a: Box::new(Node::Operation {
+                        operator: Operator::Multiply,
+                        a: Box::new(Node::Number(1.)),
+                        b: Box::new(Node::Number(2.)),
+                    }),
+                    b: Box::new(Node::Number(3.)),
+                }),
+                &mut Scope::default(),
+                "%rax",
+            )
+            .unwrap(),
             [
                 String::from("movq $1, %rax"),
                 String::from("imul $2, %rax"),
@@ -308,21 +329,24 @@ mod tests {
 
     #[test]
     fn variable_reference_operation() {
-        let node = Node::Operation {
-            operator: Operator::Add,
-            a: Box::new(Node::VariableReference(String::from("a"))),
-            b: Box::new(Node::Operation {
-                operator: Operator::Multiply,
-                a: Box::new(Node::Number(2.)),
-                b: Box::new(Node::Number(3.)),
-            }),
-        };
         let mut scope = Scope::default();
         let _ = scope.insert("a");
-        let code = transform_operation(&node, &mut scope, "%rax");
 
         assert_eq!(
-            code.unwrap(),
+            transform_operation(
+                &(Node::Operation {
+                    operator: Operator::Add,
+                    a: Box::new(Node::VariableReference(String::from("a"))),
+                    b: Box::new(Node::Operation {
+                        operator: Operator::Multiply,
+                        a: Box::new(Node::Number(2.)),
+                        b: Box::new(Node::Number(3.)),
+                    }),
+                }),
+                &mut scope,
+                "%rax",
+            )
+            .unwrap(),
             [
                 String::from("movq $2, %rax"),
                 String::from("imul $3, %rax"),
@@ -335,19 +359,21 @@ mod tests {
 
     #[test]
     fn operation_number() {
-        let node = Node::Operation {
-            operator: Operator::Add,
-            a: Box::new(Node::Number(1.)),
-            b: Box::new(Node::Operation {
-                operator: Operator::Multiply,
-                a: Box::new(Node::Number(2.)),
-                b: Box::new(Node::Number(3.)),
-            }),
-        };
-        let code = transform_operation(&node, &mut Scope::default(), "%rax");
-
         assert_eq!(
-            code.unwrap(),
+            transform_operation(
+                &(Node::Operation {
+                    operator: Operator::Add,
+                    a: Box::new(Node::Number(1.)),
+                    b: Box::new(Node::Operation {
+                        operator: Operator::Multiply,
+                        a: Box::new(Node::Number(2.)),
+                        b: Box::new(Node::Number(3.)),
+                    }),
+                }),
+                &mut Scope::default(),
+                "%rax",
+            )
+            .unwrap(),
             [
                 String::from("movq $2, %rax"),
                 String::from("imul $3, %rax"),
@@ -360,21 +386,24 @@ mod tests {
 
     #[test]
     fn operation_variable_reference() {
-        let node = Node::Operation {
-            operator: Operator::Add,
-            a: Box::new(Node::Operation {
-                operator: Operator::Multiply,
-                a: Box::new(Node::Number(1.)),
-                b: Box::new(Node::Number(2.)),
-            }),
-            b: Box::new(Node::VariableReference(String::from("a"))),
-        };
         let mut scope = Scope::default();
         let _ = scope.insert("a");
-        let code = transform_operation(&node, &mut scope, "%rax");
 
         assert_eq!(
-            code.unwrap(),
+            transform_operation(
+                &(Node::Operation {
+                    operator: Operator::Add,
+                    a: Box::new(Node::Operation {
+                        operator: Operator::Multiply,
+                        a: Box::new(Node::Number(1.)),
+                        b: Box::new(Node::Number(2.)),
+                    }),
+                    b: Box::new(Node::VariableReference(String::from("a"))),
+                }),
+                &mut scope,
+                "%rax",
+            )
+            .unwrap(),
             [
                 String::from("movq $1, %rax"),
                 String::from("imul $2, %rax"),
@@ -385,23 +414,25 @@ mod tests {
 
     #[test]
     fn operation_operation() {
-        let node = Node::Operation {
-            operator: Operator::Add,
-            a: Box::new(Node::Operation {
-                operator: Operator::Multiply,
-                a: Box::new(Node::Number(1.)),
-                b: Box::new(Node::Number(2.)),
-            }),
-            b: Box::new(Node::Operation {
-                operator: Operator::Subtract,
-                a: Box::new(Node::Number(3.)),
-                b: Box::new(Node::Number(4.)),
-            }),
-        };
-        let code = transform_operation(&node, &mut Scope::default(), "%rax");
-
         assert_eq!(
-            code.unwrap(),
+            transform_operation(
+                &(Node::Operation {
+                    operator: Operator::Add,
+                    a: Box::new(Node::Operation {
+                        operator: Operator::Multiply,
+                        a: Box::new(Node::Number(1.)),
+                        b: Box::new(Node::Number(2.)),
+                    }),
+                    b: Box::new(Node::Operation {
+                        operator: Operator::Subtract,
+                        a: Box::new(Node::Number(3.)),
+                        b: Box::new(Node::Number(4.)),
+                    }),
+                }),
+                &mut Scope::default(),
+                "%rax",
+            )
+            .unwrap(),
             [
                 String::from("movq $1, %rax"),
                 String::from("imul $2, %rax"),
