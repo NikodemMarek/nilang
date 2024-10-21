@@ -7,8 +7,7 @@ fn identifier() {
     assert_eq!(
         lex("main").next().unwrap().unwrap(),
         Token {
-            token: TokenType::Identifier,
-            value: "main".to_string(),
+            token: TokenType::Identifier("main".into()),
             start: (0, 0),
             end: (0, 3),
         }
@@ -17,8 +16,7 @@ fn identifier() {
     assert_eq!(
         lex("fn8").next().unwrap().unwrap(),
         Token {
-            token: TokenType::Identifier,
-            value: "fn8".to_string(),
+            token: TokenType::Identifier("fn8".into()),
             start: (0, 0),
             end: (0, 2),
         }
@@ -27,8 +25,7 @@ fn identifier() {
     assert_eq!(
         lex("_rt").next().unwrap().unwrap(),
         Token {
-            token: TokenType::Identifier,
-            value: "_rt".to_string(),
+            token: TokenType::Identifier("_rt".into()),
             start: (0, 0),
             end: (0, 2),
         }
@@ -37,8 +34,7 @@ fn identifier() {
     assert_eq!(
         lex("v33ry__C0mpL3x").next().unwrap().unwrap(),
         Token {
-            token: TokenType::Identifier,
-            value: "v33ry__C0mpL3x".to_string(),
+            token: TokenType::Identifier("v33ry__C0mpL3x".into()),
             start: (0, 0),
             end: (0, 13),
         }
@@ -47,8 +43,7 @@ fn identifier() {
     assert_eq!(
         lex("ClassName").next().unwrap().unwrap(),
         Token {
-            token: TokenType::Identifier,
-            value: "ClassName".to_string(),
+            token: TokenType::Identifier("ClassName".into()),
             start: (0, 0),
             end: (0, 8),
         }

@@ -7,8 +7,7 @@ fn keyword() {
     assert_eq!(
         lex("fn").next().unwrap().unwrap(),
         Token {
-            token: TokenType::Keyword,
-            value: "fn".to_string(),
+            token: TokenType::Keyword("fn".into()),
             start: (0, 0),
             end: (0, 1),
         }
@@ -17,8 +16,7 @@ fn keyword() {
     assert_eq!(
         lex("rt").next().unwrap().unwrap(),
         Token {
-            token: TokenType::Keyword,
-            value: "rt".to_string(),
+            token: TokenType::Keyword("rt".into()),
             start: (0, 0),
             end: (0, 1),
         }
@@ -27,8 +25,7 @@ fn keyword() {
     assert_eq!(
         lex("vr").next().unwrap().unwrap(),
         Token {
-            token: TokenType::Keyword,
-            value: "vr".to_string(),
+            token: TokenType::Keyword("vr".into()),
             start: (0, 0),
             end: (0, 1),
         }

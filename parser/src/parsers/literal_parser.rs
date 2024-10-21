@@ -1,26 +1,10 @@
-use std::iter::Peekable;
+use errors::ParserErrors;
+use nilang_types::nodes::Node;
 
-use errors::{LexerErrors, ParserErrors};
-use nilang_types::{
-    nodes::Node,
-    tokens::{Token, TokenType},
-};
+use crate::assuming_iterator::PeekableAssumingIterator;
 
-pub fn parse_literal<I>(tokens: &mut Peekable<I>) -> Result<Node, ParserErrors>
-where
-    I: Iterator<Item = Result<Token, LexerErrors>>,
-{
-    let (value, start, end) = if let Some(Ok(Token {
-        token: TokenType::Literal(value),
-        start,
-        end,
-        ..
-    })) = tokens.next()
-    {
-        (value, start, end)
-    } else {
-        unreachable!()
-    };
+pub fn parse_literal<I: PeekableAssumingIterator>(tokens: &mut I) -> Result<Node, ParserErrors> {
+    let (start, end, value) = tokens.assume_literal()?;
 
     Ok(match value.parse() {
         Ok(parsed) => Node::Number(parsed),

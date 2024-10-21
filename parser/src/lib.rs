@@ -1,6 +1,7 @@
 use errors::{LexerErrors, ParserErrors};
 use nilang_types::{nodes::Node, tokens::Token};
 
+mod assuming_iterator;
 mod parsers;
 
 pub fn parse(

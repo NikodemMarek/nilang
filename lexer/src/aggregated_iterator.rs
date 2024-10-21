@@ -250,184 +250,187 @@ impl AggregatedIterator<'_> {
 
 #[cfg(test)]
 mod tests {
-    use nilang_types::tokens::{Token, TokenType};
+    use nilang_types::{
+        nodes::Operator,
+        tokens::{Token, TokenType},
+    };
 
     use crate::aggregated_iterator::AggregatedIterator;
 
     #[test]
     fn test_aggregated_iterator() {
         let mut iter = AggregatedIterator::new("5 + 4");
+
         assert_eq!(
             iter.next().unwrap().unwrap(),
             Token {
-                token: TokenType::Literal,
-                value: String::from("5"),
+                token: TokenType::Literal("5".into()),
                 start: (0, 0),
                 end: (0, 0),
             }
         );
+
         assert_eq!(
             iter.next().unwrap().unwrap(),
             Token {
-                token: TokenType::Operator,
-                value: String::from("+"),
+                token: TokenType::Operator(Operator::Add),
                 start: (0, 2),
                 end: (0, 2),
             }
         );
+
         assert_eq!(
             iter.next().unwrap().unwrap(),
             Token {
-                token: TokenType::Literal,
-                value: String::from("4"),
+                token: TokenType::Literal("4".into()),
                 start: (0, 4),
                 end: (0, 4),
             }
         );
 
         let mut iter = AggregatedIterator::new("test(123)");
+
         assert_eq!(
             iter.next().unwrap().unwrap(),
             Token {
-                token: TokenType::Identifier,
-                value: String::from("test"),
+                token: TokenType::Identifier("test".into()),
                 start: (0, 0),
                 end: (0, 3),
             }
         );
+
         assert_eq!(
             iter.next().unwrap().unwrap(),
             Token {
                 token: TokenType::OpeningParenthesis,
-                value: String::from("("),
                 start: (0, 4),
                 end: (0, 4),
             }
         );
+
         assert_eq!(
             iter.next().unwrap().unwrap(),
             Token {
-                token: TokenType::Literal,
-                value: String::from("123"),
+                token: TokenType::Literal("123".into()),
                 start: (0, 5),
                 end: (0, 7),
             }
         );
+
         assert_eq!(
             iter.next().unwrap().unwrap(),
             Token {
                 token: TokenType::ClosingParenthesis,
-                value: String::from(")"),
                 start: (0, 8),
                 end: (0, 8),
             }
         );
 
         let mut iter = AggregatedIterator::new("fn test(abc) {\n    rt abc + 5;\n}");
+
         assert_eq!(
             iter.next().unwrap().unwrap(),
             Token {
-                token: TokenType::Keyword,
-                value: String::from("fn"),
+                token: TokenType::Keyword("fn".into()),
                 start: (0, 0),
                 end: (0, 1),
             }
         );
+
         assert_eq!(
             iter.next().unwrap().unwrap(),
             Token {
-                token: TokenType::Identifier,
-                value: String::from("test"),
+                token: TokenType::Identifier("test".into()),
                 start: (0, 3),
                 end: (0, 6),
             }
         );
+
         assert_eq!(
             iter.next().unwrap().unwrap(),
             Token {
                 token: TokenType::OpeningParenthesis,
-                value: String::from("("),
                 start: (0, 7),
                 end: (0, 7),
             }
         );
+
         assert_eq!(
             iter.next().unwrap().unwrap(),
             Token {
-                token: TokenType::Identifier,
-                value: String::from("abc"),
+                token: TokenType::Identifier("abc".into()),
                 start: (0, 8),
                 end: (0, 10),
             }
         );
+
         assert_eq!(
             iter.next().unwrap().unwrap(),
             Token {
                 token: TokenType::ClosingParenthesis,
-                value: String::from(")"),
                 start: (0, 11),
                 end: (0, 11),
             }
         );
+
         assert_eq!(
             iter.next().unwrap().unwrap(),
             Token {
                 token: TokenType::OpeningBrace,
-                value: String::from("{"),
                 start: (0, 13),
                 end: (0, 13),
             }
         );
+
         assert_eq!(
             iter.next().unwrap().unwrap(),
             Token {
-                token: TokenType::Keyword,
-                value: String::from("rt"),
+                token: TokenType::Keyword("rt".into()),
                 start: (1, 4),
                 end: (1, 5),
             }
         );
+
         assert_eq!(
             iter.next().unwrap().unwrap(),
             Token {
-                token: TokenType::Identifier,
-                value: String::from("abc"),
+                token: TokenType::Identifier("abc".into()),
                 start: (1, 7),
                 end: (1, 9),
             }
         );
+
         assert_eq!(
             iter.next().unwrap().unwrap(),
             Token {
-                token: TokenType::Operator,
-                value: String::from("+"),
+                token: TokenType::Operator(Operator::Add),
                 start: (1, 11),
                 end: (1, 11),
             }
         );
+
         assert_eq!(
             iter.next().unwrap().unwrap(),
             Token {
-                token: TokenType::Literal,
-                value: String::from("5"),
+                token: TokenType::Literal("5".into()),
                 start: (1, 13),
                 end: (1, 13),
             }
         );
+
         assert_eq!(
             iter.next().unwrap().unwrap(),
             Token {
                 token: TokenType::Semicolon,
-                value: String::from(";"),
                 start: (1, 14),
                 end: (1, 14),
             }
         );
+
         assert_eq!(
             iter.next().unwrap().unwrap(),
             Token {
                 token: TokenType::ClosingBrace,
-                value: String::from("}"),
                 start: (2, 0),
                 end: (2, 0),
             }

@@ -7,8 +7,7 @@ fn literal() {
     assert_eq!(
         lex("5  ").next().unwrap().unwrap(),
         Token {
-            token: TokenType::Literal,
-            value: "5".to_string(),
+            token: TokenType::Literal("5".into()),
             start: (0, 0),
             end: (0, 0),
         }
@@ -17,8 +16,7 @@ fn literal() {
     assert_eq!(
         lex("4.  ").next().unwrap().unwrap(),
         Token {
-            token: TokenType::Literal,
-            value: "4.".to_string(),
+            token: TokenType::Literal("4.".into()),
             start: (0, 0),
             end: (0, 1),
         }
@@ -27,8 +25,7 @@ fn literal() {
     assert_eq!(
         lex(".9").next().unwrap().unwrap(),
         Token {
-            token: TokenType::Literal,
-            value: ".9".to_string(),
+            token: TokenType::Literal(".9".into()),
             start: (0, 0),
             end: (0, 1),
         }
@@ -37,8 +34,7 @@ fn literal() {
     assert_eq!(
         lex("3.7").next().unwrap().unwrap(),
         Token {
-            token: TokenType::Literal,
-            value: "3.7".to_string(),
+            token: TokenType::Literal("3.7".into()),
             start: (0, 0),
             end: (0, 2),
         }

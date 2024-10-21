@@ -1,85 +1,58 @@
-use std::iter::Peekable;
-
-use errors::{LexerErrors, ParserErrors};
+use errors::ParserErrors;
 use nilang_types::{
     nodes::Node,
     tokens::{Token, TokenType},
 };
+
+use crate::assuming_iterator::PeekableAssumingIterator;
 
 use super::{
     identifier_parser::parse_identifier, literal_parser::parse_literal,
     operation_parser::parse_operation_if_operator_follows_no_rearrange,
 };
 
-pub fn parse_parenthesis<I>(tokens: &mut Peekable<I>) -> Result<Node, ParserErrors>
-where
-    I: Iterator<Item = Result<Token, LexerErrors>>,
-{
-    let start = if let Some(Ok(Token {
-        token: TokenType::OpeningParenthesis,
-        start,
-        ..
-    })) = tokens.next()
-    {
-        start
-    } else {
-        unreachable!()
-    };
+pub fn parse_parenthesis<I: PeekableAssumingIterator>(
+    tokens: &mut I,
+) -> Result<Node, ParserErrors> {
+    let start = tokens.assume_opening_parenthesis()?;
 
-    let content = match tokens.peek() {
-        Some(Ok(Token {
+    let content = match tokens.peek_valid()? {
+        Token {
             token: TokenType::Literal(_),
             ..
-        })) => {
-            let literal = parse_literal(tokens);
-            parse_operation_if_operator_follows_no_rearrange(tokens, literal?)?
+        } => {
+            let literal = parse_literal(tokens)?;
+            parse_operation_if_operator_follows_no_rearrange(tokens, literal)?
         }
-        Some(Ok(Token {
+        Token {
             token: TokenType::Identifier(_),
             ..
-        })) => {
-            let identifier = parse_identifier(tokens);
-            parse_operation_if_operator_follows_no_rearrange(tokens, identifier?)?
+        } => {
+            let identifier = parse_identifier(tokens)?;
+            parse_operation_if_operator_follows_no_rearrange(tokens, identifier)?
         }
-        Some(Ok(Token {
+        Token {
             token: TokenType::OpeningParenthesis,
             ..
-        })) => {
-            let parenthesis = parse_parenthesis(tokens);
-            parse_operation_if_operator_follows_no_rearrange(tokens, parenthesis?)?
+        } => {
+            let parenthesis = parse_parenthesis(tokens)?;
+            parse_operation_if_operator_follows_no_rearrange(tokens, parenthesis)?
         }
-        Some(Ok(Token {
+        Token {
             token: TokenType::ClosingParenthesis,
             end,
             ..
-        })) => Err(ParserErrors::EmptyParenthesis {
+        } => Err(ParserErrors::EmptyParenthesis {
             from: start,
             to: *end,
         })?,
-        Some(Ok(Token { token, start, .. })) => Err(ParserErrors::UnexpectedToken {
+        Token { token, start, .. } => Err(ParserErrors::UnexpectedToken {
             token: token.clone(),
             loc: *start,
         })?,
-        Some(Err(e)) => Err(ParserErrors::LexerError(e.clone()))?,
-        None => Err(ParserErrors::EndOfInput {
-            loc: (usize::MAX, usize::MAX),
-        })?,
     };
 
-    match tokens.next() {
-        Some(Ok(Token {
-            token: TokenType::ClosingParenthesis,
-            ..
-        })) => {}
-        Some(Ok(Token { start, .. })) => Err(ParserErrors::ExpectedTokens {
-            tokens: Vec::from([TokenType::ClosingParenthesis]),
-            loc: start,
-        })?,
-        Some(Err(e)) => Err(ParserErrors::LexerError(e))?,
-        None => Err(ParserErrors::EndOfInput {
-            loc: (usize::MAX, usize::MAX),
-        })?,
-    };
+    tokens.assume_closing_parenthesis()?;
 
     Ok(content)
 }

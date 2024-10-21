@@ -9,15 +9,15 @@ pub struct Token {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TokenType {
-    Operator(Operator),
+    Literal(Box<str>),
     Identifier(Box<str>),
     Keyword(Box<str>),
-    Literal(Box<str>),
+    Operator(Operator),
+    Equals,
     OpeningParenthesis,
     ClosingParenthesis,
     OpeningBrace,
     ClosingBrace,
-    Equals,
-    Semicolon,
     Comma,
+    Semicolon,
 }

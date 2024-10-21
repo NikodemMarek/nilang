@@ -1,34 +1,28 @@
-use std::iter::Peekable;
-
-use errors::{LexerErrors, ParserErrors};
+use errors::ParserErrors;
 use nilang_types::{
     nodes::Node,
     tokens::{Token, TokenType},
 };
 
+use crate::assuming_iterator::PeekableAssumingIterator;
+
 use super::parse;
 
-pub fn parse_scope<I>(tokens: &mut Peekable<I>) -> Result<Node, ParserErrors>
-where
-    I: Iterator<Item = Result<Token, LexerErrors>>,
-{
-    let scope_start = match tokens.peek() {
-        Some(Ok(Token { start, .. })) => (start.0, start.1 - 1),
-        Some(_) | None => unreachable!(),
-    };
+pub fn parse_scope<I: PeekableAssumingIterator>(tokens: &mut I) -> Result<Node, ParserErrors> {
+    let start = tokens.assume_opening_brace()?;
 
     let mut in_scope = Vec::new();
-    while let Some(Ok(token)) = tokens.peek() {
+    while let token = tokens.peek_valid()? {
         if let Token {
             token: TokenType::ClosingBrace,
-            start,
+            end,
             ..
         } = token
         {
             if in_scope.is_empty() {
                 Err(ParserErrors::EmptyScope {
-                    from: (scope_start.0, scope_start.1 + 1),
-                    to: (start.0, start.1 - 1),
+                    from: start,
+                    to: *end,
                 })?
             }
 

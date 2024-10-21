@@ -1,123 +1,100 @@
-use std::iter::Peekable;
-
-use errors::{LexerErrors, ParserErrors};
+use errors::ParserErrors;
 use nilang_types::{
     nodes::Node,
     tokens::{Token, TokenType},
 };
+
+use crate::assuming_iterator::PeekableAssumingIterator;
 
 use super::{
     identifier_parser::parse_identifier, literal_parser::parse_literal,
     operation_parser::parse_operation_if_operator_follows, parenthesis_parser::parse_parenthesis,
 };
 
-pub fn parse_function_arguments<I>(tokens: &mut Peekable<I>) -> Result<Vec<Node>, ParserErrors>
-where
-    I: Iterator<Item = Result<Token, LexerErrors>>,
-{
-    match tokens.next() {
-        Some(Ok(Token {
-            token: TokenType::OpeningParenthesis,
-            ..
-        })) => {}
-        Some(Ok(Token { start, .. })) => Err(ParserErrors::ExpectedTokens {
-            tokens: Vec::from([TokenType::OpeningParenthesis]),
-            loc: start,
-        })?,
-        Some(Err(e)) => Err(ParserErrors::LexerError(e))?,
-        None => Err(ParserErrors::EndOfInput {
-            loc: (usize::MAX, usize::MAX),
-        })?,
-    };
+pub fn parse_argument_list<I: PeekableAssumingIterator>(
+    tokens: &mut I,
+) -> Result<Vec<Node>, ParserErrors> {
+    tokens.assume_opening_parenthesis()?;
 
     Ok({
         let mut arguments = Vec::new();
 
         loop {
-            match tokens.peek() {
-                Some(Ok(Token {
+            match tokens.peek_valid()? {
+                Token {
                     token: TokenType::Literal(_),
                     ..
-                })) => {
+                } => {
                     let literal = parse_literal(tokens);
                     arguments.push(parse_operation_if_operator_follows(tokens, literal?)?);
 
-                    match tokens.next() {
-                        Some(Ok(Token {
+                    match tokens.assume_next()? {
+                        Token {
                             token: TokenType::ClosingParenthesis,
                             ..
-                        })) => break,
-                        Some(Ok(Token {
+                        } => break,
+                        Token {
                             token: TokenType::Comma,
                             ..
-                        })) => {}
-                        Some(Ok(Token { start, .. })) => Err(ParserErrors::ExpectedTokens {
+                        } => {}
+                        Token { start, .. } => Err(ParserErrors::ExpectedTokens {
                             tokens: Vec::from([TokenType::Comma, TokenType::ClosingParenthesis]),
                             loc: start,
                         })?,
-                        Some(_) | None => Err(ParserErrors::EndOfInput {
-                            loc: (usize::MAX, usize::MAX),
-                        })?,
                     }
                 }
-                Some(Ok(Token {
+                Token {
                     token: TokenType::Identifier(_),
                     ..
-                })) => {
+                } => {
                     let identifier = parse_identifier(tokens);
                     arguments.push(parse_operation_if_operator_follows(tokens, identifier?)?);
 
-                    match tokens.next() {
-                        Some(Ok(Token {
+                    match tokens.assume_next()? {
+                        Token {
                             token: TokenType::ClosingParenthesis,
                             ..
-                        })) => break,
-                        Some(Ok(Token {
+                        } => break,
+                        Token {
                             token: TokenType::Comma,
                             ..
-                        })) => {}
-                        Some(Ok(Token { start, .. })) => Err(ParserErrors::ExpectedTokens {
+                        } => {}
+                        Token { start, .. } => Err(ParserErrors::ExpectedTokens {
                             tokens: Vec::from([TokenType::Comma, TokenType::ClosingParenthesis]),
                             loc: start,
                         })?,
-                        Some(_) | None => Err(ParserErrors::EndOfInput {
-                            loc: (usize::MAX, usize::MAX),
-                        })?,
                     }
                 }
-                Some(Ok(Token {
+                Token {
                     token: TokenType::OpeningParenthesis,
                     ..
-                })) => {
+                } => {
                     let parenthesis = parse_parenthesis(tokens);
                     arguments.push(parse_operation_if_operator_follows(tokens, parenthesis?)?);
 
-                    match tokens.next() {
-                        Some(Ok(Token {
+                    match tokens.assume_next()? {
+                        Token {
                             token: TokenType::ClosingParenthesis,
                             ..
-                        })) => break,
-                        Some(Ok(Token {
+                        } => break,
+                        Token {
                             token: TokenType::Comma,
                             ..
-                        })) => {}
-                        Some(Ok(Token { start, .. })) => Err(ParserErrors::ExpectedTokens {
+                        } => {}
+                        Token { start, .. } => Err(ParserErrors::ExpectedTokens {
                             tokens: Vec::from([TokenType::Comma, TokenType::ClosingParenthesis]),
                             loc: start,
                         })?,
-                        Some(_) | None => Err(ParserErrors::EndOfInput {
-                            loc: (usize::MAX, usize::MAX),
-                        })?,
                     }
                 }
-                Some(Ok(Token {
+                Token {
                     token: TokenType::ClosingParenthesis,
                     ..
-                })) => {
+                } => {
                     tokens.next();
                     break;
                 }
-                Some(Ok(Token { start, .. })) => Err(ParserErrors::ExpectedTokens {
+                Token { start, .. } => Err(ParserErrors::ExpectedTokens {
                     tokens: Vec::from([
                         TokenType::Identifier("".into()),
                         TokenType::Literal("".into()),
@@ -125,9 +102,6 @@ where
                         TokenType::ClosingParenthesis,
                     ]),
                     loc: *start,
-                })?,
-                Some(_) | None => Err(ParserErrors::EndOfInput {
-                    loc: (usize::MAX, usize::MAX),
                 })?,
             }
         }
@@ -143,12 +117,12 @@ mod tests {
         tokens::{Token, TokenType},
     };
 
-    use crate::parsers::function_arguments_parser::parse_function_arguments;
+    use crate::parsers::argument_list_parser::parse_argument_list;
 
     #[test]
-    fn test_parse_function_arguments() {
+    fn test_parse_argument_list() {
         assert_eq!(
-            parse_function_arguments(
+            parse_argument_list(
                 &mut [
                     Ok(Token {
                         token: TokenType::OpeningParenthesis,
@@ -184,7 +158,7 @@ mod tests {
         );
 
         assert_eq!(
-            parse_function_arguments(
+            parse_argument_list(
                 &mut [
                     Ok(Token {
                         token: TokenType::OpeningParenthesis,

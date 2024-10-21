@@ -1,25 +1,22 @@
-use std::iter::Peekable;
-
-use errors::{LexerErrors, ParserErrors};
+use errors::ParserErrors;
 use nilang_types::{
     nodes::{Node, Operator},
     tokens::{Token, TokenType},
 };
 
+use crate::assuming_iterator::PeekableAssumingIterator;
+
 use super::parse;
 
-pub fn parse_operation_if_operator_follows<I>(
-    tokens: &mut Peekable<I>,
+pub fn parse_operation_if_operator_follows<I: PeekableAssumingIterator>(
+    tokens: &mut I,
     node: Node,
-) -> Result<Node, ParserErrors>
-where
-    I: Iterator<Item = Result<Token, LexerErrors>>,
-{
+) -> Result<Node, ParserErrors> {
     Ok(
-        if let Some(Ok(Token {
+        if let Token {
             token: TokenType::Operator(_),
             ..
-        })) = tokens.peek()
+        } = tokens.peek_valid()?
         {
             let operation = parse_operation(tokens, node, true);
             parse_operation_if_operator_follows(tokens, operation?)?
@@ -29,18 +26,15 @@ where
     )
 }
 
-pub fn parse_operation_if_operator_follows_no_rearrange<I>(
-    tokens: &mut Peekable<I>,
+pub fn parse_operation_if_operator_follows_no_rearrange<I: PeekableAssumingIterator>(
+    tokens: &mut I,
     node: Node,
-) -> Result<Node, ParserErrors>
-where
-    I: Iterator<Item = Result<Token, LexerErrors>>,
-{
+) -> Result<Node, ParserErrors> {
     Ok(
-        if let Some(Ok(Token {
+        if let Token {
             token: TokenType::Operator(_),
             ..
-        })) = tokens.peek()
+        } = tokens.peek_valid()?
         {
             let operation = parse_operation(tokens, node, false);
             parse_operation_if_operator_follows(tokens, operation?)?
@@ -50,24 +44,12 @@ where
     )
 }
 
-fn parse_operation<I>(
-    tokens: &mut Peekable<I>,
+fn parse_operation<I: PeekableAssumingIterator>(
+    tokens: &mut I,
     preceeding: Node,
     rearrange: bool,
-) -> Result<Node, ParserErrors>
-where
-    I: Iterator<Item = Result<Token, LexerErrors>>,
-{
-    let (operator, start) = if let Some(Ok(Token {
-        token: TokenType::Operator(operator),
-        start,
-        ..
-    })) = tokens.next()
-    {
-        (operator, start)
-    } else {
-        unreachable!()
-    };
+) -> Result<Node, ParserErrors> {
+    let (start, _, operator) = tokens.assume_operator()?;
 
     Ok(match preceeding {
         a @ Node::Number(_) => Node::Operation {
@@ -156,7 +138,7 @@ fn extend_operation(operation: Node, operator: Operator, node: Node) -> Result<N
             },
         })
     } else {
-        Err(ParserErrors::ThisNeverHappens)?
+        unreachable!()
     }
 }
 
@@ -196,6 +178,11 @@ mod tests {
                         start: (0, 4),
                         end: (0, 4),
                     }),
+                    Ok(Token {
+                        token: TokenType::Semicolon,
+                        start: (0, 5),
+                        end: (0, 5),
+                    })
                 ]
                 .into_iter()
                 .peekable(),
@@ -228,6 +215,11 @@ mod tests {
                         token: TokenType::Literal("9".into()),
                         start: (0, 2),
                         end: (0, 2),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Semicolon,
+                        start: (0, 3),
+                        end: (0, 3),
                     })
                 ]
                 .into_iter()
@@ -255,6 +247,11 @@ mod tests {
                         token: TokenType::Literal("7.5".into()),
                         start: (0, 2),
                         end: (0, 4),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Semicolon,
+                        start: (0, 5),
+                        end: (0, 5),
                     })
                 ]
                 .into_iter()
@@ -282,6 +279,11 @@ mod tests {
                         token: TokenType::Literal("4".into()),
                         start: (0, 4),
                         end: (0, 4),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Semicolon,
+                        start: (0, 5),
+                        end: (0, 5),
                     })
                 ]
                 .into_iter()
@@ -309,6 +311,11 @@ mod tests {
                         token: TokenType::Literal("1".into()),
                         start: (0, 2),
                         end: (0, 2),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Semicolon,
+                        start: (0, 3),
+                        end: (0, 3),
                     })
                 ]
                 .into_iter()
@@ -336,6 +343,11 @@ mod tests {
                         token: TokenType::Literal("1.5".into()),
                         start: (0, 2),
                         end: (0, 4),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Semicolon,
+                        start: (0, 5),
+                        end: (0, 5),
                     })
                 ]
                 .into_iter()
@@ -377,6 +389,11 @@ mod tests {
                         start: (0, 4),
                         end: (0, 4),
                     }),
+                    Ok(Token {
+                        token: TokenType::Semicolon,
+                        start: (0, 5),
+                        end: (0, 5),
+                    })
                 ]
                 .into_iter()
                 .peekable(),
@@ -417,6 +434,11 @@ mod tests {
                         start: (0, 4),
                         end: (0, 4),
                     }),
+                    Ok(Token {
+                        token: TokenType::Semicolon,
+                        start: (0, 5),
+                        end: (0, 5),
+                    })
                 ]
                 .into_iter()
                 .peekable(),
@@ -457,6 +479,11 @@ mod tests {
                         start: (0, 5),
                         end: (0, 5),
                     }),
+                    Ok(Token {
+                        token: TokenType::Semicolon,
+                        start: (0, 8),
+                        end: (0, 8),
+                    })
                 ]
                 .into_iter()
                 .peekable(),
@@ -497,6 +524,11 @@ mod tests {
                         start: (0, 5),
                         end: (0, 5),
                     }),
+                    Ok(Token {
+                        token: TokenType::Semicolon,
+                        start: (0, 6),
+                        end: (0, 6),
+                    })
                 ]
                 .into_iter()
                 .peekable(),
@@ -537,6 +569,11 @@ mod tests {
                         start: (0, 5),
                         end: (0, 5),
                     }),
+                    Ok(Token {
+                        token: TokenType::Semicolon,
+                        start: (0, 6),
+                        end: (0, 6),
+                    })
                 ]
                 .into_iter()
                 .peekable(),
@@ -587,6 +624,11 @@ mod tests {
                         start: (0, 7),
                         end: (0, 7),
                     }),
+                    Ok(Token {
+                        token: TokenType::Semicolon,
+                        start: (0, 8),
+                        end: (0, 8),
+                    })
                 ]
                 .into_iter()
                 .peekable(),
@@ -641,6 +683,11 @@ mod tests {
                         start: (0, 9),
                         end: (0, 11),
                     }),
+                    Ok(Token {
+                        token: TokenType::Semicolon,
+                        start: (0, 12),
+                        end: (0, 12),
+                    })
                 ]
                 .into_iter()
                 .peekable(),

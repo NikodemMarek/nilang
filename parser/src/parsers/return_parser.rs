@@ -1,65 +1,42 @@
-use std::iter::Peekable;
-
-use errors::{LexerErrors, ParserErrors};
+use errors::ParserErrors;
 use nilang_types::{
     nodes::Node,
     tokens::{Token, TokenType},
 };
+
+use crate::assuming_iterator::PeekableAssumingIterator;
 
 use super::{
     identifier_parser::parse_identifier, literal_parser::parse_literal,
     operation_parser::parse_operation_if_operator_follows, parenthesis_parser::parse_parenthesis,
 };
 
-pub fn parse_return<I>(tokens: &mut Peekable<I>) -> Result<Node, ParserErrors>
-where
-    I: Iterator<Item = Result<Token, LexerErrors>>,
-{
-    match tokens.next() {
-        Some(Ok(Token {
-            token: TokenType::Keyword(value),
-            ..
-        })) => {
-            if *value != *"rt" {
-                Err(ParserErrors::ExpectedTokens {
-                    tokens: Vec::from([TokenType::Keyword("rt".into())]),
-                    loc: (0, 1),
-                })?
-            }
-        }
-        Some(Ok(Token { start, .. })) => Err(ParserErrors::ExpectedTokens {
-            tokens: Vec::from([TokenType::Keyword("rt".into())]),
-            loc: start,
-        })?,
-        Some(Err(e)) => Err(ParserErrors::LexerError(e))?,
-        None => Err(ParserErrors::EndOfInput {
-            loc: (usize::MAX, usize::MAX),
-        })?,
-    };
+pub fn parse_return<I: PeekableAssumingIterator>(tokens: &mut I) -> Result<Node, ParserErrors> {
+    tokens.assume_keyword("rt")?;
 
-    let value = match tokens.peek() {
-        Some(Ok(Token {
+    let value = match tokens.peek_valid()? {
+        Token {
             token: TokenType::Literal(_),
             ..
-        })) => {
-            let literal = parse_literal(tokens);
-            parse_operation_if_operator_follows(tokens, literal?)?
+        } => {
+            let literal = parse_literal(tokens)?;
+            parse_operation_if_operator_follows(tokens, literal)?
         }
-        Some(Ok(Token {
+        Token {
             token: TokenType::Identifier(_),
             ..
-        })) => {
-            let identifier = parse_identifier(tokens);
-            parse_operation_if_operator_follows(tokens, identifier?)?
+        } => {
+            let identifier = parse_identifier(tokens)?;
+            parse_operation_if_operator_follows(tokens, identifier)?
         }
-        Some(Ok(Token {
+        Token {
             token: TokenType::OpeningParenthesis,
             ..
-        })) => {
-            let parenthesis = parse_parenthesis(tokens);
-            parse_operation_if_operator_follows(tokens, parenthesis?)?
+        } => {
+            let parenthesis = parse_parenthesis(tokens)?;
+            parse_operation_if_operator_follows(tokens, parenthesis)?
         }
-        Some(Ok(Token { end, .. })) => Err(ParserErrors::ExpectedTokens {
+        Token { end, .. } => Err(ParserErrors::ExpectedTokens {
             tokens: Vec::from([
                 TokenType::Literal("".into()),
                 TokenType::Identifier("".into()),
@@ -67,26 +44,9 @@ where
             ]),
             loc: *end,
         })?,
-        Some(Err(e)) => Err(ParserErrors::LexerError(e.clone()))?,
-        None => Err(ParserErrors::EndOfInput {
-            loc: (usize::MAX, usize::MAX),
-        })?,
     };
 
-    match tokens.next() {
-        Some(Ok(Token {
-            token: TokenType::Semicolon,
-            ..
-        })) => {}
-        Some(Ok(Token { start, .. })) => Err(ParserErrors::ExpectedTokens {
-            tokens: Vec::from([TokenType::Semicolon]),
-            loc: start,
-        })?,
-        Some(Err(e)) => Err(ParserErrors::LexerError(e))?,
-        None => Err(ParserErrors::EndOfInput {
-            loc: (usize::MAX, usize::MAX),
-        })?,
-    };
+    tokens.assume_semicolon()?;
 
     Ok(Node::Return(Box::new(value)))
 }

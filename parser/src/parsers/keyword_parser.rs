@@ -1,24 +1,21 @@
-use std::iter::Peekable;
-
-use errors::{LexerErrors, ParserErrors};
+use errors::ParserErrors;
 use nilang_types::{
     nodes::Node,
     tokens::{Token, TokenType},
 };
 
+use crate::assuming_iterator::PeekableAssumingIterator;
+
 use super::{
-    function_declaration_parser::parse_function_declaration, return_parser::parse_return,
+    function_definition_parser::parse_function_definition, return_parser::parse_return,
     variable_declaration_parser::parse_variable_declaration,
 };
 
-pub fn parse_keyword<I>(tokens: &mut Peekable<I>) -> Result<Node, ParserErrors>
-where
-    I: Iterator<Item = Result<Token, LexerErrors>>,
-{
-    let value = if let Some(Ok(Token {
+pub fn parse_keyword<I: PeekableAssumingIterator>(tokens: &mut I) -> Result<Node, ParserErrors> {
+    let value = if let Token {
         token: TokenType::Keyword(value),
         ..
-    })) = tokens.peek()
+    } = tokens.peek_valid()?
     {
         value
     } else {
@@ -27,7 +24,7 @@ where
 
     Ok(match &**value {
         "rt" => parse_return(tokens)?,
-        "fn" => parse_function_declaration(tokens)?,
+        "fn" => parse_function_definition(tokens)?,
         "vr" => parse_variable_declaration(tokens)?,
         _ => Err(ParserErrors::ExpectedTokens {
             tokens: Vec::from([TokenType::Keyword("".into())]),

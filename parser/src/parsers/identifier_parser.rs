@@ -1,63 +1,53 @@
-use std::iter::Peekable;
-
-use errors::{LexerErrors, ParserErrors};
+use errors::ParserErrors;
 use nilang_types::{
     nodes::Node,
     tokens::{Token, TokenType},
 };
 
+use crate::assuming_iterator::PeekableAssumingIterator;
+
 use super::{
-    function_arguments_parser::parse_function_arguments,
+    argument_list_parser::parse_argument_list,
     operation_parser::parse_operation_if_operator_follows,
 };
 
-pub fn parse_identifier<I>(tokens: &mut Peekable<I>) -> Result<Node, ParserErrors>
-where
-    I: Iterator<Item = Result<Token, LexerErrors>>,
-{
-    let value = if let Some(Ok(Token {
-        token: TokenType::Identifier(value),
-        ..
-    })) = tokens.next()
-    {
-        value
-    } else {
-        unreachable!()
-    };
+pub fn parse_identifier<I: PeekableAssumingIterator>(tokens: &mut I) -> Result<Node, ParserErrors> {
+    let (_, _, value) = tokens.assume_identifier()?;
 
-    Ok(match tokens.peek() {
-        Some(Ok(Token {
+    match tokens.peek_valid()? {
+        Token {
             token: TokenType::OpeningParenthesis,
             ..
-        })) => {
-            let function_arguments = parse_function_arguments(tokens);
+        } => {
+            let function_arguments = parse_argument_list(tokens);
             parse_operation_if_operator_follows(
                 tokens,
                 Node::FunctionCall {
                     name: value.to_string(),
                     arguments: function_arguments?,
                 },
-            )?
+            )
         }
-        Some(Ok(_)) => {
-            parse_operation_if_operator_follows(tokens, Node::VariableReference(value.to_string()))?
+        Token {
+            token: TokenType::Operator(_),
+            ..
+        } => {
+            parse_operation_if_operator_follows(tokens, Node::VariableReference(value.to_string()))
         }
-        Some(Err(e)) => Err(ParserErrors::LexerError(e.clone()))?,
-        None => Err(ParserErrors::EndOfInput {
-            loc: (usize::MAX, usize::MAX),
-        })?,
-    })
+        Token { .. } => Ok(Node::VariableReference(value.to_string())),
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::parsers::identifier_parser::parse_identifier;
+    use nilang_types::{
+        nodes::Node,
+        tokens::{Token, TokenType},
+    };
+
     #[test]
     fn test_parse_identifier() {
-        use crate::parsers::identifier_parser::parse_identifier;
-        use nilang_types::{
-            nodes::Node,
-            tokens::{Token, TokenType},
-        };
         assert_eq!(
             parse_identifier(
                 &mut [
@@ -97,6 +87,11 @@ mod tests {
                         start: (0, 2),
                         end: (0, 2),
                     }),
+                    Ok(Token {
+                        token: TokenType::Semicolon,
+                        start: (0, 3),
+                        end: (0, 3),
+                    })
                 ]
                 .into_iter()
                 .peekable()
