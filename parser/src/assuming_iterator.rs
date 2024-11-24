@@ -3,7 +3,7 @@ use std::iter::Peekable;
 use errors::{LexerErrors, ParserErrors};
 use nilang_types::{
     nodes::Operator,
-    tokens::{Token, TokenType},
+    tokens::{Keyword, Token, TokenType},
 };
 
 type Loc = (usize, usize);
@@ -13,7 +13,7 @@ pub trait AssumingIterator: Iterator {
 
     fn assume_literal(&mut self) -> Result<(Loc, Loc, Box<str>), ParserErrors>;
     fn assume_identifier(&mut self) -> Result<(Loc, Loc, Box<str>), ParserErrors>;
-    fn assume_keyword(&mut self, keyword: &str) -> Result<(Loc, Loc), ParserErrors>;
+    fn assume_keyword(&mut self, keyword: Keyword) -> Result<(Loc, Loc), ParserErrors>;
     fn assume_operator(&mut self) -> Result<(Loc, Loc, Operator), ParserErrors>;
     fn assume_equals(&mut self) -> Result<Loc, ParserErrors>;
     fn assume_opening_parenthesis(&mut self) -> Result<Loc, ParserErrors>;
@@ -67,16 +67,16 @@ impl<I: Iterator<Item = Result<Token, LexerErrors>>> AssumingIterator for I {
     }
 
     #[inline]
-    fn assume_keyword(&mut self, keyword: &str) -> Result<(Loc, Loc), ParserErrors> {
+    fn assume_keyword(&mut self, keyword: Keyword) -> Result<(Loc, Loc), ParserErrors> {
         match self.assume_next()? {
             Token {
                 start,
                 end,
                 token: TokenType::Keyword(value),
             } => {
-                if *value != *keyword {
+                if value != keyword {
                     Err(ParserErrors::ExpectedTokens {
-                        tokens: Vec::from([TokenType::Keyword(keyword.into())]),
+                        tokens: Vec::from([TokenType::Keyword(keyword)]),
                         loc: (0, 1),
                     })?
                 }
@@ -84,7 +84,7 @@ impl<I: Iterator<Item = Result<Token, LexerErrors>>> AssumingIterator for I {
                 Ok((start, end))
             }
             Token { start, .. } => Err(ParserErrors::ExpectedTokens {
-                tokens: Vec::from([TokenType::Keyword(keyword.into())]),
+                tokens: Vec::from([TokenType::Keyword(keyword)]),
                 loc: start,
             }),
         }

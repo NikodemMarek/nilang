@@ -1,7 +1,7 @@
 use std::iter::Peekable;
 
 use errors::LexerErrors;
-use nilang_types::tokens::{Token, TokenType};
+use nilang_types::tokens::{Keyword, Token, TokenType};
 
 pub struct AggregatedIterator<'a> {
     iter: Peekable<std::str::Chars<'a>>,
@@ -115,7 +115,9 @@ impl<'a> Iterator for AggregatedIterator<'a> {
 
                     return Some(Ok(Token {
                         token: match aggregation.as_str() {
-                            "fn" | "vr" | "rt" => TokenType::Keyword(aggregation.into()),
+                            "fn" => TokenType::Keyword(Keyword::Function),
+                            "vr" => TokenType::Keyword(Keyword::Variable),
+                            "rt" => TokenType::Keyword(Keyword::Return),
                             _ => TokenType::Identifier(aggregation.into()),
                         },
                         start,
@@ -252,7 +254,7 @@ impl AggregatedIterator<'_> {
 mod tests {
     use nilang_types::{
         nodes::Operator,
-        tokens::{Token, TokenType},
+        tokens::{Keyword, Token, TokenType},
     };
 
     use crate::aggregated_iterator::AggregatedIterator;
@@ -331,7 +333,7 @@ mod tests {
         assert_eq!(
             iter.next().unwrap().unwrap(),
             Token {
-                token: TokenType::Keyword("fn".into()),
+                token: TokenType::Keyword(Keyword::Function),
                 start: (0, 0),
                 end: (0, 1),
             }
@@ -385,7 +387,7 @@ mod tests {
         assert_eq!(
             iter.next().unwrap().unwrap(),
             Token {
-                token: TokenType::Keyword("rt".into()),
+                token: TokenType::Keyword(Keyword::Return),
                 start: (1, 4),
                 end: (1, 5),
             }

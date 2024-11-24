@@ -1,7 +1,7 @@
 use errors::ParserErrors;
 use nilang_types::{
     nodes::Node,
-    tokens::{Token, TokenType},
+    tokens::{Keyword, Token, TokenType},
 };
 
 use crate::assuming_iterator::PeekableAssumingIterator;
@@ -22,14 +22,10 @@ pub fn parse_keyword<I: PeekableAssumingIterator>(tokens: &mut I) -> Result<Node
         unreachable!()
     };
 
-    Ok(match &**value {
-        "rt" => parse_return(tokens)?,
-        "fn" => parse_function_definition(tokens)?,
-        "vr" => parse_variable_declaration(tokens)?,
-        _ => Err(ParserErrors::ExpectedTokens {
-            tokens: Vec::from([TokenType::Keyword("".into())]),
-            loc: (0, 1),
-        })?,
+    Ok(match *value {
+        Keyword::Variable => parse_variable_declaration(tokens)?,
+        Keyword::Function => parse_function_definition(tokens)?,
+        Keyword::Return => parse_return(tokens)?,
     })
 }
 
@@ -38,7 +34,7 @@ mod tests {
     use crate::parsers::keyword_parser::parse_keyword;
     use nilang_types::{
         nodes::Node,
-        tokens::{Token, TokenType},
+        tokens::{Keyword, Token, TokenType},
     };
 
     #[test]
@@ -47,7 +43,7 @@ mod tests {
             parse_keyword(
                 &mut [
                     Ok(Token {
-                        token: TokenType::Keyword("rt".into()),
+                        token: TokenType::Keyword(Keyword::Return),
                         start: (0, 0),
                         end: (0, 1),
                     }),
@@ -73,7 +69,7 @@ mod tests {
             parse_keyword(
                 &mut [
                     Ok(Token {
-                        token: TokenType::Keyword("fn".into()),
+                        token: TokenType::Keyword(Keyword::Function),
                         start: (0, 0),
                         end: (0, 1),
                     }),
@@ -118,7 +114,7 @@ mod tests {
             parse_keyword(
                 &mut [
                     Ok(Token {
-                        token: TokenType::Keyword("vr".into()),
+                        token: TokenType::Keyword(Keyword::Variable),
                         start: (0, 0),
                         end: (0, 1),
                     }),

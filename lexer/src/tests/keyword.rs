@@ -1,4 +1,4 @@
-use nilang_types::tokens::{Token, TokenType};
+use nilang_types::tokens::{Keyword, Token, TokenType};
 
 use crate::lex;
 
@@ -7,7 +7,7 @@ fn keyword() {
     assert_eq!(
         lex("fn").next().unwrap().unwrap(),
         Token {
-            token: TokenType::Keyword("fn".into()),
+            token: TokenType::Keyword(Keyword::Function),
             start: (0, 0),
             end: (0, 1),
         }
@@ -16,7 +16,7 @@ fn keyword() {
     assert_eq!(
         lex("rt").next().unwrap().unwrap(),
         Token {
-            token: TokenType::Keyword("rt".into()),
+            token: TokenType::Keyword(Keyword::Return),
             start: (0, 0),
             end: (0, 1),
         }
@@ -25,7 +25,7 @@ fn keyword() {
     assert_eq!(
         lex("vr").next().unwrap().unwrap(),
         Token {
-            token: TokenType::Keyword("vr".into()),
+            token: TokenType::Keyword(Keyword::Variable),
             start: (0, 0),
             end: (0, 1),
         }

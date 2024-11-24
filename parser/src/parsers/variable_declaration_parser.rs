@@ -1,7 +1,7 @@
 use errors::ParserErrors;
 use nilang_types::{
     nodes::Node,
-    tokens::{Token, TokenType},
+    tokens::{Keyword, Token, TokenType},
 };
 
 use crate::assuming_iterator::PeekableAssumingIterator;
@@ -14,7 +14,7 @@ use super::{
 pub fn parse_variable_declaration<I: PeekableAssumingIterator>(
     tokens: &mut I,
 ) -> Result<Node, ParserErrors> {
-    tokens.assume_keyword("vr")?;
+    tokens.assume_keyword(Keyword::Variable)?;
 
     let (_, _, name) = tokens.assume_identifier()?;
 
@@ -64,7 +64,7 @@ pub fn parse_variable_declaration<I: PeekableAssumingIterator>(
 mod tests {
     use nilang_types::{
         nodes::{Node, Operator},
-        tokens::{Token, TokenType},
+        tokens::{Keyword, Token, TokenType},
     };
 
     use crate::parsers::variable_declaration_parser::parse_variable_declaration;
@@ -75,7 +75,7 @@ mod tests {
             parse_variable_declaration(
                 &mut [
                     Ok(Token {
-                        token: TokenType::Keyword("vr".into()),
+                        token: TokenType::Keyword(Keyword::Variable),
                         start: (0, 0),
                         end: (0, 1),
                     }),
@@ -114,7 +114,7 @@ mod tests {
             parse_variable_declaration(
                 &mut [
                     Ok(Token {
-                        token: TokenType::Keyword("vr".into()),
+                        token: TokenType::Keyword(Keyword::Variable),
                         start: (0, 0),
                         end: (0, 1),
                     }),
@@ -153,7 +153,7 @@ mod tests {
             parse_variable_declaration(
                 &mut [
                     Ok(Token {
-                        token: TokenType::Keyword("vr".into()),
+                        token: TokenType::Keyword(Keyword::Variable),
                         start: (0, 0),
                         end: (0, 1),
                     }),
@@ -216,7 +216,7 @@ mod tests {
             parse_variable_declaration(
                 &mut [
                     Ok(Token {
-                        token: TokenType::Keyword("vr".into()),
+                        token: TokenType::Keyword(Keyword::Variable),
                         start: (0, 0),
                         end: (0, 1),
                     }),
@@ -279,7 +279,7 @@ mod tests {
             parse_variable_declaration(
                 &mut [
                     Ok(Token {
-                        token: TokenType::Keyword("vr".into()),
+                        token: TokenType::Keyword(Keyword::Variable),
                         start: (0, 0),
                         end: (0, 1),
                     }),

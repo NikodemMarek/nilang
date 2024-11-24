@@ -8,10 +8,17 @@ pub struct Token {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub enum Keyword {
+    Function,
+    Variable,
+    Return,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum TokenType {
     Literal(Box<str>),
     Identifier(Box<str>),
-    Keyword(Box<str>),
+    Keyword(Keyword),
     Operator(Operator),
     Equals,
     OpeningParenthesis,

@@ -1,7 +1,7 @@
 use errors::ParserErrors;
 use nilang_types::{
     nodes::Node,
-    tokens::{Token, TokenType},
+    tokens::{Keyword, Token, TokenType},
 };
 
 use crate::assuming_iterator::PeekableAssumingIterator;
@@ -11,7 +11,7 @@ use super::{parameter_list_parser::parse_parameter_list, parse};
 pub fn parse_function_definition<I: PeekableAssumingIterator>(
     tokens: &mut I,
 ) -> Result<Node, ParserErrors> {
-    tokens.assume_keyword("fn")?;
+    tokens.assume_keyword(Keyword::Function)?;
 
     let (_, _, name) = tokens.assume_identifier()?;
 
@@ -51,7 +51,7 @@ pub fn parse_function_definition<I: PeekableAssumingIterator>(
 mod tests {
     use nilang_types::{
         nodes::Node,
-        tokens::{Token, TokenType},
+        tokens::{Keyword, Token, TokenType},
     };
 
     use super::parse_function_definition;
@@ -62,7 +62,7 @@ mod tests {
             &parse_function_definition(
                 &mut [
                     Ok(Token {
-                        token: TokenType::Keyword("fn".into()),
+                        token: TokenType::Keyword(Keyword::Function),
                         start: (0, 0),
                         end: (0, 1),
                     }),
@@ -87,7 +87,7 @@ mod tests {
                         end: (0, 9),
                     }),
                     Ok(Token {
-                        token: TokenType::Keyword("rt".into()),
+                        token: TokenType::Keyword(Keyword::Return),
                         start: (0, 11),
                         end: (0, 12),
                     }),

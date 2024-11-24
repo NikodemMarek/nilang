@@ -1,7 +1,7 @@
 use errors::ParserErrors;
 use nilang_types::{
     nodes::Node,
-    tokens::{Token, TokenType},
+    tokens::{Keyword, Token, TokenType},
 };
 
 use crate::assuming_iterator::PeekableAssumingIterator;
@@ -12,7 +12,7 @@ use super::{
 };
 
 pub fn parse_return<I: PeekableAssumingIterator>(tokens: &mut I) -> Result<Node, ParserErrors> {
-    tokens.assume_keyword("rt")?;
+    tokens.assume_keyword(Keyword::Return)?;
 
     let value = match tokens.peek_valid()? {
         Token {
@@ -55,7 +55,7 @@ pub fn parse_return<I: PeekableAssumingIterator>(tokens: &mut I) -> Result<Node,
 mod tests {
     use nilang_types::{
         nodes::{Node, Operator},
-        tokens::{Token, TokenType},
+        tokens::{Keyword, Token, TokenType},
     };
 
     use crate::parsers::return_parser::parse_return;
@@ -66,7 +66,7 @@ mod tests {
             parse_return(
                 &mut [
                     Ok(Token {
-                        token: TokenType::Keyword("rt".into()),
+                        token: TokenType::Keyword(Keyword::Return),
                         start: (0, 0),
                         end: (0, 1),
                     }),
@@ -92,7 +92,7 @@ mod tests {
             parse_return(
                 &mut [
                     Ok(Token {
-                        token: TokenType::Keyword("rt".into()),
+                        token: TokenType::Keyword(Keyword::Return),
                         start: (0, 0),
                         end: (0, 1),
                     }),
@@ -142,7 +142,7 @@ mod tests {
             parse_return(
                 &mut [
                     Ok(Token {
-                        token: TokenType::Keyword("rt".into()),
+                        token: TokenType::Keyword(Keyword::Return),
                         start: (0, 0),
                         end: (0, 1),
                     }),
@@ -182,7 +182,7 @@ mod tests {
             parse_return(
                 &mut [
                     Ok(Token {
-                        token: TokenType::Keyword("rt".into()),
+                        token: TokenType::Keyword(Keyword::Return),
                         start: (0, 0),
                         end: (0, 1),
                     }),
