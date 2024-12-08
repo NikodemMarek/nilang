@@ -6,7 +6,10 @@ use nilang_types::{
 
 use crate::assuming_iterator::PeekableAssumingIterator;
 
-use super::{parameter_list_parser::parse_parameter_list, parse};
+use super::{
+    parameter_list_parser::parse_parameter_list, parse,
+    type_annotation_parser::parse_type_annotation,
+};
 
 pub fn parse_function_definition<I: PeekableAssumingIterator>(
     tokens: &mut I,
@@ -16,6 +19,8 @@ pub fn parse_function_definition<I: PeekableAssumingIterator>(
     let (_, _, name) = tokens.assume_identifier()?;
 
     let parameters = parse_parameter_list(tokens)?;
+
+    let return_type = parse_type_annotation(tokens)?;
 
     tokens.assume_opening_brace()?;
 
@@ -41,8 +46,9 @@ pub fn parse_function_definition<I: PeekableAssumingIterator>(
     };
 
     Ok(Node::FunctionDeclaration {
-        name: name.to_string(),
+        name,
         parameters,
+        return_type,
         body: Box::new(Node::Scope(body)),
     })
 }
@@ -82,14 +88,24 @@ mod tests {
                         end: (0, 8),
                     }),
                     Ok(Token {
-                        token: TokenType::OpeningBrace,
+                        token: TokenType::Colon,
                         start: (0, 9),
-                        end: (0, 9),
+                        end: (0, 9)
+                    }),
+                    Ok(Token {
+                        token: TokenType::Identifier("int".into()),
+                        start: (0, 10),
+                        end: (0, 12)
+                    }),
+                    Ok(Token {
+                        token: TokenType::OpeningBrace,
+                        start: (0, 13),
+                        end: (0, 13),
                     }),
                     Ok(Token {
                         token: TokenType::Keyword(Keyword::Return),
-                        start: (0, 11),
-                        end: (0, 12),
+                        start: (0, 14),
+                        end: (0, 15),
                     }),
                     Ok(Token {
                         token: TokenType::Literal("6".into()),
@@ -112,8 +128,9 @@ mod tests {
             )
             .unwrap(),
             &Node::FunctionDeclaration {
-                name: "main".to_string(),
-                parameters: Vec::new(),
+                name: "main".into(),
+                parameters: [].into(),
+                return_type: "int".into(),
                 body: Box::new(Node::Scope(Vec::from(&[Node::Return(Box::new(
                     Node::Number(6.)
                 ))]))),

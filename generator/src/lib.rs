@@ -3,24 +3,116 @@
 mod transformers;
 mod utils;
 
+use std::{collections::HashMap, rc::Rc};
+
 use errors::GeneratorErrors;
-use nilang_types::nodes::Node;
+use nilang_types::nodes::{Node, Program};
 use transformers::{scope::Scope, transform};
 use utils::generate_function;
 
-pub fn generate(program: Node) -> eyre::Result<String> {
-    if let Node::Program(program) = program {
-        let mut scope = Scope::default();
+/// (size, <field, offset>)
+type StructSize = (u8, Option<HashMap<Box<str>, u8>>);
 
-        let mut code = Vec::with_capacity(4096);
-        for node in program {
-            code.append(&mut transform(&node, &mut scope)?);
-        }
+/// <type, (size, <field, offset>)>
+#[derive(Debug)]
+struct TypesRef(HashMap<Box<str>, StructSize>);
 
-        Ok(generate_program(&[], &code))
-    } else {
-        Err(GeneratorErrors::InvalidNode { node: program })?
+impl Default for TypesRef {
+    fn default() -> Self {
+        Self(HashMap::from([
+            ("ptr".into(), (4, None)),
+            ("int".into(), (4, None)),
+            ("bool".into(), (1, None)),
+            ("char".into(), (1, None)),
+        ]))
     }
+}
+
+impl TypesRef {
+    pub fn get_structure_size(&self, r#type: &str) -> Result<u8, GeneratorErrors> {
+        match self.0.get(r#type) {
+            Some(size) => Ok(size.0),
+            None => Err(GeneratorErrors::StructureNotDefined {
+                name: r#type.into(),
+            }),
+        }
+    }
+
+    pub fn get_field_offset(&self, r#type: &str, field: &str) -> Result<u8, GeneratorErrors> {
+        let structure = match self.0.get(r#type) {
+            Some((_, Some(structure))) => structure,
+            Some(_) => unreachable!(),
+            None => Err(GeneratorErrors::StructureNotDefined {
+                name: r#type.into(),
+            })?,
+        };
+        match structure.get(field) {
+            Some(offset) => Ok(*offset),
+            None => Err(GeneratorErrors::FieldNotDefined { name: field.into() }),
+        }
+    }
+}
+
+fn calculate_structure_size(tsr: &TypesRef, structure: &Node) -> Result<u8, GeneratorErrors> {
+    if let Node::Structure { fields, name } = structure {
+        fields.iter().try_fold(0, |size, (_, r#type)| {
+            if r#type == name {
+                todo!("probably treat it as a pointer")
+            }
+            tsr.0.get(r#type).map(|s| size + s.0).ok_or_else(|| {
+                GeneratorErrors::StructureNotDefined {
+                    name: r#type.to_owned(),
+                }
+            })
+        })
+    } else {
+        unreachable!()
+    }
+}
+
+const ALIGNMENT: u8 = 8;
+
+pub fn generate(
+    Program {
+        structures,
+        functions,
+    }: Program,
+) -> eyre::Result<String> {
+    let mut tr = TypesRef::default();
+    for (name, structure) in structures.iter() {
+        tr.0.insert(
+            name.clone(),
+            (
+                calculate_structure_size(&tr, structure)?,
+                Some(match structure {
+                    Node::Structure { fields, .. } => {
+                        let mut map = HashMap::new();
+                        let mut offset = 0;
+                        for (field_name, r#type) in fields.iter() {
+                            map.insert(field_name.clone(), offset);
+                            offset += match tr.0.get(r#type) {
+                                Some((size, _)) => size,
+                                None => unreachable!(),
+                            };
+                        }
+
+                        map
+                    }
+                    _ => unreachable!(),
+                }),
+            ),
+        );
+    }
+    let tr = Rc::new(tr);
+
+    let mut scope = Scope::new(tr.clone());
+
+    let mut code = Vec::with_capacity(4096);
+    for node in functions.values() {
+        code.append(&mut transform(node, &tr, &mut scope)?);
+    }
+
+    Ok(generate_program(&[], &code))
 }
 
 fn generate_program(data: &[String], code: &[String]) -> String {
@@ -43,23 +135,32 @@ fn generate_program(data: &[String], code: &[String]) -> String {
 
 #[cfg(test)]
 mod tests {
-    use nilang_types::nodes::{Node, Operator};
+    use std::collections::HashMap;
+
+    use nilang_types::nodes::{Node, Operator, Program};
 
     use crate::{generate, generate_program};
 
     #[test]
     fn test_generate() {
-        let node = Node::Program(Vec::from([Node::FunctionDeclaration {
-            name: "main".to_string(),
-            parameters: Vec::new(),
-            body: Box::new(Node::Scope(Vec::from(&[Node::Return(Box::new(
-                Node::Operation {
-                    operator: Operator::Add,
-                    a: Box::new(Node::Number(1.)),
-                    b: Box::new(Node::Number(2.)),
+        let node = Program {
+            structures: HashMap::new(),
+            functions: HashMap::from([(
+                "main".into(),
+                Node::FunctionDeclaration {
+                    name: "main".into(),
+                    parameters: [].into(),
+                    return_type: "int".into(),
+                    body: Box::new(Node::Scope(Vec::from(&[Node::Return(Box::new(
+                        Node::Operation {
+                            operator: Operator::Add,
+                            a: Box::new(Node::Number(1.)),
+                            b: Box::new(Node::Number(2.)),
+                        },
+                    ))]))),
                 },
-            ))]))),
-        }]));
+            )]),
+        };
         let output = generate(node);
 
         assert_eq!(

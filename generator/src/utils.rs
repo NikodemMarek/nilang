@@ -9,6 +9,14 @@ pub fn generate_function(name: &str, code: &[String]) -> Vec<String> {
     a.iter().chain(b.iter()).map(ToOwned::to_owned).collect()
 }
 
+/// Saves address of allocation in rax
+pub fn generate_allocation(size: u8) -> Vec<String> {
+    Vec::from([
+        format!("movq ${size}, %rdi"),
+        String::from("call malloc"), // TODO: Handle malloc error
+    ])
+}
+
 pub fn pad_lines<'a, I: IntoIterator<Item = &'a String>>(lines: I, padding: usize) -> Vec<String> {
     lines
         .into_iter()

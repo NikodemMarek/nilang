@@ -57,6 +57,7 @@ fn parse_operation<I: PeekableAssumingIterator>(
             a: Box::new(a),
             b: Box::new(parse(tokens)?),
         },
+        Node::FieldAccess { .. } => todo!(),
         a @ Node::VariableReference(_) | a @ Node::FunctionCall { .. } => Node::Operation {
             operator,
             a: Box::new(a),
@@ -82,7 +83,8 @@ fn parse_operation<I: PeekableAssumingIterator>(
         Node::Return(_)
         | Node::FunctionDeclaration { .. }
         | Node::VariableDeclaration { .. }
-        | Node::Program(_) => Err(ParserErrors::InvalidOperand {
+        | Node::Structure { .. }
+        | Node::Object { .. } => Err(ParserErrors::InvalidOperand {
             loc: (start.0, start.1 - 1),
         })?,
     })

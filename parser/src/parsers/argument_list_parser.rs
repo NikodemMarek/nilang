@@ -6,108 +6,59 @@ use nilang_types::{
 
 use crate::assuming_iterator::PeekableAssumingIterator;
 
-use super::{
-    identifier_parser::parse_identifier, literal_parser::parse_literal,
-    operation_parser::parse_operation_if_operator_follows, parenthesis_parser::parse_parenthesis,
-};
+use super::value_yielding_parser::parse_value_yielding;
 
 pub fn parse_argument_list<I: PeekableAssumingIterator>(
     tokens: &mut I,
 ) -> Result<Vec<Node>, ParserErrors> {
     tokens.assume_opening_parenthesis()?;
 
-    Ok({
-        let mut arguments = Vec::new();
+    let mut arguments = Vec::new();
 
-        loop {
-            match tokens.peek_valid()? {
-                Token {
-                    token: TokenType::Literal(_),
-                    ..
-                } => {
-                    let literal = parse_literal(tokens);
-                    arguments.push(parse_operation_if_operator_follows(tokens, literal?)?);
+    loop {
+        match tokens.peek_valid()? {
+            Token {
+                token:
+                    TokenType::Literal(_) | TokenType::Identifier(_) | TokenType::OpeningParenthesis,
+                ..
+            } => {
+                arguments.push(parse_value_yielding(tokens)?);
 
-                    match tokens.assume_next()? {
-                        Token {
-                            token: TokenType::ClosingParenthesis,
-                            ..
-                        } => break,
-                        Token {
-                            token: TokenType::Comma,
-                            ..
-                        } => {}
-                        Token { start, .. } => Err(ParserErrors::ExpectedTokens {
-                            tokens: Vec::from([TokenType::Comma, TokenType::ClosingParenthesis]),
-                            loc: start,
-                        })?,
-                    }
+                match tokens.assume_next()? {
+                    Token {
+                        token: TokenType::ClosingParenthesis,
+                        ..
+                    } => break,
+                    Token {
+                        token: TokenType::Comma,
+                        ..
+                    } => {}
+                    Token { start, .. } => Err(ParserErrors::ExpectedTokens {
+                        tokens: Vec::from([TokenType::Comma, TokenType::ClosingParenthesis]),
+                        loc: start,
+                    })?,
                 }
-                Token {
-                    token: TokenType::Identifier(_),
-                    ..
-                } => {
-                    let identifier = parse_identifier(tokens);
-                    arguments.push(parse_operation_if_operator_follows(tokens, identifier?)?);
-
-                    match tokens.assume_next()? {
-                        Token {
-                            token: TokenType::ClosingParenthesis,
-                            ..
-                        } => break,
-                        Token {
-                            token: TokenType::Comma,
-                            ..
-                        } => {}
-                        Token { start, .. } => Err(ParserErrors::ExpectedTokens {
-                            tokens: Vec::from([TokenType::Comma, TokenType::ClosingParenthesis]),
-                            loc: start,
-                        })?,
-                    }
-                }
-                Token {
-                    token: TokenType::OpeningParenthesis,
-                    ..
-                } => {
-                    let parenthesis = parse_parenthesis(tokens);
-                    arguments.push(parse_operation_if_operator_follows(tokens, parenthesis?)?);
-
-                    match tokens.assume_next()? {
-                        Token {
-                            token: TokenType::ClosingParenthesis,
-                            ..
-                        } => break,
-                        Token {
-                            token: TokenType::Comma,
-                            ..
-                        } => {}
-                        Token { start, .. } => Err(ParserErrors::ExpectedTokens {
-                            tokens: Vec::from([TokenType::Comma, TokenType::ClosingParenthesis]),
-                            loc: start,
-                        })?,
-                    }
-                }
-                Token {
-                    token: TokenType::ClosingParenthesis,
-                    ..
-                } => {
-                    tokens.next();
-                    break;
-                }
-                Token { start, .. } => Err(ParserErrors::ExpectedTokens {
-                    tokens: Vec::from([
-                        TokenType::Identifier("".into()),
-                        TokenType::Literal("".into()),
-                        TokenType::OpeningParenthesis,
-                        TokenType::ClosingParenthesis,
-                    ]),
-                    loc: *start,
-                })?,
             }
+            Token {
+                token: TokenType::ClosingParenthesis,
+                ..
+            } => {
+                tokens.next();
+                break;
+            }
+            Token { start, .. } => Err(ParserErrors::ExpectedTokens {
+                tokens: Vec::from([
+                    TokenType::Identifier("".into()),
+                    TokenType::Literal("".into()),
+                    TokenType::OpeningParenthesis,
+                    TokenType::ClosingParenthesis,
+                ]),
+                loc: *start,
+            })?,
         }
+    }
 
-        arguments
-    })
+    Ok(arguments)
 }
 
 #[cfg(test)]
@@ -154,7 +105,7 @@ mod tests {
                 .peekable()
             )
             .unwrap(),
-            vec![Node::Number(5.), Node::VariableReference("x".to_string()),]
+            vec![Node::Number(5.), Node::VariableReference("x".into()),]
         );
 
         assert_eq!(
@@ -192,7 +143,7 @@ mod tests {
             .unwrap(),
             Vec::from([Node::Operation {
                 operator: Operator::Add,
-                a: Box::new(Node::VariableReference("x".to_string())),
+                a: Box::new(Node::VariableReference("x".into())),
                 b: Box::new(Node::Number(4.)),
             }])
         );

@@ -9,17 +9,21 @@ use scope_parser::parse_scope;
 
 use crate::assuming_iterator::PeekableAssumingIterator;
 
-pub mod argument_list_parser;
-pub mod function_definition_parser;
-pub mod identifier_parser;
-pub mod keyword_parser;
-pub mod literal_parser;
-pub mod operation_parser;
-pub mod parameter_list_parser;
-pub mod parenthesis_parser;
-pub mod return_parser;
-pub mod scope_parser;
-pub mod variable_declaration_parser;
+mod argument_list_parser;
+mod function_definition_parser;
+mod identifier_parser;
+mod keyword_parser;
+mod literal_parser;
+mod object_parser;
+mod operation_parser;
+mod parameter_list_parser;
+mod parenthesis_parser;
+mod return_parser;
+mod scope_parser;
+mod structure_parser;
+mod type_annotation_parser;
+mod value_yielding_parser;
+mod variable_declaration_parser;
 
 pub fn parse<I: PeekableAssumingIterator>(tokens: &mut I) -> Result<Node, ParserErrors> {
     let peek_valid = tokens.peek_valid()?;
@@ -35,7 +39,9 @@ pub fn parse<I: PeekableAssumingIterator>(tokens: &mut I) -> Result<Node, Parser
         | TokenType::ClosingBrace
         | TokenType::Equals
         | TokenType::Semicolon
-        | TokenType::Comma => Err(ParserErrors::UnexpectedToken {
+        | TokenType::Colon
+        | TokenType::Comma
+        | TokenType::Dot => Err(ParserErrors::UnexpectedToken {
             token: peek_valid.token.clone(),
             loc: peek_valid.start,
         })?,

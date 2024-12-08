@@ -1,3 +1,4 @@
+use errors::GeneratorErrors;
 use nilang_types::nodes::Node;
 
 use super::{function_call::transform_function_call, operator::transform_operation, scope::Scope};
@@ -8,12 +9,29 @@ pub fn transform_return(a: &Node, scope: &mut Scope) -> eyre::Result<Vec<String>
             Node::Number(value) => Ok(Vec::from([format!("movq ${}, %rbx", value)])),
             node @ Node::Operation { .. } => transform_operation(&node, scope, "%rbx"),
             Node::VariableReference(name) => Ok(Vec::from([format!(
-                "movq {}(%rbp), %rbx",
+                "movq -{}(%rbp), %rbx",
                 scope.get(&name)?
             )])),
+            Node::FieldAccess { structure, field } => match *structure {
+                Node::VariableReference(name) => Ok(Vec::from([
+                    format!("movq -{}(%rbp), %rax", scope.get(&name)?),
+                    format!("movq -{}(%rax), %rbx", 4),
+                ])),
+                Node::Object { .. } => todo!(),
+                Node::FieldAccess { .. } => todo!(),
+                Node::FunctionCall { .. } => todo!(),
+                node @ Node::FunctionDeclaration { .. }
+                | node @ Node::Number(_)
+                | node @ Node::Operation { .. }
+                | node @ Node::Scope(_)
+                | node @ Node::VariableDeclaration { .. }
+                | node @ Node::Return(_)
+                | node @ Node::Structure { .. } => Err(GeneratorErrors::InvalidNode { node })?,
+            },
+            Node::Object { .. } => todo!(),
             Node::FunctionDeclaration { .. } | Node::Scope(_) => todo!(),
             node @ Node::FunctionCall { .. } => transform_function_call(&node, scope),
-            Node::VariableDeclaration { .. } | Node::Return(_) | Node::Program(_) => {
+            Node::VariableDeclaration { .. } | Node::Return(_) | Node::Structure { .. } => {
                 panic!("Unexpected node: {:?}", a)
             }
         }
@@ -43,11 +61,11 @@ mod tests {
     #[test]
     fn return_variable_reference() {
         let mut scope = super::Scope::default();
-        let _ = scope.insert("a");
+        let _ = scope.insert("a", "int");
 
         assert_eq!(
             transform_return(
-                &Node::Return(Box::new(Node::VariableReference(String::from("a")))),
+                &Node::Return(Box::new(Node::VariableReference("a".into()))),
                 &mut scope,
             )
             .unwrap(),

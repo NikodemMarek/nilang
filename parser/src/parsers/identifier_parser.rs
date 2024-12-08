@@ -7,35 +7,51 @@ use nilang_types::{
 use crate::assuming_iterator::PeekableAssumingIterator;
 
 use super::{
-    argument_list_parser::parse_argument_list,
+    argument_list_parser::parse_argument_list, object_parser::parse_object,
     operation_parser::parse_operation_if_operator_follows,
 };
 
 pub fn parse_identifier<I: PeekableAssumingIterator>(tokens: &mut I) -> Result<Node, ParserErrors> {
-    let (_, _, value) = tokens.assume_identifier()?;
+    let (_, _, name) = tokens.assume_identifier()?;
 
-    match tokens.peek_valid()? {
+    let variable_reference = match tokens.peek_valid()? {
         Token {
             token: TokenType::OpeningParenthesis,
             ..
         } => {
-            let function_arguments = parse_argument_list(tokens);
-            parse_operation_if_operator_follows(
-                tokens,
-                Node::FunctionCall {
-                    name: value.to_string(),
-                    arguments: function_arguments?,
-                },
-            )
+            let arguments = parse_argument_list(tokens)?;
+            parse_operation_if_operator_follows(tokens, Node::FunctionCall { name, arguments })?
         }
         Token {
             token: TokenType::Operator(_),
             ..
+        } => parse_operation_if_operator_follows(tokens, Node::VariableReference(name))?,
+        Token {
+            token: TokenType::OpeningBrace,
+            ..
+        } => Node::Object {
+            structure: name,
+            fields: parse_object(tokens)?,
+        },
+        Token { .. } => Node::VariableReference(name),
+    };
+
+    Ok(match tokens.peek_valid()? {
+        Token {
+            token: TokenType::Dot,
+            ..
         } => {
-            parse_operation_if_operator_follows(tokens, Node::VariableReference(value.to_string()))
+            tokens.next();
+            Node::FieldAccess {
+                structure: Box::new(variable_reference),
+                field: {
+                    let (_, _, name) = tokens.assume_identifier()?;
+                    name
+                },
+            }
         }
-        Token { .. } => Ok(Node::VariableReference(value.to_string())),
-    }
+        Token { .. } => variable_reference,
+    })
 }
 
 #[cfg(test)]
@@ -66,7 +82,7 @@ mod tests {
                 .peekable()
             )
             .unwrap(),
-            Node::VariableReference("x".to_string())
+            Node::VariableReference("x".into())
         );
 
         assert_eq!(
@@ -98,8 +114,79 @@ mod tests {
             )
             .unwrap(),
             Node::FunctionCall {
-                name: "x".to_string(),
+                name: "x".into(),
                 arguments: Vec::new()
+            }
+        );
+
+        assert_eq!(
+            parse_identifier(
+                &mut [
+                    Ok(Token {
+                        token: TokenType::Identifier("x".into()),
+                        start: (0, 0),
+                        end: (0, 0),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Dot,
+                        start: (0, 1),
+                        end: (0, 1),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Identifier("test".into()),
+                        start: (0, 2),
+                        end: (0, 5),
+                    }),
+                ]
+                .into_iter()
+                .peekable()
+            )
+            .unwrap(),
+            Node::FieldAccess {
+                structure: Box::new(Node::VariableReference("x".into())),
+                field: "test".into()
+            }
+        );
+
+        assert_eq!(
+            parse_identifier(
+                &mut [
+                    Ok(Token {
+                        token: TokenType::Identifier("x".into()),
+                        start: (0, 0),
+                        end: (0, 0),
+                    }),
+                    Ok(Token {
+                        token: TokenType::OpeningParenthesis,
+                        start: (0, 1),
+                        end: (0, 1),
+                    }),
+                    Ok(Token {
+                        token: TokenType::ClosingParenthesis,
+                        start: (0, 2),
+                        end: (0, 2),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Dot,
+                        start: (0, 3),
+                        end: (0, 3),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Identifier("test".into()),
+                        start: (0, 4),
+                        end: (0, 7),
+                    }),
+                ]
+                .into_iter()
+                .peekable()
+            )
+            .unwrap(),
+            Node::FieldAccess {
+                structure: Box::new(Node::FunctionCall {
+                    name: "x".into(),
+                    arguments: Vec::new()
+                }),
+                field: "test".into()
             }
         );
     }

@@ -42,7 +42,7 @@ pub fn transform_operation(
                 format!("{}(%rbp)", scope.get(&name_b)?),
             ),
             (Node::Number(value_a), operation_b @ Node::Operation { .. }) => {
-                let result_pointer_offset_b = scope.insert_unnamed()?;
+                let result_pointer_offset_b = scope.insert_unnamed("int")?;
                 (
                     [
                         transform_operation(&operation_b, scope, result_register)?,
@@ -59,7 +59,7 @@ pub fn transform_operation(
                 )
             }
             (Node::VariableReference(name_a), operation_b @ Node::Operation { .. }) => {
-                let result_pointer_offset_b = scope.insert_unnamed()?;
+                let result_pointer_offset_b = scope.insert_unnamed("int")?;
                 (
                     [
                         transform_operation(&operation_b, scope, result_register)?,
@@ -76,7 +76,7 @@ pub fn transform_operation(
                 )
             }
             (a @ Node::Operation { .. }, b @ Node::Operation { .. }) => {
-                let result_pointer_offset_a = scope.insert_unnamed()?;
+                let result_pointer_offset_a = scope.insert_unnamed("int")?;
                 (
                     [
                         transform_operation(&a, scope, result_register)?,
@@ -235,14 +235,14 @@ mod tests {
     #[test]
     fn number_variable_reference() {
         let mut scope = Scope::default();
-        let _ = scope.insert("a");
+        let _ = scope.insert("a", "int");
 
         assert_eq!(
             transform_operation(
                 &(Node::Operation {
                     operator: Operator::Add,
                     a: Box::new(Node::Number(1.)),
-                    b: Box::new(Node::VariableReference(String::from("a"))),
+                    b: Box::new(Node::VariableReference("a".into())),
                 }),
                 &mut scope,
                 "%rax",
@@ -258,13 +258,13 @@ mod tests {
     #[test]
     fn variable_reference_number() {
         let mut scope = Scope::default();
-        let _ = scope.insert("a");
+        let _ = scope.insert("a", "int");
 
         assert_eq!(
             transform_operation(
                 &(Node::Operation {
                     operator: Operator::Add,
-                    a: Box::new(Node::VariableReference(String::from("a"))),
+                    a: Box::new(Node::VariableReference("a".into())),
                     b: Box::new(Node::Number(2.)),
                 }),
                 &mut scope,
@@ -281,15 +281,15 @@ mod tests {
     #[test]
     fn variable_reference_variable_reference() {
         let mut scope = Scope::default();
-        let _ = scope.insert("a");
-        let _ = scope.insert("b");
+        let _ = scope.insert("a", "int");
+        let _ = scope.insert("b", "int");
 
         assert_eq!(
             transform_operation(
                 &(Node::Operation {
                     operator: Operator::Add,
-                    a: Box::new(Node::VariableReference(String::from("a"))),
-                    b: Box::new(Node::VariableReference(String::from("b"))),
+                    a: Box::new(Node::VariableReference("a".into())),
+                    b: Box::new(Node::VariableReference("b".into())),
                 }),
                 &mut scope,
                 "%rax",
@@ -330,13 +330,13 @@ mod tests {
     #[test]
     fn variable_reference_operation() {
         let mut scope = Scope::default();
-        let _ = scope.insert("a");
+        let _ = scope.insert("a", "int");
 
         assert_eq!(
             transform_operation(
                 &(Node::Operation {
                     operator: Operator::Add,
-                    a: Box::new(Node::VariableReference(String::from("a"))),
+                    a: Box::new(Node::VariableReference("a".into())),
                     b: Box::new(Node::Operation {
                         operator: Operator::Multiply,
                         a: Box::new(Node::Number(2.)),
@@ -387,7 +387,7 @@ mod tests {
     #[test]
     fn operation_variable_reference() {
         let mut scope = Scope::default();
-        let _ = scope.insert("a");
+        let _ = scope.insert("a", "int");
 
         assert_eq!(
             transform_operation(
@@ -398,7 +398,7 @@ mod tests {
                         a: Box::new(Node::Number(1.)),
                         b: Box::new(Node::Number(2.)),
                     }),
-                    b: Box::new(Node::VariableReference(String::from("a"))),
+                    b: Box::new(Node::VariableReference("a".into())),
                 }),
                 &mut scope,
                 "%rax",

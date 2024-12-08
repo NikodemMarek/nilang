@@ -111,4 +111,33 @@ fn special_character() {
             end: (0, 4),
         },
     );
+
+    let mut iter = lex("a: b");
+
+    assert_eq!(
+        iter.next().unwrap().unwrap(),
+        Token {
+            token: TokenType::Identifier("a".into()),
+            start: (0, 0),
+            end: (0, 0),
+        },
+    );
+
+    assert_eq!(
+        iter.next().unwrap().unwrap(),
+        Token {
+            token: TokenType::Colon,
+            start: (0, 1),
+            end: (0, 1),
+        },
+    );
+
+    assert_eq!(
+        iter.next().unwrap().unwrap(),
+        Token {
+            token: TokenType::Identifier("b".into()),
+            start: (0, 3),
+            end: (0, 3),
+        },
+    );
 }

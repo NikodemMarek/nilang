@@ -22,6 +22,7 @@ pub trait AssumingIterator: Iterator {
     fn assume_closing_brace(&mut self) -> Result<Loc, ParserErrors>;
     fn assume_comma(&mut self) -> Result<Loc, ParserErrors>;
     fn assume_semicolon(&mut self) -> Result<Loc, ParserErrors>;
+    fn assume_colon(&mut self) -> Result<Loc, ParserErrors>;
 }
 
 impl<I: Iterator<Item = Result<Token, LexerErrors>>> AssumingIterator for I {
@@ -205,6 +206,21 @@ impl<I: Iterator<Item = Result<Token, LexerErrors>>> AssumingIterator for I {
             } => Ok(start),
             Token { start, .. } => Err(ParserErrors::ExpectedTokens {
                 tokens: Vec::from([TokenType::Semicolon]),
+                loc: start,
+            }),
+        }
+    }
+
+    #[inline]
+    fn assume_colon(&mut self) -> Result<Loc, ParserErrors> {
+        match self.assume_next()? {
+            Token {
+                start,
+                token: TokenType::Colon,
+                ..
+            } => Ok(start),
+            Token { start, .. } => Err(ParserErrors::ExpectedTokens {
+                tokens: Vec::from([TokenType::Colon]),
                 loc: start,
             }),
         }

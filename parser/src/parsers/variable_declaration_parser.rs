@@ -1,14 +1,10 @@
 use errors::ParserErrors;
-use nilang_types::{
-    nodes::Node,
-    tokens::{Keyword, Token, TokenType},
-};
+use nilang_types::{nodes::Node, tokens::Keyword};
 
 use crate::assuming_iterator::PeekableAssumingIterator;
 
 use super::{
-    identifier_parser::parse_identifier, literal_parser::parse_literal,
-    operation_parser::parse_operation_if_operator_follows, parenthesis_parser::parse_parenthesis,
+    type_annotation_parser::parse_type_annotation, value_yielding_parser::parse_value_yielding,
 };
 
 pub fn parse_variable_declaration<I: PeekableAssumingIterator>(
@@ -18,44 +14,17 @@ pub fn parse_variable_declaration<I: PeekableAssumingIterator>(
 
     let (_, _, name) = tokens.assume_identifier()?;
 
+    let r#type = parse_type_annotation(tokens)?;
+
     tokens.assume_equals()?;
 
-    let value = match tokens.peek_valid()? {
-        Token {
-            token: TokenType::Literal(_),
-            ..
-        } => {
-            let literal = parse_literal(tokens);
-            parse_operation_if_operator_follows(tokens, literal?)?
-        }
-        Token {
-            token: TokenType::Identifier(_),
-            ..
-        } => {
-            let identifier = parse_identifier(tokens);
-            parse_operation_if_operator_follows(tokens, identifier?)?
-        }
-        Token {
-            token: TokenType::OpeningParenthesis,
-            ..
-        } => {
-            let parenthesis = parse_parenthesis(tokens);
-            parse_operation_if_operator_follows(tokens, parenthesis?)?
-        }
-        Token { end, .. } => Err(ParserErrors::ExpectedTokens {
-            tokens: Vec::from([
-                TokenType::Literal("".into()),
-                TokenType::Identifier("".into()),
-                TokenType::OpeningParenthesis,
-            ]),
-            loc: *end,
-        })?,
-    };
+    let value = parse_value_yielding(tokens)?;
 
     tokens.assume_semicolon()?;
 
     Ok(Node::VariableDeclaration {
-        name: name.to_string(),
+        name,
+        r#type,
         value: Box::new(value),
     })
 }
@@ -85,19 +54,29 @@ mod tests {
                         end: (0, 4),
                     }),
                     Ok(Token {
-                        token: TokenType::Equals,
+                        token: TokenType::Colon,
                         start: (0, 5),
                         end: (0, 5),
                     }),
                     Ok(Token {
-                        token: TokenType::Literal("9".into()),
+                        token: TokenType::Identifier("int".into()),
                         start: (0, 6),
-                        end: (0, 6),
+                        end: (0, 8),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Equals,
+                        start: (0, 9),
+                        end: (0, 9),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Literal("9".into()),
+                        start: (0, 10),
+                        end: (0, 10),
                     }),
                     Ok(Token {
                         token: TokenType::Semicolon,
-                        start: (0, 7),
-                        end: (0, 7),
+                        start: (0, 11),
+                        end: (0, 11),
                     }),
                 ]
                 .into_iter()
@@ -105,7 +84,8 @@ mod tests {
             )
             .unwrap(),
             Node::VariableDeclaration {
-                name: "test".to_string(),
+                name: "test".into(),
+                r#type: "int".into(),
                 value: Box::new(Node::Number(9.))
             }
         );
@@ -124,19 +104,29 @@ mod tests {
                         end: (0, 4),
                     }),
                     Ok(Token {
-                        token: TokenType::Equals,
+                        token: TokenType::Colon,
                         start: (0, 5),
-                        end: (0, 6),
+                        end: (0, 5),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Identifier("int".into()),
+                        start: (0, 6),
+                        end: (0, 8),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Equals,
+                        start: (0, 9),
+                        end: (0, 9),
                     }),
                     Ok(Token {
                         token: TokenType::Identifier("test2".into()),
-                        start: (0, 7),
-                        end: (0, 11),
+                        start: (0, 10),
+                        end: (0, 14),
                     }),
                     Ok(Token {
                         token: TokenType::Semicolon,
-                        start: (0, 12),
-                        end: (0, 12),
+                        start: (0, 15),
+                        end: (0, 15),
                     }),
                 ]
                 .into_iter()
@@ -144,7 +134,8 @@ mod tests {
             )
             .unwrap(),
             Node::VariableDeclaration {
-                name: "test".to_string(),
+                name: "test".into(),
+                r#type: "int".into(),
                 value: Box::new(Node::VariableReference("test2".into()))
             }
         );
@@ -163,39 +154,49 @@ mod tests {
                         end: (0, 4),
                     }),
                     Ok(Token {
-                        token: TokenType::Equals,
+                        token: TokenType::Colon,
                         start: (0, 5),
-                        end: (0, 6),
+                        end: (0, 5),
                     }),
                     Ok(Token {
-                        token: TokenType::OpeningParenthesis,
-                        start: (0, 7),
-                        end: (0, 7),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("6".into()),
-                        start: (0, 8),
+                        token: TokenType::Identifier("int".into()),
+                        start: (0, 6),
                         end: (0, 8),
                     }),
                     Ok(Token {
-                        token: TokenType::Operator(Operator::Add),
+                        token: TokenType::Equals,
                         start: (0, 9),
                         end: (0, 9),
                     }),
                     Ok(Token {
-                        token: TokenType::Literal("9".into()),
+                        token: TokenType::OpeningParenthesis,
                         start: (0, 10),
                         end: (0, 10),
                     }),
                     Ok(Token {
-                        token: TokenType::ClosingParenthesis,
+                        token: TokenType::Literal("6".into()),
                         start: (0, 11),
                         end: (0, 11),
                     }),
                     Ok(Token {
-                        token: TokenType::Semicolon,
+                        token: TokenType::Operator(Operator::Add),
                         start: (0, 12),
                         end: (0, 12),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Literal("9".into()),
+                        start: (0, 13),
+                        end: (0, 13),
+                    }),
+                    Ok(Token {
+                        token: TokenType::ClosingParenthesis,
+                        start: (0, 14),
+                        end: (0, 14),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Semicolon,
+                        start: (0, 15),
+                        end: (0, 15),
                     }),
                 ]
                 .into_iter()
@@ -203,7 +204,8 @@ mod tests {
             )
             .unwrap(),
             Node::VariableDeclaration {
-                name: "test".to_string(),
+                name: "test".into(),
+                r#type: "int".into(),
                 value: Box::new(Node::Operation {
                     operator: Operator::Add,
                     a: Box::new(Node::Number(6.)),
@@ -226,39 +228,49 @@ mod tests {
                         end: (0, 4),
                     }),
                     Ok(Token {
-                        token: TokenType::Equals,
+                        token: TokenType::Colon,
                         start: (0, 5),
-                        end: (0, 6),
+                        end: (0, 5),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Identifier("int".into()),
+                        start: (0, 6),
+                        end: (0, 8),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Equals,
+                        start: (0, 9),
+                        end: (0, 9),
                     }),
                     Ok(Token {
                         token: TokenType::OpeningParenthesis,
-                        start: (0, 7),
-                        end: (0, 7),
+                        start: (0, 10),
+                        end: (0, 10),
                     }),
                     Ok(Token {
                         token: TokenType::Identifier("test2".into()),
-                        start: (0, 8),
-                        end: (0, 12),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Add),
-                        start: (0, 13),
-                        end: (0, 13),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("9".into()),
-                        start: (0, 14),
-                        end: (0, 14),
-                    }),
-                    Ok(Token {
-                        token: TokenType::ClosingParenthesis,
-                        start: (0, 15),
+                        start: (0, 11),
                         end: (0, 15),
                     }),
                     Ok(Token {
-                        token: TokenType::Semicolon,
+                        token: TokenType::Operator(Operator::Add),
                         start: (0, 16),
                         end: (0, 16),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Literal("9".into()),
+                        start: (0, 17),
+                        end: (0, 17),
+                    }),
+                    Ok(Token {
+                        token: TokenType::ClosingParenthesis,
+                        start: (0, 18),
+                        end: (0, 18),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Semicolon,
+                        start: (0, 19),
+                        end: (0, 19),
                     }),
                 ]
                 .into_iter()
@@ -266,10 +278,11 @@ mod tests {
             )
             .unwrap(),
             Node::VariableDeclaration {
-                name: "test".to_string(),
+                name: "test".into(),
+                r#type: "int".into(),
                 value: Box::new(Node::Operation {
                     operator: Operator::Add,
-                    a: Box::new(Node::VariableReference("test2".to_string())),
+                    a: Box::new(Node::VariableReference("test2".into())),
                     b: Box::new(Node::Number(9.)),
                 })
             }
@@ -289,44 +302,54 @@ mod tests {
                         end: (0, 4),
                     }),
                     Ok(Token {
-                        token: TokenType::Equals,
+                        token: TokenType::Colon,
                         start: (0, 5),
-                        end: (0, 6),
+                        end: (0, 5),
                     }),
                     Ok(Token {
-                        token: TokenType::Identifier("abc".into()),
-                        start: (0, 7),
+                        token: TokenType::Identifier("int".into()),
+                        start: (0, 6),
                         end: (0, 8),
                     }),
                     Ok(Token {
-                        token: TokenType::OpeningParenthesis,
+                        token: TokenType::Equals,
                         start: (0, 9),
                         end: (0, 9),
                     }),
                     Ok(Token {
-                        token: TokenType::Literal("6".into()),
+                        token: TokenType::Identifier("abc".into()),
                         start: (0, 10),
-                        end: (0, 10),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Add),
-                        start: (0, 11),
-                        end: (0, 11),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("9".into()),
-                        start: (0, 12),
                         end: (0, 12),
                     }),
                     Ok(Token {
-                        token: TokenType::ClosingParenthesis,
+                        token: TokenType::OpeningParenthesis,
                         start: (0, 13),
                         end: (0, 13),
                     }),
                     Ok(Token {
-                        token: TokenType::Semicolon,
+                        token: TokenType::Literal("6".into()),
                         start: (0, 14),
                         end: (0, 14),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Operator(Operator::Add),
+                        start: (0, 15),
+                        end: (0, 15),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Literal("9".into()),
+                        start: (0, 16),
+                        end: (0, 16),
+                    }),
+                    Ok(Token {
+                        token: TokenType::ClosingParenthesis,
+                        start: (0, 17),
+                        end: (0, 17),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Semicolon,
+                        start: (0, 18),
+                        end: (0, 18),
                     }),
                 ]
                 .into_iter()
@@ -334,9 +357,10 @@ mod tests {
             )
             .unwrap(),
             Node::VariableDeclaration {
-                name: "test".to_string(),
+                name: "test".into(),
+                r#type: "int".into(),
                 value: Box::new(Node::FunctionCall {
-                    name: "abc".to_string(),
+                    name: "abc".into(),
                     arguments: vec![Node::Operation {
                         operator: Operator::Add,
                         a: Box::new(Node::Number(6.)),

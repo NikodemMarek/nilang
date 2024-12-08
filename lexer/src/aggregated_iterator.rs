@@ -49,7 +49,7 @@ impl<'a> Iterator for AggregatedIterator<'a> {
                                 self.loc.1 += 1;
 
                                 return Some(Ok(Token {
-                                    token: TokenType::Literal(aggregation.into()), // TODO: Add dot token
+                                    token: TokenType::Dot,
                                     start,
                                     end,
                                 }));
@@ -118,6 +118,7 @@ impl<'a> Iterator for AggregatedIterator<'a> {
                             "fn" => TokenType::Keyword(Keyword::Function),
                             "vr" => TokenType::Keyword(Keyword::Variable),
                             "rt" => TokenType::Keyword(Keyword::Return),
+                            "st" => TokenType::Keyword(Keyword::Structure),
                             _ => TokenType::Identifier(aggregation.into()),
                         },
                         start,
@@ -211,6 +212,18 @@ impl<'a> Iterator for AggregatedIterator<'a> {
                     self.iter.next();
                     return Some(Ok(Token {
                         token: TokenType::Semicolon,
+                        start,
+                        end: start,
+                    }));
+                }
+                ':' => {
+                    let start = self.loc;
+
+                    self.loc.1 += 1;
+
+                    self.iter.next();
+                    return Some(Ok(Token {
+                        token: TokenType::Colon,
                         start,
                         end: start,
                     }));

@@ -93,6 +93,7 @@ impl From<&ParserErrors> for ((usize, usize), (usize, usize), String) {
 fn token_type_to_str(token: &TokenType) -> &str {
     match token {
         TokenType::Semicolon => "semicolon",
+        TokenType::Colon => "colon",
         TokenType::OpeningParenthesis => "opening parenthesis",
         TokenType::ClosingParenthesis => "closing parenthesis",
         TokenType::OpeningBrace => "opening brace",
@@ -103,5 +104,6 @@ fn token_type_to_str(token: &TokenType) -> &str {
         TokenType::Keyword(_) => "keyword",
         TokenType::Equals => "equals",
         TokenType::Comma => "comma",
+        TokenType::Dot => "dot",
     }
 }

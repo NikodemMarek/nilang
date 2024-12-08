@@ -28,7 +28,7 @@
             alias-test-generator = pkgs.writeShellScriptBin "tg" ''${pkgs.cargo-watch}/bin/cargo-watch -C generator -x test -c'';
 
             alias-assemble = pkgs.writeShellScriptBin "ae" ''as test.asm -o test.o'';
-            alias-link = pkgs.writeShellScriptBin "lk" ''ld test.o -o test'';
+            alias-link = pkgs.writeShellScriptBin "lk" ''gcc test.o -o test -nostartfiles'';
             alias-execute = pkgs.writeShellScriptBin "ee" ''./test'';
             alias-assemble-link-execute = pkgs.writeShellScriptBin "alr" ''ae && lk && ee'';
             alias-run-assemble-link-execute = pkgs.writeShellScriptBin "ralr" ''r && ae && lk && ee ; echo $?'';

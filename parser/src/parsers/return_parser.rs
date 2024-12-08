@@ -1,50 +1,14 @@
 use errors::ParserErrors;
-use nilang_types::{
-    nodes::Node,
-    tokens::{Keyword, Token, TokenType},
-};
+use nilang_types::{nodes::Node, tokens::Keyword};
 
 use crate::assuming_iterator::PeekableAssumingIterator;
 
-use super::{
-    identifier_parser::parse_identifier, literal_parser::parse_literal,
-    operation_parser::parse_operation_if_operator_follows, parenthesis_parser::parse_parenthesis,
-};
+use super::value_yielding_parser::parse_value_yielding;
 
 pub fn parse_return<I: PeekableAssumingIterator>(tokens: &mut I) -> Result<Node, ParserErrors> {
     tokens.assume_keyword(Keyword::Return)?;
 
-    let value = match tokens.peek_valid()? {
-        Token {
-            token: TokenType::Literal(_),
-            ..
-        } => {
-            let literal = parse_literal(tokens)?;
-            parse_operation_if_operator_follows(tokens, literal)?
-        }
-        Token {
-            token: TokenType::Identifier(_),
-            ..
-        } => {
-            let identifier = parse_identifier(tokens)?;
-            parse_operation_if_operator_follows(tokens, identifier)?
-        }
-        Token {
-            token: TokenType::OpeningParenthesis,
-            ..
-        } => {
-            let parenthesis = parse_parenthesis(tokens)?;
-            parse_operation_if_operator_follows(tokens, parenthesis)?
-        }
-        Token { end, .. } => Err(ParserErrors::ExpectedTokens {
-            tokens: Vec::from([
-                TokenType::Literal("".into()),
-                TokenType::Identifier("".into()),
-                TokenType::OpeningParenthesis,
-            ]),
-            loc: *end,
-        })?,
-    };
+    let value = parse_value_yielding(tokens)?;
 
     tokens.assume_semicolon()?;
 

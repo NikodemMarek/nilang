@@ -9,23 +9,30 @@ use nilang_types::nodes::Node;
 use scope::Scope;
 use variable_declaration::transform_variable_declaration;
 
-use crate::transformers::{
-    function_call::transform_function_call, function_declaration::transform_function_declaration,
-    operator::transform_operation, r#return::transform_return, scope::transform_scope,
+use crate::{
+    transformers::{
+        function_call::transform_function_call,
+        function_declaration::transform_function_declaration, operator::transform_operation,
+        r#return::transform_return, scope::transform_scope,
+    },
+    TypesRef,
 };
 
-pub fn transform(node: &Node, scope: &mut Scope) -> eyre::Result<Vec<String>> {
+pub fn transform(node: &Node, tr: &TypesRef, scope: &mut Scope) -> eyre::Result<Vec<String>> {
     match node {
         Node::Return(_) => transform_return(node, scope),
-        Node::FunctionDeclaration { .. } => transform_function_declaration(node, scope),
-        Node::Scope(_) => transform_scope(node, scope),
+        Node::FunctionDeclaration { .. } => transform_function_declaration(node, tr, scope),
+        Node::Scope(_) => transform_scope(node, tr, scope),
         Node::Operation { .. } => transform_operation(node, scope, "%rax"),
-        Node::VariableDeclaration { .. } => transform_variable_declaration(node, scope),
+        Node::VariableDeclaration { .. } => transform_variable_declaration(node, tr, scope),
         Node::FunctionCall { .. } => transform_function_call(node, scope),
-        node @ Node::Number(_) | node @ Node::VariableReference(_) => {
+        Node::Structure { .. } => todo!(),
+        Node::Object { .. } => todo!(),
+        node @ Node::Number(_)
+        | node @ Node::VariableReference(_)
+        | node @ Node::FieldAccess { .. } => {
             panic!("Unexpected node: {:?}", node)
         }
-        Node::Program(_) => todo!(),
     }
 }
 
@@ -33,15 +40,19 @@ pub fn transform(node: &Node, scope: &mut Scope) -> eyre::Result<Vec<String>> {
 mod tests {
     use nilang_types::nodes::{Node, Operator};
 
-    use crate::transformers::transform;
+    use crate::{
+        transformers::{scope::Scope, transform},
+        TypesRef,
+    };
 
     #[test]
     fn test_transform() {
         assert_eq!(
             transform(
                 &(Node::FunctionDeclaration {
-                    name: "main".to_string(),
-                    parameters: Vec::new(),
+                    name: "main".into(),
+                    parameters: [].into(),
+                    return_type: "int".into(),
                     body: Box::new(Node::Scope(Vec::from(&[Node::Return(Box::new(
                         Node::Operation {
                             operator: Operator::Add,
@@ -50,7 +61,8 @@ mod tests {
                         },
                     ))]))),
                 }),
-                &mut super::Scope::default(),
+                &TypesRef::default(),
+                &mut Scope::default(),
             )
             .unwrap(),
             [

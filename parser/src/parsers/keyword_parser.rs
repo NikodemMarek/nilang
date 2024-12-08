@@ -8,7 +8,7 @@ use crate::assuming_iterator::PeekableAssumingIterator;
 
 use super::{
     function_definition_parser::parse_function_definition, return_parser::parse_return,
-    variable_declaration_parser::parse_variable_declaration,
+    structure_parser::parse_structure, variable_declaration_parser::parse_variable_declaration,
 };
 
 pub fn parse_keyword<I: PeekableAssumingIterator>(tokens: &mut I) -> Result<Node, ParserErrors> {
@@ -26,6 +26,7 @@ pub fn parse_keyword<I: PeekableAssumingIterator>(tokens: &mut I) -> Result<Node
         Keyword::Variable => parse_variable_declaration(tokens)?,
         Keyword::Function => parse_function_definition(tokens)?,
         Keyword::Return => parse_return(tokens)?,
+        Keyword::Structure => parse_structure(tokens)?,
     })
 }
 
@@ -89,23 +90,34 @@ mod tests {
                         end: (0, 8),
                     }),
                     Ok(Token {
-                        token: TokenType::OpeningBrace,
+                        token: TokenType::Colon,
                         start: (0, 9),
                         end: (0, 9),
                     }),
                     Ok(Token {
+                        token: TokenType::Identifier("int".into()),
+                        start: (0, 11),
+                        end: (0, 13),
+                    }),
+                    Ok(Token {
+                        token: TokenType::OpeningBrace,
+                        start: (0, 15),
+                        end: (0, 15),
+                    }),
+                    Ok(Token {
                         token: TokenType::ClosingBrace,
-                        start: (0, 10),
-                        end: (0, 10),
-                    })
+                        start: (0, 16),
+                        end: (0, 16),
+                    }),
                 ]
                 .into_iter()
                 .peekable()
             )
             .unwrap(),
             Node::FunctionDeclaration {
-                name: "test".to_string(),
-                parameters: Vec::new(),
+                name: "test".into(),
+                parameters: [].into(),
+                return_type: "int".into(),
                 body: Box::new(Node::Scope(Vec::new())),
             }
         );
@@ -124,20 +136,29 @@ mod tests {
                         end: (0, 6),
                     }),
                     Ok(Token {
-                        token: TokenType::Equals,
-
-                        start: (0, 7),
-                        end: (0, 7),
+                        token: TokenType::Colon,
+                        start: (0, 5),
+                        end: (0, 5),
                     }),
                     Ok(Token {
-                        token: TokenType::Literal("6".into()),
-                        start: (0, 8),
+                        token: TokenType::Identifier("int".into()),
+                        start: (0, 6),
                         end: (0, 8),
                     }),
                     Ok(Token {
-                        token: TokenType::Semicolon,
+                        token: TokenType::Equals,
                         start: (0, 9),
                         end: (0, 9),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Literal("6".into()),
+                        start: (0, 10),
+                        end: (0, 10),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Semicolon,
+                        start: (0, 11),
+                        end: (0, 11),
                     })
                 ]
                 .into_iter()
@@ -145,7 +166,8 @@ mod tests {
             )
             .unwrap(),
             Node::VariableDeclaration {
-                name: "test".to_string(),
+                name: "test".into(),
+                r#type: "int".into(),
                 value: Box::new(Node::Number(6.)),
             }
         );

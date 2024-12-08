@@ -30,7 +30,7 @@ pub fn transform_function_call(a: &Node, scope: &mut Scope) -> eyre::Result<Vec<
                     _ => {}
                 }
             } else {
-                // TODO: Push to the stack
+                todo!("Push to the stack");
             }
         }
 
@@ -53,7 +53,7 @@ mod tests {
         assert_eq!(
             transform_function_call(
                 &(Node::FunctionCall {
-                    name: String::from("main"),
+                    name: "main".into(),
                     arguments: Vec::from([
                         Node::Number(1.),
                         Node::Number(2.),
