@@ -77,6 +77,15 @@ dependencies = [
  "nilang-generator",
  "nilang-lexer",
  "nilang-parser",
+ "nilang-transformer",
+]
+
+[[package]]
+name = "nilang-transformer"
+version = "0.1.0"
+dependencies = [
+ "errors",
+ "nilang-types",
 ]
 
 [[package]]

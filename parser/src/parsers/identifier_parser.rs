@@ -30,7 +30,7 @@ pub fn parse_identifier<I: PeekableAssumingIterator>(tokens: &mut I) -> Result<N
             token: TokenType::OpeningBrace,
             ..
         } => Node::Object {
-            structure: name,
+            r#type: name,
             fields: parse_object(tokens)?,
         },
         Token { .. } => Node::VariableReference(name),
@@ -115,7 +115,7 @@ mod tests {
             .unwrap(),
             Node::FunctionCall {
                 name: "x".into(),
-                arguments: Vec::new()
+                arguments: [].into()
             }
         );
 
@@ -184,7 +184,7 @@ mod tests {
             Node::FieldAccess {
                 structure: Box::new(Node::FunctionCall {
                     name: "x".into(),
-                    arguments: Vec::new()
+                    arguments: [].into()
                 }),
                 field: "test".into()
             }

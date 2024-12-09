@@ -361,11 +361,12 @@ mod tests {
                 r#type: "int".into(),
                 value: Box::new(Node::FunctionCall {
                     name: "abc".into(),
-                    arguments: vec![Node::Operation {
+                    arguments: [Node::Operation {
                         operator: Operator::Add,
                         a: Box::new(Node::Number(6.)),
                         b: Box::new(Node::Number(9.)),
                     }]
+                    .into()
                 })
             }
         );

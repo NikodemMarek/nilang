@@ -31,7 +31,14 @@ fn compile(code: &str) -> String {
         }
     };
 
-    match nilang_generator::generate(parsed) {
+    let transformed = match nilang_transformer::transform(parsed) {
+        Ok(transformed) => transformed,
+        Err(err) => {
+            panic!("{}", err);
+        }
+    };
+
+    match nilang_generator::generate(transformed) {
         Ok(generated) => generated,
         Err(err) => {
             panic!("{}", err);

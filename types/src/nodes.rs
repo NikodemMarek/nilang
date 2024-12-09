@@ -16,7 +16,7 @@ pub enum Node {
     },
     FunctionCall {
         name: Box<str>,
-        arguments: Vec<Node>,
+        arguments: Box<[Node]>,
     },
     Number(f64),
     Operation {
@@ -37,7 +37,7 @@ pub enum Node {
         fields: HashMap<Box<str>, Box<str>>, // name, type
     },
     Object {
-        structure: Box<str>,
+        r#type: Box<str>,
         fields: HashMap<Box<str>, Node>,
     },
     FieldAccess {

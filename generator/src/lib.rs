@@ -1,12 +1,18 @@
 #![feature(box_patterns)]
 
+mod generators;
+mod memory_manager;
 mod transformers;
 mod utils;
 
 use std::{collections::HashMap, rc::Rc};
 
 use errors::GeneratorErrors;
-use nilang_types::nodes::{Node, Program};
+use memory_manager::MemoryManager;
+use nilang_types::{
+    instructions::Instruction,
+    nodes::{Node, Program},
+};
 use transformers::{scope::Scope, transform};
 use utils::generate_function;
 
@@ -72,47 +78,18 @@ fn calculate_structure_size(tsr: &TypesRef, structure: &Node) -> Result<u8, Gene
 
 const ALIGNMENT: u8 = 8;
 
-pub fn generate(
-    Program {
-        structures,
-        functions,
-    }: Program,
-) -> eyre::Result<String> {
-    let mut tr = TypesRef::default();
-    for (name, structure) in structures.iter() {
-        tr.0.insert(
-            name.clone(),
-            (
-                calculate_structure_size(&tr, structure)?,
-                Some(match structure {
-                    Node::Structure { fields, .. } => {
-                        let mut map = HashMap::new();
-                        let mut offset = 0;
-                        for (field_name, r#type) in fields.iter() {
-                            map.insert(field_name.clone(), offset);
-                            offset += match tr.0.get(r#type) {
-                                Some((size, _)) => size,
-                                None => unreachable!(),
-                            };
-                        }
+pub fn generate(functions: HashMap<Box<str>, Vec<Instruction>>) -> eyre::Result<String> {
+    let mut code = Vec::new();
 
-                        map
-                    }
-                    _ => unreachable!(),
-                }),
-            ),
-        );
-    }
-    let tr = Rc::new(tr);
-
-    let mut scope = Scope::new(tr.clone());
-
-    let mut code = Vec::with_capacity(4096);
-    for node in functions.values() {
-        code.append(&mut transform(node, &tr, &mut scope)?);
+    for (name, instructions) in functions.into_iter() {
+        let mut mm = MemoryManager::default();
+        code.append(&mut generators::generate(
+            &mut mm,
+            &mut instructions.into_iter(),
+        )?);
     }
 
-    Ok(generate_program(&[], &code))
+    Ok(code.join("\n"))
 }
 
 fn generate_program(data: &[String], code: &[String]) -> String {

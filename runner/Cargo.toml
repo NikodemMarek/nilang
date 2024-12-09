@@ -9,6 +9,7 @@ edition = "2021"
 errors = { version = "0.1.0", path = "../errors" }
 nilang-lexer = { version = "0.1.0", path = "../lexer" }
 nilang-parser = { version = "0.1.0", path = "../parser" }
+nilang-transformer = { version = "0.1.0", path = "../transformer" }
 nilang-generator = { version = "0.1.0", path = "../generator" }
 
 eyre = "0.6.12"

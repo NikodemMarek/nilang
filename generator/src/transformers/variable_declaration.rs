@@ -38,7 +38,10 @@ pub fn transform_variable_declaration(
                 Vec::from([format!("movq %rbx, -{}(%rbp)", scope.insert(name, r#type)?)]),
             ]
             .concat()),
-            Node::Object { structure, fields } => {
+            Node::Object {
+                r#type: structure,
+                fields,
+            } => {
                 if structure != *r#type {
                     Err(GeneratorErrors::InvalidType {
                         expected: r#type.clone(),

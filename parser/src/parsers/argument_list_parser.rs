@@ -10,7 +10,7 @@ use super::value_yielding_parser::parse_value_yielding;
 
 pub fn parse_argument_list<I: PeekableAssumingIterator>(
     tokens: &mut I,
-) -> Result<Vec<Node>, ParserErrors> {
+) -> Result<Box<[Node]>, ParserErrors> {
     tokens.assume_opening_parenthesis()?;
 
     let mut arguments = Vec::new();
@@ -58,7 +58,7 @@ pub fn parse_argument_list<I: PeekableAssumingIterator>(
         }
     }
 
-    Ok(arguments)
+    Ok(arguments.into())
 }
 
 #[cfg(test)]
@@ -105,7 +105,7 @@ mod tests {
                 .peekable()
             )
             .unwrap(),
-            vec![Node::Number(5.), Node::VariableReference("x".into()),]
+            [Node::Number(5.), Node::VariableReference("x".into())].into()
         );
 
         assert_eq!(
@@ -141,11 +141,12 @@ mod tests {
                 .peekable()
             )
             .unwrap(),
-            Vec::from([Node::Operation {
+            [Node::Operation {
                 operator: Operator::Add,
                 a: Box::new(Node::VariableReference("x".into())),
                 b: Box::new(Node::Number(4.)),
-            }])
+            }]
+            .into()
         );
     }
 }

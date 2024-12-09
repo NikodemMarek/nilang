@@ -54,7 +54,7 @@ mod tests {
             transform_function_call(
                 &(Node::FunctionCall {
                     name: "main".into(),
-                    arguments: Vec::from([
+                    arguments: [
                         Node::Number(1.),
                         Node::Number(2.),
                         Node::Operation {
@@ -62,7 +62,8 @@ mod tests {
                             a: Box::new(Node::Number(3.)),
                             b: Box::new(Node::Number(4.)),
                         },
-                    ]),
+                    ]
+                    .into(),
                 }),
                 &mut Scope::default(),
             )
