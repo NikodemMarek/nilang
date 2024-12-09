@@ -9,7 +9,7 @@ pub enum GeneratorErrors {
     VariableAlreadyExists {
         name: Box<str>,
     },
-    VariableDoesNotExist {
+    VariableNotDefined {
         name: Box<str>,
     },
     StructureNotDefined {
@@ -36,7 +36,7 @@ impl std::fmt::Display for GeneratorErrors {
                 GeneratorErrors::VariableAlreadyExists { name } => {
                     format!("Variable `{}` already exists", name).as_str().red()
                 }
-                GeneratorErrors::VariableDoesNotExist { name } => {
+                GeneratorErrors::VariableNotDefined { name } => {
                     format!("Variable `{}` does not exist", name).as_str().red()
                 }
                 GeneratorErrors::StructureNotDefined { name } => {

@@ -9,6 +9,7 @@ args@{
     "nilang-lexer/default"
     "nilang-parser/default"
     "nilang-generator/default"
+    "nilang-transformer/default"
     "nilang-runner/default"
   ],
   rustPackages,
@@ -29,7 +30,7 @@ args@{
   ignoreLockHash,
 }:
 let
-  nixifiedLockHash = "7e6b2e8727645f947caa23b0742facda9ce5307c8bb00c346b623bd9b29b6f45";
+  nixifiedLockHash = "635f20519b381f5ba646fdd4a5293f67346e3eb4096d08501f29cc408ed31865";
   workspaceSrc = if args.workspaceSrc == null then ./. else args.workspaceSrc;
   currentLockHash = builtins.hashFile "sha256" (workspaceSrc + /Cargo.lock);
   lockHashIgnored = if ignoreLockHash
@@ -56,6 +57,7 @@ in
     nilang-lexer = rustPackages.unknown.nilang-lexer."0.1.0";
     nilang-parser = rustPackages.unknown.nilang-parser."0.1.0";
     nilang-generator = rustPackages.unknown.nilang-generator."0.1.0";
+    nilang-transformer = rustPackages.unknown.nilang-transformer."0.1.0";
     nilang-runner = rustPackages.unknown.nilang-runner."0.1.0";
   };
   "registry+https://github.com/rust-lang/crates.io-index".colored."2.1.0" = overridableMkRustCrate (profileName: rec {
@@ -159,6 +161,18 @@ in
       nilang_generator = (rustPackages."unknown".nilang-generator."0.1.0" { inherit profileName; }).out;
       nilang_lexer = (rustPackages."unknown".nilang-lexer."0.1.0" { inherit profileName; }).out;
       nilang_parser = (rustPackages."unknown".nilang-parser."0.1.0" { inherit profileName; }).out;
+      nilang_transformer = (rustPackages."unknown".nilang-transformer."0.1.0" { inherit profileName; }).out;
+    };
+  });
+  
+  "unknown".nilang-transformer."0.1.0" = overridableMkRustCrate (profileName: rec {
+    name = "nilang-transformer";
+    version = "0.1.0";
+    registry = "unknown";
+    src = fetchCrateLocal workspaceSrc;
+    dependencies = {
+      errors = (rustPackages."unknown".errors."0.1.0" { inherit profileName; }).out;
+      nilang_types = (rustPackages."unknown".nilang-types."0.1.0" { inherit profileName; }).out;
     };
   });
   

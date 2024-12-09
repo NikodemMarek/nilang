@@ -1,5 +1,10 @@
 pub fn generate_function(name: &str, code: &[String]) -> Vec<String> {
-    let a = [format!(".globl _{name}"), format!("_{name}:")];
+    let a = [
+        format!(".globl _{name}"),
+        format!("_{name}:"),
+        "pushq %rbp".into(),
+        "movq %rsp, %rbp".into(),
+    ];
     let b = pad_lines(
         code.iter()
             .chain(space_bottom(&[String::from("ret")]).iter()),

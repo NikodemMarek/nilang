@@ -48,7 +48,7 @@ impl Scope {
     pub fn get(&self, name: &str) -> eyre::Result<u8> {
         let offset = match self.variables.get(name) {
             Some(offset) => *offset,
-            None => Err(GeneratorErrors::VariableDoesNotExist { name: name.into() })?,
+            None => Err(GeneratorErrors::VariableNotDefined { name: name.into() })?,
         };
 
         Ok(offset)

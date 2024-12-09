@@ -1,19 +1,18 @@
 #![feature(box_patterns)]
 
+mod flavour;
+mod flavours;
 mod generators;
-mod memory_manager;
+
+mod to_assembly;
 mod transformers;
 mod utils;
 
-use std::{collections::HashMap, rc::Rc};
+use std::collections::HashMap;
 
 use errors::GeneratorErrors;
-use memory_manager::MemoryManager;
-use nilang_types::{
-    instructions::Instruction,
-    nodes::{Node, Program},
-};
-use transformers::{scope::Scope, transform};
+use flavours::gnu_64::GnuFlavour;
+use nilang_types::{instructions::Instruction, nodes::Node};
 use utils::generate_function;
 
 /// (size, <field, offset>)
@@ -79,17 +78,22 @@ fn calculate_structure_size(tsr: &TypesRef, structure: &Node) -> Result<u8, Gene
 const ALIGNMENT: u8 = 8;
 
 pub fn generate(functions: HashMap<Box<str>, Vec<Instruction>>) -> eyre::Result<String> {
+    let mut flavour = GnuFlavour::default();
     let mut code = Vec::new();
 
     for (name, instructions) in functions.into_iter() {
-        let mut mm = MemoryManager::default();
-        code.append(&mut generators::generate(
-            &mut mm,
-            &mut instructions.into_iter(),
-        )?);
+        let mut function = generate_function(
+            &name,
+            &generators::generate(&mut flavour, &mut instructions.into_iter())?
+                .iter()
+                .map(|s| s.to_string())
+                .collect::<Vec<_>>(),
+        );
+
+        code.append(&mut function);
     }
 
-    Ok(code.join("\n"))
+    Ok(generate_program(&[], &code))
 }
 
 fn generate_program(data: &[String], code: &[String]) -> String {
