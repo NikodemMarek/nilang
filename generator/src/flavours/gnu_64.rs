@@ -2,20 +2,20 @@ use errors::GeneratorErrors;
 use nilang_types::instructions::Instruction;
 
 use crate::{
-    flavour::{Flavour, Inst, Location, Registers, StackManagement},
+    flavour::{Flavour, Location, MemoryManagement, Registers},
     to_assembly::ToAssembly,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Gnu64Registers {
-    RAX,
-    RBX,
-    RCX,
-    RDX,
-    RSI,
-    RDI,
-    RBP,
-    RSP,
+    Rax,
+    Rbx,
+    Rcx,
+    Rdx,
+    Rsi,
+    Rdi,
+    Rbp,
+    Rsp,
     R8,
     R9,
     R10,
@@ -29,14 +29,14 @@ pub enum Gnu64Registers {
 impl ToAssembly for Gnu64Registers {
     fn to_assembly(&self) -> Box<str> {
         match self {
-            Gnu64Registers::RAX => "rax",
-            Gnu64Registers::RBX => "rbx",
-            Gnu64Registers::RCX => "rcx",
-            Gnu64Registers::RDX => "rdx",
-            Gnu64Registers::RSI => "rsi",
-            Gnu64Registers::RDI => "rdi",
-            Gnu64Registers::RBP => "rbp",
-            Gnu64Registers::RSP => "rsp",
+            Gnu64Registers::Rax => "rax",
+            Gnu64Registers::Rbx => "rbx",
+            Gnu64Registers::Rcx => "rcx",
+            Gnu64Registers::Rdx => "rdx",
+            Gnu64Registers::Rsi => "rsi",
+            Gnu64Registers::Rdi => "rdi",
+            Gnu64Registers::Rbp => "rbp",
+            Gnu64Registers::Rsp => "rsp",
             Gnu64Registers::R8 => "r8",
             Gnu64Registers::R9 => "r9",
             Gnu64Registers::R10 => "r10",
@@ -52,23 +52,28 @@ impl ToAssembly for Gnu64Registers {
 
 impl Registers for Gnu64Registers {
     #[inline]
-    fn get_return_register() -> Self {
-        Gnu64Registers::RSP
+    fn alignment() -> usize {
+        8
     }
 
     #[inline]
-    fn get_stack_pointer_register() -> Self {
-        Gnu64Registers::RBP
+    fn return_register() -> Self {
+        Gnu64Registers::Rsp
     }
 
-    fn get_general_purpose_registers() -> Box<[Self]> {
+    #[inline]
+    fn stack_pointer_register() -> Self {
+        Gnu64Registers::Rbp
+    }
+
+    fn general_purpose_registers() -> Box<[Self]> {
         Box::new([
-            Gnu64Registers::RAX,
-            Gnu64Registers::RBX,
-            Gnu64Registers::RCX,
-            Gnu64Registers::RDX,
-            Gnu64Registers::RSI,
-            Gnu64Registers::RDI,
+            Gnu64Registers::Rax,
+            Gnu64Registers::Rbx,
+            Gnu64Registers::Rcx,
+            Gnu64Registers::Rdx,
+            Gnu64Registers::Rsi,
+            Gnu64Registers::Rdi,
             Gnu64Registers::R8,
             Gnu64Registers::R9,
             Gnu64Registers::R10,
@@ -81,36 +86,39 @@ impl Registers for Gnu64Registers {
     }
 }
 
-impl StackManagement for Location<Gnu64Registers> {
-    type RegisterSet = Gnu64Registers;
+pub struct GnuFlavour<R: Registers> {
+    mm: MemoryManagement<R>,
 }
 
-// impl ToAssembly for Location<Gnu64Registers> {
-//     fn to_assembly(&self) -> Box<str> {
-//         match self {
-//             Location::Register(register) => format!("%{}", register.to_assembly()).into(),
-//             Location::Stack(offset) => format!(
-//                 "-{}(%{})",
-//                 offset,
-//                 Gnu64Registers::get_stack_pointer_register().to_assembly()
-//             )
-//             .into(),
-//         }
-//     }
-// }
-
-#[derive(Default)]
-pub struct GnuFlavour {
-    mm: Inst<Gnu64Registers>,
+impl<R: Registers> Default for GnuFlavour<R> {
+    fn default() -> Self {
+        Self {
+            mm: Default::default(),
+        }
+    }
 }
 
-impl Flavour<Gnu64Registers> for GnuFlavour {
+impl<R: Registers> Flavour for GnuFlavour<R> {
+    type RegistersSet = R;
+
+    fn location(location: Location<R>) -> Box<str> {
+        match location {
+            Location::Register(register) => register.to_assembly(),
+            Location::Stack(offset) => format!(
+                "-{}(%{})",
+                offset,
+                Self::get_stack_pointer_register().to_assembly()
+            )
+            .into(),
+        }
+    }
+
     fn generate(&mut self, instruction: Instruction) -> Result<Vec<Box<str>>, GeneratorErrors> {
         match instruction {
             Instruction::LoadNumber(number, temporary) => Ok(Vec::from([format!(
                 "movq ${}, {}",
                 number,
-                self.mm.reserve(&temporary).to_assembly()
+                GnuFlavour::location(self.mm.reserve(&temporary))
             )
             .into()])),
             Instruction::ReturnNumber(number) => Ok(Vec::from([
@@ -126,7 +134,7 @@ impl Flavour<Gnu64Registers> for GnuFlavour {
                 Ok(location) => Ok(Vec::from([
                     format!(
                         "movq {}, {}",
-                        location.to_assembly(),
+                        Self::location(location),
                         Self::get_return_register().to_assembly()
                     )
                     .into(),
@@ -140,4 +148,4 @@ impl Flavour<Gnu64Registers> for GnuFlavour {
     }
 }
 
-impl Inst<Gnu64Registers> {}
+impl MemoryManagement<Gnu64Registers> {}

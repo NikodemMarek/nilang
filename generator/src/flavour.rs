@@ -5,50 +5,56 @@ use nilang_types::instructions::Instruction;
 
 use crate::to_assembly::ToAssembly;
 
-pub trait Flavour<R>
-where
-    R: ToAssembly + Registers + Copy,
-{
+pub trait Flavour {
+    type RegistersSet: Registers;
+
+    fn location(location: Location<Self::RegistersSet>) -> Box<str>;
+
     fn generate(&mut self, instruction: Instruction) -> Result<Vec<Box<str>>, GeneratorErrors>;
 
     #[inline]
     fn get_return_register() -> impl ToAssembly {
-        R::get_return_register()
+        Self::RegistersSet::return_register()
+    }
+
+    #[inline]
+    fn get_stack_pointer_register() -> impl ToAssembly {
+        Self::RegistersSet::stack_pointer_register()
     }
 }
 
-impl<R> Default for Inst<R>
+impl<R> Default for MemoryManagement<R>
 where
-    R: ToAssembly + Registers + Clone,
+    R: Registers,
 {
     fn default() -> Self {
         Self {
-            free_registers: R::get_general_purpose_registers().to_vec(),
+            free_registers: R::general_purpose_registers().to_vec(),
             reservations: HashMap::new(),
             allocated_stack: 0,
         }
     }
 }
 
-pub struct Inst<R>
+pub struct MemoryManagement<R>
 where
-    R: ToAssembly + Registers,
+    R: Registers,
 {
     free_registers: Vec<R>,
     reservations: HashMap<Box<str>, Location<R>>,
     allocated_stack: usize,
 }
 
-impl<R> Inst<R>
+impl<R> MemoryManagement<R>
 where
-    R: ToAssembly + Registers + Copy,
+    R: Registers,
 {
     #[inline]
-    pub fn reserve(&mut self, name: &str) -> impl ToAssembly {
+    pub fn reserve(&mut self, name: &str) -> Location<R> {
         let location = match self.free_registers.pop() {
             Some(register) => Location::Register(register),
             None => {
-                self.allocated_stack += 8;
+                self.allocated_stack += R::alignment();
                 Location::Stack(self.allocated_stack)
             }
         };
@@ -59,7 +65,7 @@ where
     }
 
     #[inline]
-    pub fn get(&self, name: &str) -> Result<impl ToAssembly, GeneratorErrors> {
+    pub fn get(&self, name: &str) -> Result<Location<R>, GeneratorErrors> {
         match self.reservations.get(name) {
             Some(location) => Ok(*location),
             None => Err(GeneratorErrors::VariableNotDefined { name: name.into() }),
@@ -67,51 +73,20 @@ where
     }
 }
 
-pub trait Instructions<S, R>
-where
-    S: StackManagement<RegisterSet = R>,
-{
-    fn generate(&mut self, instruction: Instruction) -> Box<[Box<str>]>;
-}
-
-pub trait StackManagement {
-    type RegisterSet: ToAssembly + Registers;
-
-    #[inline]
-    fn get_return_register() -> impl ToAssembly {
-        Self::RegisterSet::get_return_register()
-    }
-
-    #[inline]
-    fn get_stack_pointer_register() -> impl ToAssembly {
-        Self::RegisterSet::get_stack_pointer_register()
-    }
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Location<R>
 where
-    R: ToAssembly + Registers,
+    R: Registers,
 {
     Register(R),
     Stack(usize),
 }
 
-impl<R> ToAssembly for Location<R>
-where
-    R: ToAssembly + Registers,
-{
-    fn to_assembly(&self) -> Box<str> {
-        match self {
-            Location::Register(register) => register.to_assembly(),
-            Location::Stack(offset) => unimplemented!(),
-        }
-    }
-}
+pub trait Registers: Sized + Copy + Clone + ToAssembly {
+    fn alignment() -> usize;
 
-pub trait Registers: Sized {
-    fn get_return_register() -> Self;
-    fn get_stack_pointer_register() -> Self;
+    fn return_register() -> Self;
+    fn stack_pointer_register() -> Self;
 
-    fn get_general_purpose_registers() -> Box<[Self]>;
+    fn general_purpose_registers() -> Box<[Self]>;
 }

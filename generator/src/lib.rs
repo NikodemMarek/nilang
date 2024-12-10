@@ -11,7 +11,7 @@ mod utils;
 use std::collections::HashMap;
 
 use errors::GeneratorErrors;
-use flavours::gnu_64::GnuFlavour;
+use flavours::gnu_64::{Gnu64Registers, GnuFlavour};
 use nilang_types::{instructions::Instruction, nodes::Node};
 use utils::generate_function;
 
@@ -75,10 +75,8 @@ fn calculate_structure_size(tsr: &TypesRef, structure: &Node) -> Result<u8, Gene
     }
 }
 
-const ALIGNMENT: u8 = 8;
-
 pub fn generate(functions: HashMap<Box<str>, Vec<Instruction>>) -> eyre::Result<String> {
-    let mut flavour = GnuFlavour::default();
+    let mut flavour = GnuFlavour::<Gnu64Registers>::default();
     let mut code = Vec::new();
 
     for (name, instructions) in functions.into_iter() {

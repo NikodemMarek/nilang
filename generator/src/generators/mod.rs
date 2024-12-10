@@ -1,19 +1,15 @@
 use errors::GeneratorErrors;
 use nilang_types::instructions::Instruction;
 
-use crate::{
-    flavour::{Flavour, Registers},
-    to_assembly::ToAssembly,
-};
+use crate::flavour::Flavour;
 
-pub fn generate<R, I, F>(
+pub fn generate<I, F>(
     flavour: &mut F,
     instructions: &mut I,
 ) -> Result<Box<[Box<str>]>, GeneratorErrors>
 where
     I: Iterator<Item = Instruction>,
-    R: ToAssembly + Registers + Copy,
-    F: Flavour<R>,
+    F: Flavour,
 {
     instructions
         .map(|instruction| flavour.generate(instruction))
