@@ -23,10 +23,7 @@ pub trait Flavour {
     }
 }
 
-impl<R> Default for MemoryManagement<R>
-where
-    R: Registers,
-{
+impl<R: Registers> Default for MemoryManagement<R> {
     fn default() -> Self {
         Self {
             free_registers: R::general_purpose_registers().to_vec(),
@@ -36,19 +33,13 @@ where
     }
 }
 
-pub struct MemoryManagement<R>
-where
-    R: Registers,
-{
+pub struct MemoryManagement<R: Registers> {
     free_registers: Vec<R>,
     reservations: HashMap<Box<str>, Location<R>>,
     allocated_stack: usize,
 }
 
-impl<R> MemoryManagement<R>
-where
-    R: Registers,
-{
+impl<R: Registers> MemoryManagement<R> {
     #[inline]
     pub fn reserve(&mut self, name: &str) -> Location<R> {
         let location = match self.free_registers.pop() {
@@ -74,10 +65,7 @@ where
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Location<R>
-where
-    R: Registers,
-{
+pub enum Location<R: Registers> {
     Register(R),
     Stack(usize),
 }

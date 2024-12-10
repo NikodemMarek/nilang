@@ -11,7 +11,7 @@ mod utils;
 use std::collections::HashMap;
 
 use errors::GeneratorErrors;
-use flavours::gnu_64::{Gnu64Registers, GnuFlavour};
+use flavours::{gnu_flavour::GnuFlavour, x86_registers::Gnu64Registers};
 use nilang_types::{instructions::Instruction, nodes::Node};
 use utils::generate_function;
 
