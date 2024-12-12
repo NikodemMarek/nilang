@@ -12,7 +12,7 @@ where
     F: Flavour,
 {
     instructions
-        .map(|instruction| flavour.generate(instruction))
+        .map(|instruction| flavour.generate_instruction(instruction))
         .flat_map(|result| match result {
             Ok(vec) => vec.into_iter().map(Ok).collect(),
             Err(er) => Vec::from([Err(er)]),

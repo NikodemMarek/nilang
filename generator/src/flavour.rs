@@ -10,16 +10,22 @@ pub trait Flavour {
 
     fn location(location: Location<Self::RegistersSet>) -> Box<str>;
 
-    fn generate(&mut self, instruction: Instruction) -> Result<Vec<Box<str>>, GeneratorErrors>;
+    fn generate_instruction(
+        &mut self,
+        instruction: Instruction,
+    ) -> Result<Vec<Box<str>>, GeneratorErrors>;
+
+    fn generate_function(name: &str, code: &[Box<str>]) -> Vec<Box<str>>;
+    fn generate_program(code: &[Box<str>]) -> Box<str>;
 
     #[inline]
-    fn get_return_register() -> impl ToAssembly {
-        Self::RegistersSet::return_register()
+    fn return_register_location() -> Location<Self::RegistersSet> {
+        Location::Register(Self::RegistersSet::return_register())
     }
 
     #[inline]
-    fn get_stack_pointer_register() -> impl ToAssembly {
-        Self::RegistersSet::stack_pointer_register()
+    fn stack_pointer_register_location() -> Location<Self::RegistersSet> {
+        Location::Register(Self::RegistersSet::stack_pointer_register())
     }
 }
 

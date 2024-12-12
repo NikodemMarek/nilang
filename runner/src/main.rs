@@ -8,10 +8,10 @@ fn main() {
     let code = read_to_string("test.ni").unwrap();
 
     let compiled = compile(&code);
-    write("test.asm", compiled).unwrap();
+    write("test.asm", compiled.as_ref()).unwrap();
 }
 
-fn compile(code: &str) -> String {
+fn compile(code: &str) -> Box<str> {
     let lexed = nilang_lexer::lex(code);
 
     let parsed = match nilang_parser::parse(lexed) {

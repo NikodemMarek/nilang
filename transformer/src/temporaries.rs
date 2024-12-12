@@ -17,3 +17,20 @@ impl Temporaries {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test_temporaries() {
+        let mut temporaries = Temporaries::default();
+
+        temporaries.insert("a".into(), "int".into());
+        temporaries.insert("b".into(), "char".into());
+
+        assert_eq!(temporaries.type_of("a").unwrap(), "int");
+        assert_eq!(temporaries.type_of("b").unwrap(), "char");
+
+        assert!(temporaries.type_of("c").is_err());
+    }
+}

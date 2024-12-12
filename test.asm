@@ -1,10 +1,8 @@
-.data
-
 .text
 .globl _start
 _start:
-pushq %rbp
-movq %rsp, %rbp
+    pushq %rbp
+    movq %rbp, %rsp
     call _main
     movl $1, %eax
     int $0x80
@@ -12,8 +10,8 @@ movq %rsp, %rbp
 
 .globl _main
 _main:
-pushq %rbp
-movq %rsp, %rbp
+    pushq %rbp
+    movq %rbp, %rsp
     movq $1, %r15
     movq $2, %r14
     movq $3, %r13
@@ -33,6 +31,6 @@ movq %rsp, %rbp
     movq $17, -24(%rbp)
     movq $18, -32(%rbp)
     movq $19, -40(%rbp)
-    movq -40(%rbp), %rbx
+    movq -40(%rbp), %rsp
     leave
     ret
