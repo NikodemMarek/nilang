@@ -9,6 +9,9 @@ pub enum TransformerErrors {
         expected: Box<str>,
         received: Box<str>,
     },
+    FunctionNotFound {
+        name: Box<str>,
+    },
 }
 
 impl std::fmt::Display for TransformerErrors {
@@ -27,6 +30,9 @@ impl std::fmt::Display for TransformerErrors {
                     )
                     .as_str()
                     .red()
+                }
+                TransformerErrors::FunctionNotFound { name } => {
+                    format!("Function not found: `{}`", name).as_str().red()
                 }
             }
         )

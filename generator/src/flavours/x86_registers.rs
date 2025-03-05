@@ -51,31 +51,47 @@ impl Registers for Gnu64Registers {
     }
 
     #[inline]
-    fn return_register() -> Self {
+    fn stack_pointer() -> Self {
         Gnu64Registers::Rsp
     }
 
     #[inline]
-    fn stack_pointer_register() -> Self {
+    fn base_pointer() -> Self {
         Gnu64Registers::Rbp
+    }
+
+    #[inline]
+    fn return_register() -> Self {
+        Gnu64Registers::Rax
     }
 
     fn general_purpose_registers() -> Box<[Self]> {
         Box::new([
-            Gnu64Registers::Rax,
+            Gnu64Registers::R15,
+            Gnu64Registers::R14,
+            Gnu64Registers::R13,
+            Gnu64Registers::R12,
+            Gnu64Registers::R11,
+            Gnu64Registers::R10,
+            Gnu64Registers::R9,
+            Gnu64Registers::R8,
+            Gnu64Registers::Rdi,
+            Gnu64Registers::Rsi,
+            Gnu64Registers::Rdx,
+            Gnu64Registers::Rcx,
             Gnu64Registers::Rbx,
+            Gnu64Registers::Rax,
+        ])
+    }
+
+    fn argument_registers() -> Box<[Self]> {
+        Box::new([
+            Gnu64Registers::R9,
+            Gnu64Registers::R8,
             Gnu64Registers::Rcx,
             Gnu64Registers::Rdx,
             Gnu64Registers::Rsi,
             Gnu64Registers::Rdi,
-            Gnu64Registers::R8,
-            Gnu64Registers::R9,
-            Gnu64Registers::R10,
-            Gnu64Registers::R11,
-            Gnu64Registers::R12,
-            Gnu64Registers::R13,
-            Gnu64Registers::R14,
-            Gnu64Registers::R15,
         ])
     }
 }

@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 use errors::GeneratorErrors;
 use nilang_types::instructions::Instruction;
 
@@ -18,7 +20,7 @@ impl<R: Registers> Default for GnuFlavour<R> {
     }
 }
 
-impl<R: Registers> Flavour for GnuFlavour<R> {
+impl<R: Registers + Debug> Flavour for GnuFlavour<R> {
     type RegistersSet = R;
 
     #[inline]
@@ -28,7 +30,7 @@ impl<R: Registers> Flavour for GnuFlavour<R> {
             Location::Stack(offset) => format!(
                 "-{}({})",
                 offset,
-                Self::location(Self::stack_pointer_register_location())
+                Self::location(Self::base_pointer_register_location())
             )
             .into(),
         }
@@ -66,7 +68,27 @@ impl<R: Registers> Flavour for GnuFlavour<R> {
                 ])),
                 Err(e) => Err(e),
             },
+            Instruction::FunctionCall(name, arguments, return_temporary) => {
+                let mut args = Vec::new();
+                for arg_instructions in self.mm.put_arguments(&arguments).iter() {
+                    args.extend(self.generate_instruction(arg_instructions.clone())?);
+                }
 
+                Ok([
+                    vec![format!("call _{}", name).into()],
+                    args,
+                    vec![format!(
+                        "movq {}, {}",
+                        Self::location(Self::return_register_location()),
+                        {
+                            dbg!(&self.mm);
+                            Self::location(self.mm.reserve(&return_temporary))
+                        }
+                    )
+                    .into()],
+                ]
+                .concat())
+            }
             _ => unimplemented!(),
         }
     }
@@ -80,13 +102,13 @@ impl<R: Registers> Flavour for GnuFlavour<R> {
                         vec![
                             format!(
                                 "pushq {}",
-                                Self::location(Self::stack_pointer_register_location())
+                                Self::location(Self::base_pointer_register_location())
                             )
                             .into(),
                             format!(
                                 "movq {}, {}",
                                 Self::location(Self::stack_pointer_register_location()),
-                                Self::location(Self::return_register_location())
+                                Self::location(Self::base_pointer_register_location()),
                             )
                             .into(),
                         ],
@@ -103,14 +125,24 @@ impl<R: Registers> Flavour for GnuFlavour<R> {
     }
 
     fn generate_program(code: &[Box<str>]) -> Box<str> {
-        let start_fn = Self::generate_function(
-            "start",
+        let start_fn = space_bottom(
             &[
-                "call _main".into(),
-                "movl $1, %eax".into(),
-                // String::from("movl $0, %ebx"),
-                "int $0x80".into(),
-            ],
+                vec![".globl _start".into(), "_start:".into()],
+                pad_lines(
+                    &[
+                        "call _main".into(),
+                        // "movq $60, %rax".into(),
+                        // "xorq %rdi, %rdi".into(),
+                        // "syscall".into(),
+                        "movq %rax, %rbx".into(),
+                        "movq $1, %rax".into(),
+                        "int $0x80".into(),
+                        "ret".into(),
+                    ],
+                    4,
+                ),
+            ]
+            .concat(),
         );
 
         format!(".text\n{}", &[start_fn, code.into()].concat().join("\n")).into()

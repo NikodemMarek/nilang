@@ -135,30 +135,50 @@ pub fn transform(
 ) -> Result<HashMap<Box<str>, Vec<Instruction>>, TransformerErrors> {
     let _ = convert_structures(structures);
 
-    let mut funcs = HashMap::new();
+    let mut functions_raw_body = HashMap::new();
     for (function_name, function_declaration) in functions {
-        let mut body = Vec::new();
-
-        let (function_body, return_type) =
-            if let Node::FunctionDeclaration {
-                body, return_type, ..
-            } = function_declaration
-            {
-                if let Node::Scope(function_body) = *body {
-                    (function_body, return_type)
-                } else {
-                    unreachable!()
-                }
+        let (function_body, return_type, parameters) = if let Node::FunctionDeclaration {
+            body,
+            return_type,
+            parameters,
+            ..
+        } = function_declaration
+        {
+            if let Node::Scope(function_body) = *body {
+                (function_body, return_type, parameters)
             } else {
                 unreachable!()
-            };
+            }
+        } else {
+            unreachable!()
+        };
 
+        functions_raw_body.insert(function_name, (return_type, parameters, function_body));
+    }
+    let functions_raw_body = std::sync::Arc::new(functions_raw_body);
+
+    let mut funcs = HashMap::new();
+    for (function_name, (return_type, parameters, function_body)) in
+        functions_raw_body.clone().iter()
+    {
+        let mut body = Vec::new();
         let mut temporaries = Temporaries::default();
-        temporaries.insert("@current_function".into(), return_type);
-        for node in function_body {
-            body.append(&mut transformers::transform(node, &mut temporaries)?);
+
+        for (parameter_name, parameter_type) in parameters {
+            temporaries.declare(parameter_name.clone(), parameter_type.clone());
         }
-        funcs.insert(function_name, body);
+
+        for node in function_body.iter() {
+            body.append(&mut transformers::transform(
+                &functions_raw_body,
+                node.clone(),
+                return_type.clone(),
+                &mut temporaries,
+            )?)
+        }
+
+        dbg!(&temporaries);
+        funcs.insert(function_name.clone(), body);
     }
 
     Ok(funcs)
