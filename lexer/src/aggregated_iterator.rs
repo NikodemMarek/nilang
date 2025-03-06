@@ -36,26 +36,31 @@ impl<'a> Iterator for AggregatedIterator<'a> {
 
                     let mut aggregation = String::from(self.iter.next().unwrap());
 
-                    loop {
-                        match self.iter.peek() {
-                            Some('0'..='9') => {
-                                self.loc.1 += 1;
+                    if let Some('0'..='9') = self.iter.peek() {
+                        while let Some('0'..='9') = self.iter.peek() {
+                            self.loc.1 += 1;
 
-                                aggregation.push(self.iter.next().unwrap());
-                            }
-                            _ => {
-                                let end = self.loc;
-
-                                self.loc.1 += 1;
-
-                                return Some(Ok(Token {
-                                    token: TokenType::Dot,
-                                    start,
-                                    end,
-                                }));
-                            }
+                            aggregation.push(self.iter.next().unwrap());
                         }
+
+                        let end = self.loc;
+                        self.loc.1 += 1;
+
+                        return Some(Ok(Token {
+                            token: TokenType::Literal(aggregation.into()),
+                            start,
+                            end,
+                        }));
                     }
+
+                    let end = self.loc;
+                    self.loc.1 += 1;
+
+                    return Some(Ok(Token {
+                        token: TokenType::Dot,
+                        start,
+                        end,
+                    }));
                 }
                 '0'..='9' => {
                     let start = self.loc;
