@@ -6,7 +6,7 @@ use std::collections::{HashMap, HashSet};
 use errors::TransformerErrors;
 use nilang_types::{
     instructions::Instruction,
-    nodes::{Node, Program},
+    nodes::{FunctionDeclaration, Parameter, Program},
 };
 use temporaries::Temporaries;
 
@@ -105,22 +105,46 @@ impl TypesRef {
     }
 }
 
+#[derive(Debug, Default)]
+struct FunctionsRef(HashMap<Box<str>, (Box<str>, Box<[Parameter]>)>);
+
+impl FunctionsRef {
+    pub fn add_function(
+        &mut self,
+        FunctionDeclaration {
+            name,
+            parameters,
+            return_type,
+            ..
+        }: FunctionDeclaration,
+    ) {
+        self.0.insert(name, (return_type, parameters));
+    }
+
+    pub fn get_parameters(&self, name: &str) -> Result<&[Parameter], TransformerErrors> {
+        self.0
+            .get(name)
+            .map(|(_, parameters)| parameters.as_ref())
+            .ok_or(TransformerErrors::FunctionNotFound { name: name.into() })
+    }
+}
+
 /// TODO: Probably move this to a generator
-fn convert_structures(structures: HashMap<Box<str>, Node>) -> TypesRef {
+fn convert_structures(structures: HashMap<Box<str>, nilang_types::nodes::Structure>) -> TypesRef {
     let mut tr = TypesRef::default();
     let st = structures.clone();
     let mut not_converted = st.keys().collect::<HashSet<_>>();
 
     let mut next = not_converted.iter().next().copied().cloned();
     while let Some(structure_name) = next.clone() {
-        let structure_fields = structures.get(&structure_name).unwrap();
-        if let Node::Structure { fields, .. } = structure_fields {
-            if let Err(add_structure) = tr.add_structure(&structure_name, fields) {
-                next = Some(add_structure);
-            } else {
-                not_converted.remove(&structure_name);
-                next = not_converted.iter().next().copied().cloned();
-            }
+        let nilang_types::nodes::Structure { fields, .. } =
+            structures.get(&structure_name).unwrap();
+
+        if let Err(add_structure) = tr.add_structure(&structure_name, fields) {
+            next = Some(add_structure);
+        } else {
+            not_converted.remove(&structure_name);
+            next = not_converted.iter().next().copied().cloned();
         }
     }
 
@@ -135,27 +159,22 @@ pub fn transform(
 ) -> Result<HashMap<Box<str>, Vec<Instruction>>, TransformerErrors> {
     let _ = convert_structures(structures);
 
+    let mut functions_ref = FunctionsRef(HashMap::new());
+    for (_, function_declaration) in functions.iter() {
+        functions_ref.add_function(function_declaration.clone());
+    }
+
     let mut functions_raw_body = HashMap::new();
     for (function_name, function_declaration) in functions {
-        let (function_body, return_type, parameters) = if let Node::FunctionDeclaration {
+        let nilang_types::nodes::FunctionDeclaration {
             body,
             return_type,
             parameters,
             ..
-        } = function_declaration
-        {
-            if let Node::Scope(function_body) = *body {
-                (function_body, return_type, parameters)
-            } else {
-                unreachable!()
-            }
-        } else {
-            unreachable!()
-        };
+        } = function_declaration;
 
-        functions_raw_body.insert(function_name, (return_type, parameters, function_body));
+        functions_raw_body.insert(function_name, (return_type, parameters, body));
     }
-    let functions_raw_body = std::sync::Arc::new(functions_raw_body);
 
     let mut funcs = HashMap::new();
     for (function_name, (return_type, parameters, function_body)) in
@@ -170,8 +189,8 @@ pub fn transform(
         }
 
         for node in function_body.iter() {
-            body.append(&mut transformers::transform(
-                &functions_raw_body,
+            body.append(&mut transformers::transform_statement(
+                &functions_ref,
                 node.clone(),
                 return_type.clone(),
                 &mut temporaries,

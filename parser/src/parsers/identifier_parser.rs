@@ -1,6 +1,6 @@
 use errors::ParserErrors;
 use nilang_types::{
-    nodes::Node,
+    nodes::ExpressionNode,
     tokens::{Token, TokenType},
 };
 
@@ -11,7 +11,9 @@ use super::{
     operation_parser::parse_operation_if_operator_follows,
 };
 
-pub fn parse_identifier<I: PeekableAssumingIterator>(tokens: &mut I) -> Result<Node, ParserErrors> {
+pub fn parse_identifier<I: PeekableAssumingIterator>(
+    tokens: &mut I,
+) -> Result<ExpressionNode, ParserErrors> {
     let (_, _, name) = tokens.assume_identifier()?;
 
     let variable_reference = match tokens.peek_valid()? {
@@ -20,20 +22,23 @@ pub fn parse_identifier<I: PeekableAssumingIterator>(tokens: &mut I) -> Result<N
             ..
         } => {
             let arguments = parse_argument_list(tokens)?;
-            parse_operation_if_operator_follows(tokens, Node::FunctionCall { name, arguments })?
+            parse_operation_if_operator_follows(
+                tokens,
+                ExpressionNode::FunctionCall { name, arguments },
+            )?
         }
         Token {
             token: TokenType::Operator(_),
             ..
-        } => parse_operation_if_operator_follows(tokens, Node::VariableReference(name))?,
+        } => parse_operation_if_operator_follows(tokens, ExpressionNode::VariableReference(name))?,
         Token {
             token: TokenType::OpeningBrace,
             ..
-        } => Node::Object {
+        } => ExpressionNode::Object {
             r#type: name,
             fields: parse_object(tokens)?,
         },
-        Token { .. } => Node::VariableReference(name),
+        Token { .. } => ExpressionNode::VariableReference(name),
     };
 
     Ok(match tokens.peek_valid()? {
@@ -42,7 +47,7 @@ pub fn parse_identifier<I: PeekableAssumingIterator>(tokens: &mut I) -> Result<N
             ..
         } => {
             tokens.next();
-            Node::FieldAccess {
+            ExpressionNode::FieldAccess {
                 structure: Box::new(variable_reference),
                 field: {
                     let (_, _, name) = tokens.assume_identifier()?;
@@ -58,7 +63,7 @@ pub fn parse_identifier<I: PeekableAssumingIterator>(tokens: &mut I) -> Result<N
 mod tests {
     use crate::parsers::identifier_parser::parse_identifier;
     use nilang_types::{
-        nodes::Node,
+        nodes::ExpressionNode,
         tokens::{Token, TokenType},
     };
 
@@ -82,7 +87,7 @@ mod tests {
                 .peekable()
             )
             .unwrap(),
-            Node::VariableReference("x".into())
+            ExpressionNode::VariableReference("x".into())
         );
 
         assert_eq!(
@@ -113,7 +118,7 @@ mod tests {
                 .peekable()
             )
             .unwrap(),
-            Node::FunctionCall {
+            ExpressionNode::FunctionCall {
                 name: "x".into(),
                 arguments: [].into()
             }
@@ -142,8 +147,8 @@ mod tests {
                 .peekable()
             )
             .unwrap(),
-            Node::FieldAccess {
-                structure: Box::new(Node::VariableReference("x".into())),
+            ExpressionNode::FieldAccess {
+                structure: Box::new(ExpressionNode::VariableReference("x".into())),
                 field: "test".into()
             }
         );
@@ -181,8 +186,8 @@ mod tests {
                 .peekable()
             )
             .unwrap(),
-            Node::FieldAccess {
-                structure: Box::new(Node::FunctionCall {
+            ExpressionNode::FieldAccess {
+                structure: Box::new(ExpressionNode::FunctionCall {
                     name: "x".into(),
                     arguments: [].into()
                 }),

@@ -1,36 +1,27 @@
 use errors::TransformerErrors;
-use nilang_types::nodes::Node;
+use nilang_types::nodes::ExpressionNode;
 
-use crate::{temporaries::Temporaries, Instruction};
+use crate::{temporaries::Temporaries, FunctionsRef, Instruction};
 
 pub fn transform_function_call(
-    context: &std::collections::HashMap<
-        Box<str>,
-        (
-            Box<str>,
-            std::collections::HashMap<Box<str>, Box<str>>,
-            Vec<Node>,
-        ),
-    >,
+    context: &FunctionsRef,
     temporaries: &mut Temporaries,
 
     name: Box<str>,
-    arguments: &[Node],
+    arguments: &[ExpressionNode],
     return_type: Box<str>,
 ) -> Result<(Vec<Instruction>, Box<str>), TransformerErrors> {
-    let mut function_parameters = context
-        .get(&name)
-        .ok_or(TransformerErrors::FunctionNotFound { name: name.clone() })?
-        .1
-        .keys();
+    let function_parameters = context.get_parameters(&name)?;
+    let mut function_parameters = function_parameters.iter();
 
     let acc = (&mut Vec::new(), &mut Vec::new());
     let (arguments, instructions) = arguments.iter().fold(acc, |acc, node| match node {
-        Node::Number(number) => {
-            let temp = function_parameters.next().unwrap().clone();
+        ExpressionNode::Number(number) => {
+            // TODO: Handle too many arguments
+            let (temp, _) = function_parameters.next().unwrap();
 
             acc.0.push(temp.clone());
-            acc.1.push(Instruction::LoadNumber(*number, temp));
+            acc.1.push(Instruction::LoadNumber(*number, temp.clone()));
 
             acc
         }

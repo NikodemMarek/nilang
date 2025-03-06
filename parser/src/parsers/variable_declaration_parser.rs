@@ -1,15 +1,13 @@
 use errors::ParserErrors;
-use nilang_types::{nodes::Node, tokens::Keyword};
+use nilang_types::{nodes::StatementNode, tokens::Keyword};
 
 use crate::assuming_iterator::PeekableAssumingIterator;
 
-use super::{
-    type_annotation_parser::parse_type_annotation, value_yielding_parser::parse_value_yielding,
-};
+use super::{parse_expression, type_annotation_parser::parse_type_annotation};
 
 pub fn parse_variable_declaration<I: PeekableAssumingIterator>(
     tokens: &mut I,
-) -> Result<Node, ParserErrors> {
+) -> Result<StatementNode, ParserErrors> {
     tokens.assume_keyword(Keyword::Variable)?;
 
     let (_, _, name) = tokens.assume_identifier()?;
@@ -18,11 +16,11 @@ pub fn parse_variable_declaration<I: PeekableAssumingIterator>(
 
     tokens.assume_equals()?;
 
-    let value = parse_value_yielding(tokens)?;
+    let value = parse_expression(tokens)?;
 
     tokens.assume_semicolon()?;
 
-    Ok(Node::VariableDeclaration {
+    Ok(StatementNode::VariableDeclaration {
         name,
         r#type,
         value: Box::new(value),
@@ -32,7 +30,7 @@ pub fn parse_variable_declaration<I: PeekableAssumingIterator>(
 #[cfg(test)]
 mod tests {
     use nilang_types::{
-        nodes::{Node, Operator},
+        nodes::{ExpressionNode, Operator, StatementNode},
         tokens::{Keyword, Token, TokenType},
     };
 
@@ -83,10 +81,10 @@ mod tests {
                 .peekable(),
             )
             .unwrap(),
-            Node::VariableDeclaration {
+            StatementNode::VariableDeclaration {
                 name: "test".into(),
                 r#type: "int".into(),
-                value: Box::new(Node::Number(9.))
+                value: Box::new(ExpressionNode::Number(9.))
             }
         );
 
@@ -133,10 +131,10 @@ mod tests {
                 .peekable(),
             )
             .unwrap(),
-            Node::VariableDeclaration {
+            StatementNode::VariableDeclaration {
                 name: "test".into(),
                 r#type: "int".into(),
-                value: Box::new(Node::VariableReference("test2".into()))
+                value: Box::new(ExpressionNode::VariableReference("test2".into()))
             }
         );
 
@@ -203,13 +201,13 @@ mod tests {
                 .peekable(),
             )
             .unwrap(),
-            Node::VariableDeclaration {
+            StatementNode::VariableDeclaration {
                 name: "test".into(),
                 r#type: "int".into(),
-                value: Box::new(Node::Operation {
+                value: Box::new(ExpressionNode::Operation {
                     operator: Operator::Add,
-                    a: Box::new(Node::Number(6.)),
-                    b: Box::new(Node::Number(9.)),
+                    a: Box::new(ExpressionNode::Number(6.)),
+                    b: Box::new(ExpressionNode::Number(9.)),
                 })
             }
         );
@@ -277,13 +275,13 @@ mod tests {
                 .peekable(),
             )
             .unwrap(),
-            Node::VariableDeclaration {
+            StatementNode::VariableDeclaration {
                 name: "test".into(),
                 r#type: "int".into(),
-                value: Box::new(Node::Operation {
+                value: Box::new(ExpressionNode::Operation {
                     operator: Operator::Add,
-                    a: Box::new(Node::VariableReference("test2".into())),
-                    b: Box::new(Node::Number(9.)),
+                    a: Box::new(ExpressionNode::VariableReference("test2".into())),
+                    b: Box::new(ExpressionNode::Number(9.)),
                 })
             }
         );
@@ -356,15 +354,15 @@ mod tests {
                 .peekable(),
             )
             .unwrap(),
-            Node::VariableDeclaration {
+            StatementNode::VariableDeclaration {
                 name: "test".into(),
                 r#type: "int".into(),
-                value: Box::new(Node::FunctionCall {
+                value: Box::new(ExpressionNode::FunctionCall {
                     name: "abc".into(),
-                    arguments: [Node::Operation {
+                    arguments: [ExpressionNode::Operation {
                         operator: Operator::Add,
-                        a: Box::new(Node::Number(6.)),
-                        b: Box::new(Node::Number(9.)),
+                        a: Box::new(ExpressionNode::Number(6.)),
+                        b: Box::new(ExpressionNode::Number(9.)),
                     }]
                     .into()
                 })

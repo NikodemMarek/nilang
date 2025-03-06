@@ -1,6 +1,6 @@
 use errors::ParserErrors;
 use nilang_types::{
-    nodes::Node,
+    nodes::ExpressionNode,
     tokens::{Token, TokenType},
 };
 
@@ -13,7 +13,7 @@ use super::{
 
 pub fn parse_parenthesis<I: PeekableAssumingIterator>(
     tokens: &mut I,
-) -> Result<Node, ParserErrors> {
+) -> Result<ExpressionNode, ParserErrors> {
     let start = tokens.assume_opening_parenthesis()?;
 
     let content = match tokens.peek_valid()? {
@@ -60,7 +60,7 @@ pub fn parse_parenthesis<I: PeekableAssumingIterator>(
 #[cfg(test)]
 mod tests {
     use nilang_types::{
-        nodes::{Node, Operator},
+        nodes::{ExpressionNode, Operator},
         tokens::{Token, TokenType},
     };
 
@@ -101,10 +101,10 @@ mod tests {
                 .peekable()
             )
             .unwrap(),
-            Node::Operation {
+            ExpressionNode::Operation {
                 operator: Operator::Add,
-                a: Box::new(Node::Number(6.)),
-                b: Box::new(Node::Number(9.)),
+                a: Box::new(ExpressionNode::Number(6.)),
+                b: Box::new(ExpressionNode::Number(9.)),
             }
         );
 
@@ -161,13 +161,13 @@ mod tests {
                 .peekable()
             )
             .unwrap(),
-            Node::Operation {
+            ExpressionNode::Operation {
                 operator: Operator::Multiply,
-                a: Box::new(Node::Number(6.)),
-                b: Box::new(Node::Operation {
+                a: Box::new(ExpressionNode::Number(6.)),
+                b: Box::new(ExpressionNode::Operation {
                     operator: Operator::Add,
-                    a: Box::new(Node::Number(9.)),
-                    b: Box::new(Node::Number(5.)),
+                    a: Box::new(ExpressionNode::Number(9.)),
+                    b: Box::new(ExpressionNode::Number(5.)),
                 }),
             }
         );
@@ -225,14 +225,14 @@ mod tests {
                 .peekable()
             )
             .unwrap(),
-            Node::Operation {
+            ExpressionNode::Operation {
                 operator: Operator::Multiply,
-                a: Box::new(Node::Operation {
+                a: Box::new(ExpressionNode::Operation {
                     operator: Operator::Add,
-                    a: Box::new(Node::Number(4.)),
-                    b: Box::new(Node::Number(9.)),
+                    a: Box::new(ExpressionNode::Number(4.)),
+                    b: Box::new(ExpressionNode::Number(9.)),
                 }),
-                b: Box::new(Node::Number(1.)),
+                b: Box::new(ExpressionNode::Number(1.)),
             }
         );
 
@@ -309,21 +309,21 @@ mod tests {
                 .peekable()
             )
             .unwrap(),
-            Node::Operation {
+            ExpressionNode::Operation {
                 operator: Operator::Add,
-                a: Box::new(Node::Operation {
+                a: Box::new(ExpressionNode::Operation {
                     operator: Operator::Multiply,
-                    a: Box::new(Node::Operation {
+                    a: Box::new(ExpressionNode::Operation {
                         operator: Operator::Add,
-                        a: Box::new(Node::Number(4.)),
-                        b: Box::new(Node::Number(9.)),
+                        a: Box::new(ExpressionNode::Number(4.)),
+                        b: Box::new(ExpressionNode::Number(9.)),
                     }),
-                    b: Box::new(Node::Number(1.)),
+                    b: Box::new(ExpressionNode::Number(1.)),
                 }),
-                b: Box::new(Node::Operation {
+                b: Box::new(ExpressionNode::Operation {
                     operator: Operator::Multiply,
-                    a: Box::new(Node::Number(6.)),
-                    b: Box::new(Node::Number(2.)),
+                    a: Box::new(ExpressionNode::Number(6.)),
+                    b: Box::new(ExpressionNode::Number(2.)),
                 }),
             }
         );

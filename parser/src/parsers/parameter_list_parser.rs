@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use errors::ParserErrors;
 use nilang_types::tokens::{Token, TokenType};
 
@@ -7,12 +5,14 @@ use crate::assuming_iterator::PeekableAssumingIterator;
 
 use super::type_annotation_parser::parse_type_annotation;
 
+type Parameter = (Box<str>, Box<str>); // (name, type)
+
 pub fn parse_parameter_list<I: PeekableAssumingIterator>(
     tokens: &mut I,
-) -> Result<HashMap<Box<str>, Box<str>>, ParserErrors> {
+) -> Result<Box<[Parameter]>, ParserErrors> {
     tokens.assume_opening_parenthesis()?;
 
-    let mut parameters = HashMap::new();
+    let mut parameters = Vec::new();
 
     loop {
         match tokens.assume_next()? {
@@ -20,7 +20,7 @@ pub fn parse_parameter_list<I: PeekableAssumingIterator>(
                 token: TokenType::Identifier(value),
                 ..
             } => {
-                parameters.insert(value, parse_type_annotation(tokens)?);
+                parameters.push((value, parse_type_annotation(tokens)?));
 
                 match tokens.assume_next()? {
                     Token {
@@ -51,7 +51,7 @@ pub fn parse_parameter_list<I: PeekableAssumingIterator>(
         }
     }
 
-    Ok(parameters)
+    Ok(parameters.into())
 }
 
 #[cfg(test)]

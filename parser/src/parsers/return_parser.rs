@@ -1,24 +1,26 @@
 use errors::ParserErrors;
-use nilang_types::{nodes::Node, tokens::Keyword};
+use nilang_types::{nodes::StatementNode, tokens::Keyword};
 
 use crate::assuming_iterator::PeekableAssumingIterator;
 
-use super::value_yielding_parser::parse_value_yielding;
+use super::parse_expression;
 
-pub fn parse_return<I: PeekableAssumingIterator>(tokens: &mut I) -> Result<Node, ParserErrors> {
+pub fn parse_return<I: PeekableAssumingIterator>(
+    tokens: &mut I,
+) -> Result<StatementNode, ParserErrors> {
     tokens.assume_keyword(Keyword::Return)?;
 
-    let value = parse_value_yielding(tokens)?;
+    let value = parse_expression(tokens)?;
 
     tokens.assume_semicolon()?;
 
-    Ok(Node::Return(Box::new(value)))
+    Ok(StatementNode::Return(Box::new(value)))
 }
 
 #[cfg(test)]
 mod tests {
     use nilang_types::{
-        nodes::{Node, Operator},
+        nodes::{ExpressionNode, Operator, StatementNode},
         tokens::{Keyword, Token, TokenType},
     };
 
@@ -49,7 +51,7 @@ mod tests {
                 .peekable(),
             )
             .unwrap(),
-            Node::Return(Box::new(Node::Number(6.)))
+            StatementNode::Return(Box::new(ExpressionNode::Number(6.)))
         );
 
         assert_eq!(
@@ -95,10 +97,10 @@ mod tests {
                 .peekable(),
             )
             .unwrap(),
-            Node::Return(Box::new(Node::Operation {
+            StatementNode::Return(Box::new(ExpressionNode::Operation {
                 operator: Operator::Add,
-                a: Box::new(Node::Number(6.)),
-                b: Box::new(Node::Number(9.)),
+                a: Box::new(ExpressionNode::Number(6.)),
+                b: Box::new(ExpressionNode::Number(9.)),
             }))
         );
 
@@ -135,10 +137,10 @@ mod tests {
                 .peekable(),
             )
             .unwrap(),
-            Node::Return(Box::new(Node::Operation {
+            StatementNode::Return(Box::new(ExpressionNode::Operation {
                 operator: Operator::Add,
-                a: Box::new(Node::Number(6.)),
-                b: Box::new(Node::Number(9.)),
+                a: Box::new(ExpressionNode::Number(6.)),
+                b: Box::new(ExpressionNode::Number(9.)),
             }))
         );
 
@@ -185,14 +187,14 @@ mod tests {
                 .peekable(),
             )
             .unwrap(),
-            Node::Return(Box::new(Node::Operation {
+            StatementNode::Return(Box::new(ExpressionNode::Operation {
                 operator: Operator::Add,
-                a: Box::new(Node::Operation {
+                a: Box::new(ExpressionNode::Operation {
                     operator: Operator::Add,
-                    a: Box::new(Node::Number(6.)),
-                    b: Box::new(Node::Number(9.)),
+                    a: Box::new(ExpressionNode::Number(6.)),
+                    b: Box::new(ExpressionNode::Number(9.)),
                 }),
-                b: Box::new(Node::Number(5.)),
+                b: Box::new(ExpressionNode::Number(5.)),
             }))
         );
     }

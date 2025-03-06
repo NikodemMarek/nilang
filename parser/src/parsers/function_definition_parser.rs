@@ -1,19 +1,19 @@
 use errors::ParserErrors;
 use nilang_types::{
-    nodes::Node,
+    nodes::FunctionDeclaration,
     tokens::{Keyword, Token, TokenType},
 };
 
 use crate::assuming_iterator::PeekableAssumingIterator;
 
 use super::{
-    parameter_list_parser::parse_parameter_list, parse,
+    parameter_list_parser::parse_parameter_list, parse_statement,
     type_annotation_parser::parse_type_annotation,
 };
 
 pub fn parse_function_definition<I: PeekableAssumingIterator>(
     tokens: &mut I,
-) -> Result<Node, ParserErrors> {
+) -> Result<FunctionDeclaration, ParserErrors> {
     tokens.assume_keyword(Keyword::Function)?;
 
     let (_, _, name) = tokens.assume_identifier()?;
@@ -37,7 +37,7 @@ pub fn parse_function_definition<I: PeekableAssumingIterator>(
                     break;
                 }
                 Token { .. } => {
-                    program.push(parse(tokens)?);
+                    program.push(parse_statement(tokens)?);
                 }
             }
         }
@@ -45,18 +45,18 @@ pub fn parse_function_definition<I: PeekableAssumingIterator>(
         program
     };
 
-    Ok(Node::FunctionDeclaration {
+    Ok(FunctionDeclaration {
         name,
         parameters,
         return_type,
-        body: Box::new(Node::Scope(body)),
+        body: body.into(),
     })
 }
 
 #[cfg(test)]
 mod tests {
     use nilang_types::{
-        nodes::Node,
+        nodes::{ExpressionNode, FunctionDeclaration, StatementNode},
         tokens::{Keyword, Token, TokenType},
     };
 
@@ -65,7 +65,7 @@ mod tests {
     #[test]
     fn test_parse_function_definition() {
         assert_eq!(
-            &parse_function_definition(
+            parse_function_definition(
                 &mut [
                     Ok(Token {
                         token: TokenType::Keyword(Keyword::Function),
@@ -127,13 +127,11 @@ mod tests {
                 .peekable(),
             )
             .unwrap(),
-            &Node::FunctionDeclaration {
+            FunctionDeclaration {
                 name: "main".into(),
                 parameters: [].into(),
                 return_type: "int".into(),
-                body: Box::new(Node::Scope(Vec::from(&[Node::Return(Box::new(
-                    Node::Number(6.)
-                ))]))),
+                body: Box::new([StatementNode::Return(Box::new(ExpressionNode::Number(6.)))]),
             }
         );
     }

@@ -2,48 +2,57 @@ use std::{collections::HashMap, fmt::Debug};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Program {
-    pub structures: HashMap<Box<str>, Node>,
-    pub functions: HashMap<Box<str>, Node>,
+    pub functions: HashMap<Box<str>, FunctionDeclaration>,
+    pub structures: HashMap<Box<str>, Structure>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Node {
-    FunctionDeclaration {
-        name: Box<str>,
-        parameters: HashMap<Box<str>, Box<str>>,
-        return_type: Box<str>,
-        body: Box<Node>,
-    },
+pub struct FunctionDeclaration {
+    pub name: Box<str>,
+    pub parameters: Box<[Parameter]>,
+    pub return_type: Box<str>,
+    pub body: Box<[StatementNode]>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Structure {
+    pub name: Box<str>,
+    pub fields: HashMap<Box<str>, Box<str>>, // name, type
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum ExpressionNode {
     FunctionCall {
         name: Box<str>,
-        arguments: Box<[Node]>,
+        arguments: Box<[ExpressionNode]>,
     },
     Number(f64),
     Operation {
         operator: Operator,
-        a: Box<Node>,
-        b: Box<Node>,
+        a: Box<ExpressionNode>,
+        b: Box<ExpressionNode>,
     },
-    Scope(Vec<Node>),
+    VariableReference(Box<str>),
+    Object {
+        r#type: Box<str>,
+        fields: HashMap<Box<str>, ExpressionNode>,
+    },
+    FieldAccess {
+        structure: Box<ExpressionNode>,
+        field: Box<str>,
+    },
+}
+
+pub type Parameter = (Box<str>, Box<str>);
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum StatementNode {
     VariableDeclaration {
         name: Box<str>,
         r#type: Box<str>,
-        value: Box<Node>,
+        value: Box<ExpressionNode>,
     },
-    VariableReference(Box<str>),
-    Return(Box<Node>),
-    Structure {
-        name: Box<str>,
-        fields: HashMap<Box<str>, Box<str>>, // name, type
-    },
-    Object {
-        r#type: Box<str>,
-        fields: HashMap<Box<str>, Node>,
-    },
-    FieldAccess {
-        structure: Box<Node>,
-        field: Box<str>,
-    },
+    Return(Box<ExpressionNode>),
 }
 
 #[derive(Copy, Clone, PartialEq)]

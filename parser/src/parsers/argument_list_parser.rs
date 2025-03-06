@@ -1,16 +1,16 @@
 use errors::ParserErrors;
 use nilang_types::{
-    nodes::Node,
+    nodes::ExpressionNode,
     tokens::{Token, TokenType},
 };
 
 use crate::assuming_iterator::PeekableAssumingIterator;
 
-use super::value_yielding_parser::parse_value_yielding;
+use super::parse_expression;
 
 pub fn parse_argument_list<I: PeekableAssumingIterator>(
     tokens: &mut I,
-) -> Result<Box<[Node]>, ParserErrors> {
+) -> Result<Box<[ExpressionNode]>, ParserErrors> {
     tokens.assume_opening_parenthesis()?;
 
     let mut arguments = Vec::new();
@@ -22,7 +22,7 @@ pub fn parse_argument_list<I: PeekableAssumingIterator>(
                     TokenType::Literal(_) | TokenType::Identifier(_) | TokenType::OpeningParenthesis,
                 ..
             } => {
-                arguments.push(parse_value_yielding(tokens)?);
+                arguments.push(parse_expression(tokens)?);
 
                 match tokens.assume_next()? {
                     Token {
@@ -64,7 +64,7 @@ pub fn parse_argument_list<I: PeekableAssumingIterator>(
 #[cfg(test)]
 mod tests {
     use nilang_types::{
-        nodes::{Node, Operator},
+        nodes::{ExpressionNode, Operator},
         tokens::{Token, TokenType},
     };
 
@@ -105,7 +105,11 @@ mod tests {
                 .peekable()
             )
             .unwrap(),
-            [Node::Number(5.), Node::VariableReference("x".into())].into()
+            [
+                ExpressionNode::Number(5.),
+                ExpressionNode::VariableReference("x".into())
+            ]
+            .into()
         );
 
         assert_eq!(
@@ -141,10 +145,10 @@ mod tests {
                 .peekable()
             )
             .unwrap(),
-            [Node::Operation {
+            [ExpressionNode::Operation {
                 operator: Operator::Add,
-                a: Box::new(Node::VariableReference("x".into())),
-                b: Box::new(Node::Number(4.)),
+                a: Box::new(ExpressionNode::VariableReference("x".into())),
+                b: Box::new(ExpressionNode::Number(4.)),
             }]
             .into()
         );

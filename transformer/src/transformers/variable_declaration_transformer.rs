@@ -1,5 +1,5 @@
 use errors::TransformerErrors;
-use nilang_types::nodes::Node;
+use nilang_types::nodes::ExpressionNode;
 
 use crate::{temporaries::Temporaries, Instruction};
 
@@ -8,12 +8,12 @@ pub fn transform_variable_declaration(
 
     name: Box<str>,
     r#type: Box<str>,
-    value: Node,
+    value: ExpressionNode,
 ) -> Result<Vec<Instruction>, TransformerErrors> {
     temporaries.declare(name.clone(), r#type.clone());
 
     match value {
-        Node::Number(number) => {
+        ExpressionNode::Number(number) => {
             if r#type != "int".into() {
                 return Err(TransformerErrors::InvalidType {
                     expected: "int".into(),
@@ -23,7 +23,7 @@ pub fn transform_variable_declaration(
 
             Ok(vec![Instruction::LoadNumber(number, name)])
         }
-        Node::VariableReference(reference_name) => {
+        ExpressionNode::VariableReference(reference_name) => {
             let reference_type = temporaries.access(&reference_name)?;
 
             if *reference_type != *r#type {
@@ -35,7 +35,7 @@ pub fn transform_variable_declaration(
 
             Ok(vec![Instruction::Copy(name, reference_name)])
         }
-        Node::Object {
+        ExpressionNode::Object {
             r#type: object_type,
             fields,
         } => {
@@ -49,7 +49,7 @@ pub fn transform_variable_declaration(
             let assignments = fields
                 .iter()
                 .map(|(field_name, field_value)| match *field_value {
-                    Node::Number(number) => {
+                    ExpressionNode::Number(number) => {
                         let temp = <Box<str>>::from(format!("{}.{}", name, field_name));
                         temporaries.declare(temp.clone(), "int".into());
                         Instruction::LoadNumber(number, temp)
@@ -67,7 +67,6 @@ pub fn transform_variable_declaration(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use nilang_types::nodes::Node;
 
     #[test]
     fn test_variable_declaration() {
@@ -76,7 +75,7 @@ mod tests {
             &mut temporaries,
             "a".into(),
             "int".into(),
-            Node::Number(10.),
+            ExpressionNode::Number(10.),
         )
         .unwrap();
         assert_eq!(result, [Instruction::LoadNumber(10., "a".into())]);
@@ -85,7 +84,7 @@ mod tests {
             &mut temporaries,
             "b".into(),
             "int".into(),
-            Node::VariableReference("a".into()),
+            ExpressionNode::VariableReference("a".into()),
         )
         .unwrap();
         assert_eq!(result, &[Instruction::Copy("b".into(), "a".into())]);
@@ -94,9 +93,11 @@ mod tests {
             &mut temporaries,
             "c".into(),
             "int".into(),
-            Node::Object {
+            ExpressionNode::Object {
                 r#type: "int".into(),
-                fields: vec![("x".into(), Node::Number(10.))].into_iter().collect(),
+                fields: vec![("x".into(), ExpressionNode::Number(10.))]
+                    .into_iter()
+                    .collect(),
             },
         )
         .unwrap();

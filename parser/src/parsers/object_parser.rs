@@ -2,17 +2,17 @@ use std::collections::HashMap;
 
 use errors::ParserErrors;
 use nilang_types::{
-    nodes::Node,
+    nodes::ExpressionNode,
     tokens::{Token, TokenType},
 };
 
 use crate::assuming_iterator::PeekableAssumingIterator;
 
-use super::value_yielding_parser::parse_value_yielding;
+use super::parse_expression;
 
 pub fn parse_object<I: PeekableAssumingIterator>(
     tokens: &mut I,
-) -> Result<HashMap<Box<str>, Node>, ParserErrors> {
+) -> Result<HashMap<Box<str>, ExpressionNode>, ParserErrors> {
     tokens.assume_opening_brace()?;
 
     let mut fields = HashMap::new();
@@ -25,7 +25,7 @@ pub fn parse_object<I: PeekableAssumingIterator>(
             } => {
                 tokens.assume_colon()?;
 
-                fields.insert(name, parse_value_yielding(tokens)?);
+                fields.insert(name, parse_expression(tokens)?);
 
                 match tokens.assume_next()? {
                     Token {

@@ -2,7 +2,7 @@ use std::{collections::HashMap, usize};
 
 use errors::{LexerErrors, ParserErrors};
 use nilang_types::{
-    nodes::{Node, Program},
+    nodes::Program,
     tokens::{Keyword, Token, TokenType},
 };
 
@@ -17,36 +17,41 @@ pub fn parse(
     let mut structures = HashMap::new();
     let mut functions = HashMap::new();
     while tokens.peek().is_some() {
-        match parsers::parse(&mut tokens)? {
-            structure @ Node::Structure { .. } => {
-                structures.insert(
-                    match structure {
-                        Node::Structure { ref name, .. } => name.clone(),
-                        _ => unreachable!(),
-                    },
-                    structure,
-                );
+        if let TokenType::Keyword(value) =
+            assuming_iterator::AssumingIterator::assume_next(&mut tokens)?.token
+        {
+            match value {
+                Keyword::Function => {
+                    let function = parsers::function_definition_parser::parse_function_definition(
+                        &mut tokens,
+                    )?;
+                    functions.insert(function.name.clone(), function);
+                }
+                Keyword::Structure => {
+                    let structure = parsers::structure_parser::parse_structure(&mut tokens)?;
+                    structures.insert(structure.name.clone(), structure);
+                }
+                Keyword::Return | Keyword::Variable => {
+                    return Err(ParserErrors::ExpectedTokens {
+                        tokens: [
+                            TokenType::Keyword(Keyword::Structure),
+                            TokenType::Keyword(Keyword::Function),
+                        ]
+                        .to_vec(),
+                        loc: (usize::MAX, usize::MAX),
+                    });
+                }
             }
-            function @ Node::FunctionDeclaration { .. } => {
-                functions.insert(
-                    match function {
-                        Node::FunctionDeclaration { ref name, .. } => name.clone(),
-                        _ => unreachable!(),
-                    },
-                    function,
-                );
-            }
-            _ => {
-                return Err(ParserErrors::ExpectedTokens {
-                    tokens: [
-                        TokenType::Keyword(Keyword::Structure),
-                        TokenType::Keyword(Keyword::Function),
-                    ]
-                    .to_vec(),
-                    loc: (usize::MAX, usize::MAX),
-                });
-            }
-        };
+        } else {
+            return Err(ParserErrors::ExpectedTokens {
+                tokens: [
+                    TokenType::Keyword(Keyword::Structure),
+                    TokenType::Keyword(Keyword::Function),
+                ]
+                .to_vec(),
+                loc: (usize::MAX, usize::MAX),
+            });
+        }
     }
 
     Ok(Program {

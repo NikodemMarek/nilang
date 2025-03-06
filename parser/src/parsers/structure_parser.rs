@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use errors::ParserErrors;
 use nilang_types::{
-    nodes::Node,
+    nodes::Structure,
     tokens::{Keyword, Token, TokenType},
 };
 
@@ -10,7 +10,9 @@ use crate::assuming_iterator::PeekableAssumingIterator;
 
 use super::type_annotation_parser::parse_type_annotation;
 
-pub fn parse_structure<I: PeekableAssumingIterator>(tokens: &mut I) -> Result<Node, ParserErrors> {
+pub fn parse_structure<I: PeekableAssumingIterator>(
+    tokens: &mut I,
+) -> Result<Structure, ParserErrors> {
     tokens.assume_keyword(Keyword::Structure)?;
 
     let (_, _, name) = tokens.assume_identifier()?;
@@ -55,13 +57,13 @@ pub fn parse_structure<I: PeekableAssumingIterator>(tokens: &mut I) -> Result<No
 
     tokens.assume_closing_brace()?;
 
-    Ok(Node::Structure { name, fields })
+    Ok(Structure { name, fields })
 }
 
 #[cfg(test)]
 mod test {
     use nilang_types::{
-        nodes::Node,
+        nodes::Structure,
         tokens::{Keyword, Token, TokenType},
     };
 
@@ -132,7 +134,7 @@ mod test {
                 .peekable()
             )
             .unwrap(),
-            Node::Structure {
+            Structure {
                 name: "Test".into(),
                 fields: [
                     ("test_field".into(), "int".into(),),
@@ -190,7 +192,7 @@ mod test {
                 .peekable()
             )
             .unwrap(),
-            Node::Structure {
+            Structure {
                 name: "Test".into(),
                 fields: [("test_field".into(), "int".into(),),].into(),
             },
