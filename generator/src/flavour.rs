@@ -110,8 +110,6 @@ impl<R: Registers + Debug> MemoryManagement<R> {
             })
             .collect();
 
-        dbg!(&argument_locations);
-
         for (argument, location) in argument_locations.iter() {
             self.reservations.insert(argument.clone(), *location);
         }
@@ -124,6 +122,14 @@ impl<R: Registers + Debug> MemoryManagement<R> {
                 Instruction::Copy((*argument).clone(), name.clone())
             })
             .collect()
+    }
+
+    pub fn get_argument(&self, arg: usize) -> Location<R> {
+        if arg >= R::argument_registers().len() {
+            Location::Stack((arg - R::argument_registers().len()) * R::alignment())
+        } else {
+            Location::Register(R::argument_registers()[arg])
+        }
     }
 }
 

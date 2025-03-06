@@ -15,4 +15,7 @@ pub enum Instruction {
     Allocate(Type, Temporary),
 
     FunctionCall(FunctionName, Box<[Temporary]>, Temporary),
+    LoadArgument(usize, Temporary),
+
+    AddNumbers(Number, Number, Temporary),
 }

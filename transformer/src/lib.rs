@@ -164,8 +164,9 @@ pub fn transform(
         let mut body = Vec::new();
         let mut temporaries = Temporaries::default();
 
-        for (parameter_name, parameter_type) in parameters {
+        for (i, (parameter_name, parameter_type)) in parameters.iter().enumerate() {
             temporaries.declare(parameter_name.clone(), parameter_type.clone());
+            body.push(Instruction::LoadArgument(i, parameter_name.clone()));
         }
 
         for node in function_body.iter() {
@@ -177,7 +178,6 @@ pub fn transform(
             )?)
         }
 
-        dbg!(&temporaries);
         funcs.insert(function_name.clone(), body);
     }
 

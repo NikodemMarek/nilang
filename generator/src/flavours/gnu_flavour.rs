@@ -80,14 +80,21 @@ impl<R: Registers + Debug> Flavour for GnuFlavour<R> {
                     vec![format!(
                         "movq {}, {}",
                         Self::location(Self::return_register_location()),
-                        {
-                            dbg!(&self.mm);
-                            Self::location(self.mm.reserve(&return_temporary))
-                        }
+                        Self::location(self.mm.reserve(&return_temporary))
                     )
                     .into()],
                 ]
                 .concat())
+            }
+            Instruction::LoadArgument(arg, variable) => {
+                let arg_loc = self.mm.get_argument(arg);
+                let arg_var_loc = self.mm.reserve(&variable);
+                Ok(vec![format!(
+                    "movq {}, {}",
+                    Self::location(arg_loc),
+                    Self::location(arg_var_loc)
+                )
+                .into()])
             }
             _ => unimplemented!(),
         }
