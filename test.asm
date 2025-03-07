@@ -7,22 +7,13 @@ _start:
     int $0x80
     ret
 
-.globl _test
-_test:
-    pushq %rbp
-    movq %rsp, %rbp
-    movq %r9, %rax
-    movq %rax, %rax
-    leave
-    ret
-
 .globl _main
 _main:
     pushq %rbp
     movq %rsp, %rbp
-    movq $6, %rbx
-    call _test
-    movq %rax, %rcx
+    movq $5, %rax
+    movq $13, %rbx
+    movq %rbx, %rcx
     movq %rcx, %rax
     leave
     ret

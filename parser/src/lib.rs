@@ -1,5 +1,6 @@
 use std::{collections::HashMap, usize};
 
+use assuming_iterator::PeekableAssumingIterator;
 use errors::{LexerErrors, ParserErrors};
 use nilang_types::{
     nodes::Program,
@@ -17,9 +18,7 @@ pub fn parse(
     let mut structures = HashMap::new();
     let mut functions = HashMap::new();
     while tokens.peek().is_some() {
-        if let TokenType::Keyword(value) =
-            assuming_iterator::AssumingIterator::assume_next(&mut tokens)?.token
-        {
+        if let TokenType::Keyword(value) = &tokens.peek_valid()?.token {
             match value {
                 Keyword::Function => {
                     let function = parsers::function_definition_parser::parse_function_definition(

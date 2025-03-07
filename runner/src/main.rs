@@ -30,6 +30,7 @@ fn compile(code: &str) -> Box<str> {
             );
         }
     };
+    dbg!(&parsed);
 
     let transformed = match nilang_transformer::transform(parsed) {
         Ok(transformed) => transformed,
@@ -37,6 +38,7 @@ fn compile(code: &str) -> Box<str> {
             panic!("{}", err);
         }
     };
+    dbg!(&transformed);
 
     match nilang_generator::generate(transformed) {
         Ok(generated) => generated,

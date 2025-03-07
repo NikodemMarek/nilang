@@ -41,7 +41,7 @@ impl<R: Registers + Debug> Flavour for GnuFlavour<R> {
         instruction: Instruction,
     ) -> Result<Vec<Box<str>>, GeneratorErrors> {
         match instruction {
-            Instruction::LoadNumber(number, temporary) => Ok(Vec::from([format!(
+            Instruction::LoadNumber(temporary, number) => Ok(Vec::from([format!(
                 "movq ${}, {}",
                 number,
                 Self::location(self.mm.reserve(&temporary))
@@ -95,6 +95,44 @@ impl<R: Registers + Debug> Flavour for GnuFlavour<R> {
                     Self::location(arg_var_loc)
                 )
                 .into()])
+            }
+            Instruction::Copy(to, from) => {
+                let from_loc = self.mm.get(&from)?;
+                let to_loc = self.mm.reserve(&to);
+                Ok(vec![format!(
+                    "movq {}, {}",
+                    Self::location(from_loc),
+                    Self::location(to_loc)
+                )
+                .into()])
+            }
+            Instruction::AddVariables(result, a, b) => {
+                let a_loc = self.mm.get(&a)?;
+                let b_loc = self.mm.get(&b)?;
+                let result_loc = self.mm.reserve(&result);
+                Ok(vec![
+                    format!("addq {}, {}", Self::location(b_loc), Self::location(a_loc)).into(),
+                    format!(
+                        "movq {}, {}",
+                        Self::location(a_loc),
+                        Self::location(result_loc)
+                    )
+                    .into(),
+                ])
+            }
+            Instruction::SubtractVariables(result, a, b) => {
+                let a_loc = self.mm.get(&a)?;
+                let b_loc = self.mm.get(&b)?;
+                let result_loc = self.mm.reserve(&result);
+                Ok(vec![
+                    format!("subq {}, {}", Self::location(b_loc), Self::location(a_loc)).into(),
+                    format!(
+                        "movq {}, {}",
+                        Self::location(a_loc),
+                        Self::location(result_loc)
+                    )
+                    .into(),
+                ])
             }
             _ => unimplemented!(),
         }

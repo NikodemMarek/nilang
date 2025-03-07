@@ -1,67 +1,24 @@
 use errors::TransformerErrors;
 use nilang_types::nodes::ExpressionNode;
 
-use crate::{temporaries::Temporaries, Instruction};
+use crate::{temporaries::Temporaries, FunctionsRef, Instruction, TypesRef};
+
+use super::transform_expression;
 
 pub fn transform_variable_declaration(
+    context: (&FunctionsRef, &TypesRef),
     temporaries: &mut Temporaries,
 
     name: Box<str>,
     r#type: Box<str>,
-    value: ExpressionNode,
+    node: ExpressionNode,
 ) -> Result<Vec<Instruction>, TransformerErrors> {
-    temporaries.declare(name.clone(), r#type.clone());
+    temporaries.declare_named(name.clone(), r#type.clone());
 
-    match value {
-        ExpressionNode::Number(number) => {
-            if r#type != "int".into() {
-                return Err(TransformerErrors::InvalidType {
-                    expected: "int".into(),
-                    received: r#type,
-                });
-            }
+    let instructions = transform_expression(context, temporaries, node, name.clone())?;
 
-            Ok(vec![Instruction::LoadNumber(number, name)])
-        }
-        ExpressionNode::VariableReference(reference_name) => {
-            let reference_type = temporaries.access(&reference_name)?;
-
-            if *reference_type != *r#type {
-                Err(TransformerErrors::InvalidType {
-                    expected: r#type,
-                    received: reference_type.into(),
-                })?
-            }
-
-            Ok(vec![Instruction::Copy(name, reference_name)])
-        }
-        ExpressionNode::Object {
-            r#type: object_type,
-            fields,
-        } => {
-            if r#type != object_type {
-                Err(TransformerErrors::InvalidType {
-                    expected: r#type.clone(),
-                    received: object_type,
-                })?
-            }
-
-            let assignments = fields
-                .iter()
-                .map(|(field_name, field_value)| match *field_value {
-                    ExpressionNode::Number(number) => {
-                        let temp = <Box<str>>::from(format!("{}.{}", name, field_name));
-                        temporaries.declare(temp.clone(), "int".into());
-                        Instruction::LoadNumber(number, temp)
-                    }
-                    _ => unimplemented!(),
-                })
-                .collect();
-
-            Ok([vec![Instruction::Allocate(name, r#type)], assignments].concat())
-        }
-        _ => unimplemented!(),
-    }
+    temporaries.access(&name)?;
+    Ok(instructions)
 }
 
 #[cfg(test)]
@@ -72,15 +29,17 @@ mod tests {
     fn test_variable_declaration() {
         let mut temporaries = Temporaries::default();
         let result = transform_variable_declaration(
+            (&FunctionsRef::default(), &TypesRef::default()),
             &mut temporaries,
             "a".into(),
             "int".into(),
             ExpressionNode::Number(10.),
         )
         .unwrap();
-        assert_eq!(result, [Instruction::LoadNumber(10., "a".into())]);
+        assert_eq!(result, [Instruction::LoadNumber("a".into(), 10.)]);
 
         let result = transform_variable_declaration(
+            (&FunctionsRef::default(), &TypesRef::default()),
             &mut temporaries,
             "b".into(),
             "int".into(),
@@ -90,6 +49,7 @@ mod tests {
         assert_eq!(result, &[Instruction::Copy("b".into(), "a".into())]);
 
         let result = transform_variable_declaration(
+            (&FunctionsRef::default(), &TypesRef::default()),
             &mut temporaries,
             "c".into(),
             "int".into(),
@@ -105,7 +65,7 @@ mod tests {
             result,
             &[
                 Instruction::Allocate("c".into(), "int".into()),
-                Instruction::LoadNumber(10., "c.x".into())
+                Instruction::LoadNumber("c.x".into(), 10.)
             ]
         );
     }

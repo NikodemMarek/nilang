@@ -1,58 +1,26 @@
 use errors::TransformerErrors;
 use nilang_types::nodes::ExpressionNode;
 
-use crate::{temporaries::Temporaries, FunctionsRef, Instruction};
+use crate::{temporaries::Temporaries, FunctionsRef, Instruction, TypesRef};
 
-use super::function_call_transformer::transform_function_call;
+use super::transform_expression;
 
 pub fn transform_return(
-    context: &FunctionsRef,
+    context: (&FunctionsRef, &TypesRef),
     temporaries: &mut Temporaries,
 
     node: ExpressionNode,
     return_type: Box<str>,
 ) -> Result<Vec<Instruction>, TransformerErrors> {
-    match node {
-        ExpressionNode::Number(number) => Ok(vec![Instruction::ReturnNumber(number)]),
-        ExpressionNode::VariableReference(variable_name) => {
-            let variable_type = temporaries.access(&variable_name)?;
+    let variable_name = temporaries.declare(return_type);
+    let instructions = transform_expression(context, temporaries, node, variable_name.clone())?;
 
-            if *variable_type != *return_type {
-                Err(TransformerErrors::InvalidType {
-                    expected: return_type,
-                    received: variable_type.into(),
-                })?
-            }
-
-            Ok(vec![Instruction::ReturnVariable(variable_name)])
-        }
-        ExpressionNode::FieldAccess { structure, field } => match *structure {
-            ExpressionNode::VariableReference(variable_name) => {
-                let temp = <Box<str>>::from(format!("{}.{}", variable_name, field));
-                let field_type = temporaries.access(&temp)?;
-
-                if *field_type != *return_type {
-                    Err(TransformerErrors::InvalidType {
-                        expected: return_type,
-                        received: field_type.into(),
-                    })?
-                }
-
-                Ok(vec![Instruction::ReturnVariable(temp)])
-            }
-            _ => unimplemented!(),
-        },
-        ExpressionNode::FunctionCall { name, arguments } => {
-            let (instructions, return_temporary) =
-                transform_function_call(context, temporaries, name, &arguments, return_type)?;
-            Ok([
-                instructions,
-                vec![Instruction::ReturnVariable(return_temporary)],
-            ]
-            .concat())
-        }
-        _ => unimplemented!(),
-    }
+    temporaries.access(&variable_name)?;
+    Ok([
+        instructions,
+        vec![Instruction::ReturnVariable(variable_name)],
+    ]
+    .concat())
 }
 
 #[cfg(test)]
@@ -64,7 +32,7 @@ mod tests {
         let node = ExpressionNode::Number(42.0);
         let function_return_type = "int";
         let result = transform_return(
-            &FunctionsRef::default(),
+            (&FunctionsRef::default(), &TypesRef::default()),
             &mut Temporaries::default(),
             node,
             function_return_type.into(),
@@ -76,11 +44,11 @@ mod tests {
     #[test]
     fn test_transform_return_variable() {
         let mut temporaries = Temporaries::default();
-        temporaries.declare("x".into(), "int".into());
+        temporaries.declare_named("x".into(), "int".into());
         let node = ExpressionNode::VariableReference("x".into());
         let function_return_type = "int";
         let result = transform_return(
-            &FunctionsRef::default(),
+            (&FunctionsRef::default(), &TypesRef::default()),
             &mut temporaries,
             node,
             function_return_type.into(),
@@ -92,15 +60,15 @@ mod tests {
     #[test]
     fn test_transform_return_field_access() {
         let mut temporaries = Temporaries::default();
-        temporaries.declare("x".into(), "struct".into());
-        temporaries.declare("x.y".into(), "int".into());
+        temporaries.declare_named("x".into(), "struct".into());
+        temporaries.declare_named("x.y".into(), "int".into());
         let node = ExpressionNode::FieldAccess {
             structure: Box::new(ExpressionNode::VariableReference("x".into())),
             field: "y".into(),
         };
         let function_return_type = "int";
         let result = transform_return(
-            &FunctionsRef::default(),
+            (&FunctionsRef::default(), &TypesRef::default()),
             &mut temporaries,
             node,
             function_return_type.into(),

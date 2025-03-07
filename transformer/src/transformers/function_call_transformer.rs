@@ -21,7 +21,7 @@ pub fn transform_function_call(
             let (temp, _) = function_parameters.next().unwrap();
 
             acc.0.push(temp.clone());
-            acc.1.push(Instruction::LoadNumber(*number, temp.clone()));
+            acc.1.push(Instruction::LoadNumber(temp.clone(), *number));
 
             acc
         }
@@ -29,7 +29,7 @@ pub fn transform_function_call(
     });
 
     let result_temporary = <Box<str>>::from(format!("{}@function_return", name));
-    temporaries.declare(result_temporary.clone(), return_type);
+    temporaries.declare_named(result_temporary.clone(), return_type);
 
     instructions.push(Instruction::FunctionCall(
         name,

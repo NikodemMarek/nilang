@@ -5,17 +5,22 @@ type FunctionName = Box<str>;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Instruction {
-    LoadNumber(Number, Temporary),
-
-    Copy(Temporary, Temporary),
-
     ReturnNumber(Number),
-    ReturnVariable(Temporary),
 
     Allocate(Type, Temporary),
 
     FunctionCall(FunctionName, Box<[Temporary]>, Temporary),
     LoadArgument(usize, Temporary),
 
-    AddNumbers(Number, Number, Temporary),
+    ReturnVariable(Temporary),
+
+    LoadNumber(Temporary, Number),
+
+    Copy(Temporary, Temporary),
+
+    AddVariables(Temporary, Temporary, Temporary),
+    SubtractVariables(Temporary, Temporary, Temporary),
+    MultiplyVariables(Temporary, Temporary, Temporary),
+    DivideVariables(Temporary, Temporary, Temporary),
+    ModuloVariables(Temporary, Temporary, Temporary),
 }

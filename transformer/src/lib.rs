@@ -103,6 +103,12 @@ impl TypesRef {
 
         Ok(())
     }
+
+    pub fn get_fields(&self, structure_name: &str) -> Option<&HashMap<Box<str>, usize>> {
+        self.structures
+            .get(structure_name)
+            .map(|(_, fields)| fields)
+    }
 }
 
 #[derive(Debug, Default)]
@@ -157,7 +163,7 @@ pub fn transform(
         functions,
     }: Program,
 ) -> Result<HashMap<Box<str>, Vec<Instruction>>, TransformerErrors> {
-    let _ = convert_structures(structures);
+    let types_ref = convert_structures(structures);
 
     let mut functions_ref = FunctionsRef(HashMap::new());
     for (_, function_declaration) in functions.iter() {
@@ -184,13 +190,13 @@ pub fn transform(
         let mut temporaries = Temporaries::default();
 
         for (i, (parameter_name, parameter_type)) in parameters.iter().enumerate() {
-            temporaries.declare(parameter_name.clone(), parameter_type.clone());
+            temporaries.declare_named(parameter_name.clone(), parameter_type.clone());
             body.push(Instruction::LoadArgument(i, parameter_name.clone()));
         }
 
         for node in function_body.iter() {
             body.append(&mut transformers::transform_statement(
-                &functions_ref,
+                (&functions_ref, &types_ref),
                 node.clone(),
                 return_type.clone(),
                 &mut temporaries,
