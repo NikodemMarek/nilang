@@ -14,6 +14,8 @@ use variable_declaration_parser::parse_variable_declaration;
 use crate::assuming_iterator::PeekableAssumingIterator;
 
 mod argument_list_parser;
+mod field_access_parser;
+mod function_call_parser;
 pub mod function_definition_parser;
 mod identifier_parser;
 mod literal_parser;

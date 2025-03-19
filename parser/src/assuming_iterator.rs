@@ -11,6 +11,7 @@ type Loc = (usize, usize);
 pub trait AssumingIterator: Iterator {
     fn assume_next(&mut self) -> Result<Token, ParserErrors>;
 
+    fn assume(&mut self, token: TokenType) -> Result<Loc, ParserErrors>;
     fn assume_literal(&mut self) -> Result<(Loc, Loc, Box<str>), ParserErrors>;
     fn assume_identifier(&mut self) -> Result<(Loc, Loc, Box<str>), ParserErrors>;
     fn assume_keyword(&mut self, keyword: Keyword) -> Result<(Loc, Loc), ParserErrors>;
@@ -27,6 +28,19 @@ pub trait AssumingIterator: Iterator {
 }
 
 impl<I: Iterator<Item = Result<Token, LexerErrors>>> AssumingIterator for I {
+    #[inline]
+    fn assume(&mut self, token: TokenType) -> Result<Loc, ParserErrors> {
+        match self.assume_next()? {
+            Token {
+                start, token: t, ..
+            } if t == token => Ok(start),
+            Token { start, .. } => Err(ParserErrors::ExpectedTokens {
+                tokens: Vec::from([token]),
+                loc: start,
+            }),
+        }
+    }
+
     #[inline]
     fn assume_next(&mut self) -> Result<Token, ParserErrors> {
         match self.next() {

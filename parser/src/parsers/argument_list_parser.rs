@@ -11,7 +11,7 @@ use super::parse_expression;
 pub fn parse_argument_list<I: PeekableAssumingIterator>(
     tokens: &mut I,
 ) -> Result<Box<[ExpressionNode]>, ParserErrors> {
-    tokens.assume_opening_parenthesis()?;
+    tokens.assume(TokenType::OpeningParenthesis)?;
 
     let mut arguments = Vec::new();
 

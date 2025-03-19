@@ -12,7 +12,8 @@ use super::parse_expression;
 
 pub fn parse_object<I: PeekableAssumingIterator>(
     tokens: &mut I,
-) -> Result<HashMap<Box<str>, ExpressionNode>, ParserErrors> {
+    name: Box<str>,
+) -> Result<ExpressionNode, ParserErrors> {
     tokens.assume_opening_brace()?;
 
     let mut fields = HashMap::new();
@@ -55,5 +56,8 @@ pub fn parse_object<I: PeekableAssumingIterator>(
         }
     }
 
-    Ok(fields)
+    Ok(ExpressionNode::Object {
+        r#type: name,
+        fields,
+    })
 }

@@ -7,8 +7,8 @@ use nilang_types::{
 use crate::assuming_iterator::PeekableAssumingIterator;
 
 use super::{
-    argument_list_parser::parse_argument_list, object_parser::parse_object,
-    operation_parser::parse_operation_if_operator_follows,
+    field_access_parser::parse_field_access, function_call_parser::parse_function_call,
+    object_parser::parse_object, operation_parser::parse_operation_if_operator_follows,
 };
 
 pub fn parse_identifier<I: PeekableAssumingIterator>(
@@ -16,17 +16,17 @@ pub fn parse_identifier<I: PeekableAssumingIterator>(
 ) -> Result<ExpressionNode, ParserErrors> {
     let (_, _, name) = tokens.assume_identifier()?;
 
-    let variable_reference = match tokens.peek_valid()? {
+    let peek_valid = if let Ok(token) = tokens.peek_valid() {
+        token
+    } else {
+        return Ok(ExpressionNode::VariableReference(name));
+    };
+
+    let expression = match peek_valid {
         Token {
             token: TokenType::OpeningParenthesis,
             ..
-        } => {
-            let arguments = parse_argument_list(tokens)?;
-            parse_operation_if_operator_follows(
-                tokens,
-                ExpressionNode::FunctionCall { name, arguments },
-            )?
-        }
+        } => parse_function_call(tokens, name)?,
         Token {
             token: TokenType::Operator(_),
             ..
@@ -34,29 +34,15 @@ pub fn parse_identifier<I: PeekableAssumingIterator>(
         Token {
             token: TokenType::OpeningBrace,
             ..
-        } => ExpressionNode::Object {
-            r#type: name,
-            fields: parse_object(tokens)?,
-        },
-        Token { .. } => ExpressionNode::VariableReference(name),
-    };
-
-    Ok(match tokens.peek_valid()? {
+        } => parse_object(tokens, name)?,
         Token {
             token: TokenType::Dot,
             ..
-        } => {
-            tokens.next();
-            ExpressionNode::FieldAccess {
-                structure: Box::new(variable_reference),
-                field: {
-                    let (_, _, name) = tokens.assume_identifier()?;
-                    name
-                },
-            }
-        }
-        Token { .. } => variable_reference,
-    })
+        } => parse_field_access(tokens, name)?,
+        Token { .. } => ExpressionNode::VariableReference(name),
+    };
+
+    Ok(expression)
 }
 
 #[cfg(test)]
@@ -88,111 +74,6 @@ mod tests {
             )
             .unwrap(),
             ExpressionNode::VariableReference("x".into())
-        );
-
-        assert_eq!(
-            parse_identifier(
-                &mut [
-                    Ok(Token {
-                        token: TokenType::Identifier("x".into()),
-                        start: (0, 0),
-                        end: (0, 0),
-                    }),
-                    Ok(Token {
-                        token: TokenType::OpeningParenthesis,
-                        start: (0, 1),
-                        end: (0, 1),
-                    }),
-                    Ok(Token {
-                        token: TokenType::ClosingParenthesis,
-                        start: (0, 2),
-                        end: (0, 2),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Semicolon,
-                        start: (0, 3),
-                        end: (0, 3),
-                    })
-                ]
-                .into_iter()
-                .peekable()
-            )
-            .unwrap(),
-            ExpressionNode::FunctionCall {
-                name: "x".into(),
-                arguments: [].into()
-            }
-        );
-
-        assert_eq!(
-            parse_identifier(
-                &mut [
-                    Ok(Token {
-                        token: TokenType::Identifier("x".into()),
-                        start: (0, 0),
-                        end: (0, 0),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Dot,
-                        start: (0, 1),
-                        end: (0, 1),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Identifier("test".into()),
-                        start: (0, 2),
-                        end: (0, 5),
-                    }),
-                ]
-                .into_iter()
-                .peekable()
-            )
-            .unwrap(),
-            ExpressionNode::FieldAccess {
-                structure: Box::new(ExpressionNode::VariableReference("x".into())),
-                field: "test".into()
-            }
-        );
-
-        assert_eq!(
-            parse_identifier(
-                &mut [
-                    Ok(Token {
-                        token: TokenType::Identifier("x".into()),
-                        start: (0, 0),
-                        end: (0, 0),
-                    }),
-                    Ok(Token {
-                        token: TokenType::OpeningParenthesis,
-                        start: (0, 1),
-                        end: (0, 1),
-                    }),
-                    Ok(Token {
-                        token: TokenType::ClosingParenthesis,
-                        start: (0, 2),
-                        end: (0, 2),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Dot,
-                        start: (0, 3),
-                        end: (0, 3),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Identifier("test".into()),
-                        start: (0, 4),
-                        end: (0, 7),
-                    }),
-                ]
-                .into_iter()
-                .peekable()
-            )
-            .unwrap(),
-            ExpressionNode::FieldAccess {
-                structure: Box::new(ExpressionNode::FunctionCall {
-                    name: "x".into(),
-                    arguments: [].into()
-                }),
-                field: "test".into()
-            }
         );
     }
 }
