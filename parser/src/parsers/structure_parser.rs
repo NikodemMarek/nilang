@@ -17,7 +17,7 @@ pub fn parse_structure<I: PeekableAssumingIterator>(
 
     let (_, _, name) = tokens.assume_identifier()?;
 
-    tokens.assume_opening_brace()?;
+    tokens.assume(TokenType::OpeningBrace)?;
 
     let mut fields = HashMap::new();
 
@@ -32,7 +32,7 @@ pub fn parse_structure<I: PeekableAssumingIterator>(
                 token: TokenType::Comma,
                 ..
             } => {
-                let _ = tokens.assume_comma();
+                let _ = tokens.assume(TokenType::Comma);
 
                 if let Token {
                     token: TokenType::ClosingBrace,
@@ -55,7 +55,7 @@ pub fn parse_structure<I: PeekableAssumingIterator>(
         }
     }
 
-    tokens.assume_closing_brace()?;
+    tokens.assume(TokenType::ClosingBrace)?;
 
     Ok(Structure { name, fields })
 }

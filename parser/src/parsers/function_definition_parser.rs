@@ -22,7 +22,7 @@ pub fn parse_function_definition<I: PeekableAssumingIterator>(
 
     let return_type = parse_type_annotation(tokens)?;
 
-    tokens.assume_opening_brace()?;
+    tokens.assume(TokenType::OpeningBrace)?;
 
     let body = {
         let mut program = Vec::new();

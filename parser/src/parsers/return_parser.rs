@@ -1,5 +1,8 @@
 use errors::ParserErrors;
-use nilang_types::{nodes::StatementNode, tokens::Keyword};
+use nilang_types::{
+    nodes::StatementNode,
+    tokens::{Keyword, TokenType},
+};
 
 use crate::assuming_iterator::PeekableAssumingIterator;
 
@@ -12,7 +15,7 @@ pub fn parse_return<I: PeekableAssumingIterator>(
 
     let value = parse_expression(tokens)?;
 
-    tokens.assume_semicolon()?;
+    tokens.assume(TokenType::Semicolon)?;
 
     Ok(StatementNode::Return(Box::new(value)))
 }

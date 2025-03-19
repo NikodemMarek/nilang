@@ -14,7 +14,7 @@ pub fn parse_object<I: PeekableAssumingIterator>(
     tokens: &mut I,
     name: Box<str>,
 ) -> Result<ExpressionNode, ParserErrors> {
-    tokens.assume_opening_brace()?;
+    tokens.assume(TokenType::OpeningBrace)?;
 
     let mut fields = HashMap::new();
 
@@ -24,7 +24,7 @@ pub fn parse_object<I: PeekableAssumingIterator>(
                 token: TokenType::Identifier(name),
                 ..
             } => {
-                tokens.assume_colon()?;
+                tokens.assume(TokenType::Colon)?;
 
                 fields.insert(name, parse_expression(tokens)?);
 

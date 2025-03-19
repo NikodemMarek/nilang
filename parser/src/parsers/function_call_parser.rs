@@ -31,8 +31,10 @@ fn expand_function_call_if_dot_follows<I: PeekableAssumingIterator>(
     function_call: ExpressionNode, // only FunctionCall is allowed here
 ) -> Result<ExpressionNode, ParserErrors> {
     if let TokenType::Dot = tokens.peek_valid()?.token {
-        tokens.assume_dot()?;
-        let field = tokens.assume_identifier()?.2;
+        tokens.assume(TokenType::Dot)?;
+
+        let (_, _, field) = tokens.assume_identifier()?;
+
         Ok(ExpressionNode::FieldAccess {
             structure: Box::new(function_call),
             field,

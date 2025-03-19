@@ -14,7 +14,7 @@ use super::{
 pub fn parse_parenthesis<I: PeekableAssumingIterator>(
     tokens: &mut I,
 ) -> Result<ExpressionNode, ParserErrors> {
-    let start = tokens.assume_opening_parenthesis()?;
+    let start = tokens.assume(TokenType::OpeningParenthesis)?;
 
     let content = match tokens.peek_valid()? {
         Token {
@@ -52,7 +52,7 @@ pub fn parse_parenthesis<I: PeekableAssumingIterator>(
         })?,
     };
 
-    tokens.assume_closing_parenthesis()?;
+    tokens.assume(TokenType::ClosingParenthesis)?;
 
     Ok(content)
 }

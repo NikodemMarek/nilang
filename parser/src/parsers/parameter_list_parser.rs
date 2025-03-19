@@ -10,7 +10,7 @@ type Parameter = (Box<str>, Box<str>); // (name, type)
 pub fn parse_parameter_list<I: PeekableAssumingIterator>(
     tokens: &mut I,
 ) -> Result<Box<[Parameter]>, ParserErrors> {
-    tokens.assume_opening_parenthesis()?;
+    tokens.assume(TokenType::OpeningParenthesis)?;
 
     let mut parameters = Vec::new();
 

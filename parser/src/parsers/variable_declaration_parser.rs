@@ -1,5 +1,8 @@
 use errors::ParserErrors;
-use nilang_types::{nodes::StatementNode, tokens::Keyword};
+use nilang_types::{
+    nodes::StatementNode,
+    tokens::{Keyword, TokenType},
+};
 
 use crate::assuming_iterator::PeekableAssumingIterator;
 
@@ -14,11 +17,11 @@ pub fn parse_variable_declaration<I: PeekableAssumingIterator>(
 
     let r#type = parse_type_annotation(tokens)?;
 
-    tokens.assume_equals()?;
+    tokens.assume(TokenType::Equals)?;
 
     let value = parse_expression(tokens)?;
 
-    tokens.assume_semicolon()?;
+    tokens.assume(TokenType::Semicolon)?;
 
     Ok(StatementNode::VariableDeclaration {
         name,
