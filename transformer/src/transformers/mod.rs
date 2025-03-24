@@ -1,21 +1,27 @@
+mod field_access_transformator;
 mod function_call_transformer;
+mod object_transformer;
 mod operation_transformer;
 mod return_transformer;
 mod variable_declaration_transformer;
+mod variable_reference_transformer;
 
 use errors::TransformerErrors;
 
+use field_access_transformator::transform_field_access;
 use nilang_types::nodes::{ExpressionNode, StatementNode};
+use object_transformer::transform_object;
 use operation_transformer::transform_operation;
 use return_transformer::transform_return;
 use variable_declaration_transformer::transform_variable_declaration;
+use variable_reference_transformer::transform_variable_reference;
 
-use crate::{temporaries::Temporaries, FunctionsRef, Instruction, TypesRef};
+use crate::{temporaries::Temporaries, FunctionsRef, Instruction, Type, TypesRef};
 
 pub fn transform_statement(
     context: (&FunctionsRef, &TypesRef),
     node: StatementNode,
-    return_type: Box<str>,
+    return_type: &Type,
     temporaries: &mut Temporaries,
 ) -> Result<Vec<Instruction>, TransformerErrors> {
     match node {
@@ -24,7 +30,7 @@ pub fn transform_statement(
             name,
             r#type,
             value,
-        } => transform_variable_declaration(context, temporaries, name, r#type, *value),
+        } => transform_variable_declaration(context, temporaries, name, &r#type.into(), *value),
     }
 }
 
@@ -33,65 +39,21 @@ pub fn transform_expression(
     temporaries: &mut Temporaries,
 
     node: ExpressionNode,
-    result_temporary_id: Box<str>,
+    result: (Box<str>, &Type),
 ) -> Result<Vec<Instruction>, TransformerErrors> {
     match node {
-        ExpressionNode::Number(number) => {
-            Ok(vec![Instruction::LoadNumber(result_temporary_id, number)])
-        }
+        ExpressionNode::Number(number) => Ok(vec![Instruction::LoadNumber(result.0, number)]),
         ExpressionNode::VariableReference(variable) => {
-            let variable_type = temporaries.type_of(&variable)?;
-            if variable_type != "int" {
-                return Ok(context
-                    .1
-                    .get_fields(variable_type)
-                    .unwrap()
-                    .iter()
-                    .map(|(field, _)| {
-                        let field_temporary =
-                            <Box<str>>::from(format!("{}.{}", result_temporary_id, field));
-                        temporaries.declare_named(field_temporary.clone(), "int".into());
-                        Instruction::Copy(
-                            field_temporary,
-                            <Box<str>>::from(format!("{}.{}", variable, field)),
-                        )
-                    })
-                    .collect::<Vec<_>>());
-            }
-
-            Ok(vec![Instruction::Copy(result_temporary_id, variable)])
+            transform_variable_reference(context, temporaries, variable, result)
         }
         ExpressionNode::FieldAccess { structure, field } => {
-            let structure_temporary = temporaries.declare("int".into());
-            let structure_instructions = transform_expression(
-                context,
-                temporaries,
-                *structure,
-                structure_temporary.clone(),
-            )?;
-
-            let field_temporary = <Box<str>>::from(format!("{}.{}", structure_temporary, field));
-
-            Ok([
-                structure_instructions,
-                vec![Instruction::Copy(result_temporary_id, field_temporary)],
-            ]
-            .concat())
+            transform_field_access(context, temporaries, *structure, field, result)
         }
         ExpressionNode::Operation { operator, a, b } => {
-            transform_operation(context, temporaries, result_temporary_id, operator, *a, *b)
+            transform_operation(context, temporaries, result, operator, *a, *b)
         }
         ExpressionNode::Object { r#type, fields } => {
-            let mut instructions = Vec::new();
-            for (field, value) in fields.iter() {
-                let field_temp = <Box<str>>::from(format!("{}.{}", result_temporary_id, field));
-                temporaries.declare_named(field_temp.clone(), r#type.clone());
-
-                let mut field_instructions =
-                    transform_expression(context, temporaries, value.clone(), field_temp)?;
-                instructions.append(&mut field_instructions);
-            }
-            Ok(instructions)
+            transform_object(context, temporaries, &r#type.into(), fields, result.0)
         }
         ExpressionNode::FunctionCall { name, arguments } => todo!(),
     }

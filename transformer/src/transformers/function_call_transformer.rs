@@ -1,7 +1,7 @@
 use errors::TransformerErrors;
 use nilang_types::nodes::ExpressionNode;
 
-use crate::{temporaries::Temporaries, FunctionsRef, Instruction};
+use crate::{temporaries::Temporaries, FunctionsRef, Instruction, Type};
 
 pub fn transform_function_call(
     context: &FunctionsRef,
@@ -9,7 +9,7 @@ pub fn transform_function_call(
 
     name: Box<str>,
     arguments: &[ExpressionNode],
-    return_type: Box<str>,
+    return_type: &Type,
 ) -> Result<(Vec<Instruction>, Box<str>), TransformerErrors> {
     let function_parameters = context.get_parameters(&name)?;
     let mut function_parameters = function_parameters.iter();
@@ -29,7 +29,7 @@ pub fn transform_function_call(
     });
 
     let result_temporary = <Box<str>>::from(format!("{}@function_return", name));
-    temporaries.declare_named(result_temporary.clone(), return_type);
+    temporaries.declare_named(result_temporary.clone(), return_type.clone());
 
     instructions.push(Instruction::FunctionCall(
         name,

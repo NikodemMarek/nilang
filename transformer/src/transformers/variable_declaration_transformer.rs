@@ -1,7 +1,7 @@
 use errors::TransformerErrors;
 use nilang_types::nodes::ExpressionNode;
 
-use crate::{temporaries::Temporaries, FunctionsRef, Instruction, TypesRef};
+use crate::{temporaries::Temporaries, FunctionsRef, Instruction, Type, TypesRef};
 
 use super::transform_expression;
 
@@ -10,12 +10,12 @@ pub fn transform_variable_declaration(
     temporaries: &mut Temporaries,
 
     name: Box<str>,
-    r#type: Box<str>,
+    r#type: &Type,
     node: ExpressionNode,
 ) -> Result<Vec<Instruction>, TransformerErrors> {
     temporaries.declare_named(name.clone(), r#type.clone());
 
-    let instructions = transform_expression(context, temporaries, node, name.clone())?;
+    let instructions = transform_expression(context, temporaries, node, (name.clone(), r#type))?;
 
     temporaries.access(&name)?;
     Ok(instructions)
@@ -32,7 +32,7 @@ mod tests {
             (&FunctionsRef::default(), &TypesRef::default()),
             &mut temporaries,
             "a".into(),
-            "int".into(),
+            &Type::Int,
             ExpressionNode::Number(10.),
         )
         .unwrap();
@@ -42,7 +42,7 @@ mod tests {
             (&FunctionsRef::default(), &TypesRef::default()),
             &mut temporaries,
             "b".into(),
-            "int".into(),
+            &Type::Int,
             ExpressionNode::VariableReference("a".into()),
         )
         .unwrap();
@@ -52,7 +52,7 @@ mod tests {
             (&FunctionsRef::default(), &TypesRef::default()),
             &mut temporaries,
             "c".into(),
-            "int".into(),
+            &Type::Int,
             ExpressionNode::Object {
                 r#type: "int".into(),
                 fields: vec![("x".into(), ExpressionNode::Number(10.))]

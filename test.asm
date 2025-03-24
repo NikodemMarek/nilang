@@ -13,7 +13,13 @@ _main:
     movq %rsp, %rbp
     movq $5, %rax
     movq $13, %rbx
-    movq %rbx, %rcx
-    movq %rcx, %rax
+    movq $9, %rcx
+    movq $7, %rdx
+    movq %rax, %rsi
+    movq %rbx, %rdi
+    movq %rcx, %r8
+    movq %rdx, %r9
+    movq %r8, %r10
+    movq %r10, %rax
     leave
     ret
