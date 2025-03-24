@@ -10,6 +10,7 @@ pub fn transform_return(
     temporaries: &mut Temporaries,
 
     node: ExpressionNode,
+
     return_type: &Type,
 ) -> Result<Vec<Instruction>, TransformerErrors> {
     let variable_name = temporaries.declare(return_type.clone());
@@ -17,7 +18,8 @@ pub fn transform_return(
         context,
         temporaries,
         node,
-        (variable_name.clone(), return_type),
+        variable_name.clone(),
+        return_type,
     )?;
 
     temporaries.access(&variable_name)?;
@@ -48,7 +50,7 @@ mod tests {
     #[test]
     fn test_transform_return_variable() {
         let mut temporaries = Temporaries::default();
-        temporaries.declare_named("x".into(), "int".into());
+        temporaries.declare_named("x".into(), Type::Int);
         let node = ExpressionNode::VariableReference("x".into());
         let result = transform_return(
             (&FunctionsRef::default(), &TypesRef::default()),
@@ -63,8 +65,8 @@ mod tests {
     #[test]
     fn test_transform_return_field_access() {
         let mut temporaries = Temporaries::default();
-        temporaries.declare_named("x".into(), "struct".into());
-        temporaries.declare_named("x.y".into(), "int".into());
+        temporaries.declare_named("x".into(), Type::Object("struct".into()));
+        temporaries.declare_named("x.y".into(), Type::Int);
         let node = ExpressionNode::FieldAccess {
             structure: Box::new(ExpressionNode::VariableReference("x".into())),
             field: "y".into(),

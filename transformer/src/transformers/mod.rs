@@ -39,21 +39,22 @@ pub fn transform_expression(
     temporaries: &mut Temporaries,
 
     node: ExpressionNode,
-    result: (Box<str>, &Type),
+    result: Box<str>,
+    r#type: &Type,
 ) -> Result<Vec<Instruction>, TransformerErrors> {
     match node {
-        ExpressionNode::Number(number) => Ok(vec![Instruction::LoadNumber(result.0, number)]),
+        ExpressionNode::Number(number) => Ok(vec![Instruction::LoadNumber(result, number)]),
         ExpressionNode::VariableReference(variable) => {
-            transform_variable_reference(context, temporaries, variable, result)
+            transform_variable_reference(context, temporaries, variable, result, r#type)
         }
         ExpressionNode::FieldAccess { structure, field } => {
-            transform_field_access(context, temporaries, *structure, field, result)
+            transform_field_access(context, temporaries, *structure, field, result, r#type)
         }
         ExpressionNode::Operation { operator, a, b } => {
-            transform_operation(context, temporaries, result, operator, *a, *b)
+            transform_operation(context, temporaries, operator, *a, *b, result, r#type)
         }
         ExpressionNode::Object { r#type, fields } => {
-            transform_object(context, temporaries, &r#type.into(), fields, result.0)
+            transform_object(context, temporaries, fields, result, &r#type.into())
         }
         ExpressionNode::FunctionCall { name, arguments } => todo!(),
     }

@@ -8,17 +8,12 @@ pub fn transform_variable_reference(
     temporaries: &mut Temporaries,
 
     variable: Box<str>,
-    (result_temporary_id, _): (Box<str>, &Type),
+    result: Box<str>,
+    r#type: &Type,
 ) -> Result<Vec<Instruction>, TransformerErrors> {
     let source_type = temporaries.type_of(&variable)?.to_owned();
 
-    copy_all_fields(
-        context,
-        temporaries,
-        variable,
-        result_temporary_id,
-        &source_type,
-    )
+    copy_all_fields(context, temporaries, variable, result, &source_type)
 }
 
 pub fn copy_all_fields(
@@ -193,7 +188,8 @@ mod tests {
             (&FunctionsRef::default(), &types_ref),
             &mut temporaries,
             "original".into(),
-            ("copy".into(), &Type::Int),
+            "copy".into(),
+            &Type::Int,
         )
         .unwrap();
         assert_eq!(

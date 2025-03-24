@@ -15,7 +15,7 @@ pub fn transform_variable_declaration(
 ) -> Result<Vec<Instruction>, TransformerErrors> {
     temporaries.declare_named(name.clone(), r#type.clone());
 
-    let instructions = transform_expression(context, temporaries, node, (name.clone(), r#type))?;
+    let instructions = transform_expression(context, temporaries, node, name.clone(), r#type)?;
 
     temporaries.access(&name)?;
     Ok(instructions)

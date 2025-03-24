@@ -11,7 +11,9 @@ pub fn transform_field_access(
 
     structure: ExpressionNode,
     field: Box<str>,
-    (result_temporary_id, result_type): (Box<str>, &Type),
+
+    result: Box<str>,
+    r#type: &Type,
 ) -> Result<Vec<Instruction>, TransformerErrors> {
     let flattened_field = flatten_field_access(structure, field)?;
 
@@ -19,8 +21,8 @@ pub fn transform_field_access(
         context,
         temporaries,
         flattened_field.into(),
-        result_temporary_id,
-        &result_type,
+        result,
+        &r#type,
     )
 }
 

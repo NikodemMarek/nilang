@@ -51,26 +51,45 @@ impl<T: ToString> From<T> for Type {
 }
 
 #[derive(Debug, Default)]
-struct FunctionsRef(HashMap<Box<str>, (Box<str>, Box<[Parameter]>)>);
+struct FunctionsRef(HashMap<Box<str>, (Type, Box<[(Box<str>, Type)]>)>);
 
 impl FunctionsRef {
-    pub fn add_function(
-        &mut self,
-        FunctionDeclaration {
-            name,
-            parameters,
-            return_type,
-            ..
-        }: FunctionDeclaration,
-    ) {
-        self.0.insert(name, (return_type, parameters));
-    }
-
-    pub fn get_parameters(&self, name: &str) -> Result<&[Parameter], TransformerErrors> {
+    pub fn get_parameters(&self, name: &str) -> Result<&[(Box<str>, Type)], TransformerErrors> {
         self.0
             .get(name)
             .map(|(_, parameters)| parameters.as_ref())
             .ok_or(TransformerErrors::FunctionNotFound { name: name.into() })
+    }
+}
+
+impl From<HashMap<Box<str>, FunctionDeclaration>> for FunctionsRef {
+    fn from(functions: HashMap<Box<str>, FunctionDeclaration>) -> Self {
+        FunctionsRef(
+            functions
+                .into_iter()
+                .map(
+                    |(
+                        name,
+                        FunctionDeclaration {
+                            return_type,
+                            parameters,
+                            ..
+                        },
+                    )| {
+                        (
+                            name,
+                            (
+                                return_type.into(),
+                                parameters
+                                    .iter()
+                                    .map(|(name, r#type)| (name.clone(), r#type.into()))
+                                    .collect(),
+                            ),
+                        )
+                    },
+                )
+                .collect(),
+        )
     }
 }
 
@@ -81,11 +100,7 @@ pub fn transform(
     }: Program,
 ) -> Result<HashMap<Box<str>, Vec<Instruction>>, TransformerErrors> {
     let types_ref = structures.into();
-
-    let mut functions_ref = FunctionsRef(HashMap::new());
-    for (_, function_declaration) in functions.iter() {
-        functions_ref.add_function(function_declaration.clone());
-    }
+    let functions_ref = functions.clone().into();
 
     let mut functions_raw_body = HashMap::new();
     for (function_name, function_declaration) in functions {
