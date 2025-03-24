@@ -9,6 +9,7 @@ mod variable_reference_transformer;
 use errors::TransformerErrors;
 
 use field_access_transformator::transform_field_access;
+use function_call_transformer::transform_function_call;
 use nilang_types::nodes::{ExpressionNode, StatementNode};
 use object_transformer::transform_object;
 use operation_transformer::transform_operation;
@@ -39,6 +40,7 @@ pub fn transform_expression(
     temporaries: &mut Temporaries,
 
     node: ExpressionNode,
+
     result: Box<str>,
     r#type: &Type,
 ) -> Result<Vec<Instruction>, TransformerErrors> {
@@ -56,6 +58,8 @@ pub fn transform_expression(
         ExpressionNode::Object { r#type, fields } => {
             transform_object(context, temporaries, fields, result, &r#type.into())
         }
-        ExpressionNode::FunctionCall { name, arguments } => todo!(),
+        ExpressionNode::FunctionCall { name, arguments } => {
+            transform_function_call(context, temporaries, name, &arguments, result, r#type)
+        }
     }
 }

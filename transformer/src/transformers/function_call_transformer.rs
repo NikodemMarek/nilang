@@ -1,40 +1,67 @@
 use errors::TransformerErrors;
 use nilang_types::nodes::ExpressionNode;
 
-use crate::{temporaries::Temporaries, FunctionsRef, Instruction, Type};
+use crate::{temporaries::Temporaries, FunctionsRef, Instruction, Type, TypesRef};
+
+use super::{transform_expression, variable_reference_transformer::object_fields_recursive};
 
 pub fn transform_function_call(
-    context: &FunctionsRef,
+    context: (&FunctionsRef, &TypesRef),
     temporaries: &mut Temporaries,
 
     name: Box<str>,
     arguments: &[ExpressionNode],
-    return_type: &Type,
-) -> Result<(Vec<Instruction>, Box<str>), TransformerErrors> {
-    let function_parameters = context.get_parameters(&name)?;
+
+    result: Box<str>,
+    r#type: &Type,
+) -> Result<Vec<Instruction>, TransformerErrors> {
+    let function_parameters = context.0.get_parameters(&name)?;
     let mut function_parameters = function_parameters.iter();
 
-    let acc = (&mut Vec::new(), &mut Vec::new());
-    let (arguments, instructions) = arguments.iter().fold(acc, |acc, node| match node {
-        ExpressionNode::Number(number) => {
-            // TODO: Handle too many arguments
-            let (temp, _) = function_parameters.next().unwrap();
+    let mut instructions = vec![];
+    let mut arguments_names = vec![];
 
-            acc.0.push(temp.clone());
-            acc.1.push(Instruction::LoadNumber(temp.clone(), *number));
+    for node in arguments {
+        if let Some((_, argument_type)) = function_parameters.next() {
+            let argument_temporary = temporaries.declare(argument_type.clone());
+            instructions.append(&mut copy_argument(
+                context,
+                temporaries,
+                node.clone(),
+                argument_temporary.clone(),
+                &argument_type.clone(),
+            )?);
 
-            acc
+            arguments_names.append(
+                &mut object_fields_recursive(context.1, argument_type)?
+                    .unwrap()
+                    .iter()
+                    .map(|(field, _)| format!("{}.{}", argument_temporary, field).into())
+                    .collect(),
+            );
+        } else {
+            panic!("Too many arguments");
         }
-        _ => unimplemented!(),
-    });
-
-    let result_temporary = <Box<str>>::from(format!("{}@function_return", name));
-    temporaries.declare_named(result_temporary.clone(), return_type.clone());
+    }
 
     instructions.push(Instruction::FunctionCall(
         name,
-        arguments.iter().cloned().collect::<Box<[_]>>(),
-        result_temporary.clone(),
+        arguments_names.into(),
+        result.clone(),
     ));
-    Ok((instructions.to_vec(), result_temporary))
+    Ok(instructions.to_vec())
+}
+
+fn copy_argument(
+    context: (&FunctionsRef, &TypesRef),
+    temporaries: &mut Temporaries,
+
+    argument: ExpressionNode,
+
+    result: Box<str>,
+    r#type: &Type,
+) -> Result<Vec<Instruction>, TransformerErrors> {
+    let instructions = transform_expression(context, temporaries, argument, result, r#type)?;
+
+    Ok(instructions)
 }

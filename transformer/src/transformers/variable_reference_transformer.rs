@@ -50,7 +50,7 @@ pub fn object_fields_recursive(
         return Ok(None);
     };
 
-    let fields_map = if let Some(fields) = context.get_fields(&object_type) {
+    let fields_map = if let Some(fields) = context.get_fields(object_type) {
         fields
     } else {
         return Ok(None);
