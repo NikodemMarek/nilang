@@ -32,7 +32,6 @@ pub fn copy_all_fields(
             temporaries.declare_named(source_temporary.clone(), temporary_type);
             instructions.push(Instruction::Copy(destination_temporary, source_temporary));
         }
-        dbg!(&instructions);
         return Ok(instructions);
     }
 

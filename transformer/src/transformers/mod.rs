@@ -4,7 +4,7 @@ mod object_transformer;
 mod operation_transformer;
 mod return_transformer;
 mod variable_declaration_transformer;
-mod variable_reference_transformer;
+pub mod variable_reference_transformer;
 
 use errors::TransformerErrors;
 

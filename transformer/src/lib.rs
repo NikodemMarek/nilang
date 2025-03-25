@@ -9,6 +9,7 @@ use nilang_types::{
     nodes::{FunctionDeclaration, Parameter, Program, Structure},
 };
 use temporaries::Temporaries;
+use transformers::variable_reference_transformer::object_fields_recursive;
 
 #[derive(Debug, Default)]
 struct TypesRef(HashMap<Box<str>, HashMap<Box<str>, Type>>);
@@ -120,9 +121,17 @@ pub fn transform(
     {
         let mut body = Vec::new();
         let mut temporaries = Temporaries::default();
-        for (i, (parameter_name, parameter_type)) in parameters.iter().enumerate() {
-            temporaries.declare_named(parameter_name.clone(), parameter_type.into());
-            body.push(Instruction::LoadArgument(i, parameter_name.clone()));
+        let mut i = 0;
+        for (parameter_name, parameter_type) in parameters.iter() {
+            let parameter_type: Type = parameter_type.into();
+            for (field, field_type) in
+                object_fields_recursive(&types_ref, &parameter_type)?.unwrap()
+            {
+                let field = Into::<Box<str>>::into(format!("{}.{}", parameter_name, field));
+                temporaries.declare_named(field.clone(), field_type);
+                body.push(Instruction::LoadArgument(i, field));
+                i += 1;
+            }
         }
 
         for node in function_body.iter() {
