@@ -11,14 +11,14 @@ _start:
 _main:
     pushq %rbp
     movq %rsp, %rbp
-    movq $5, %rax
-    movq $13, %rbx
-    movq $7, %rcx
-    movq $9, %rdx
-    movq %rax, %rsi
-    movq %rbx, %rdi
-    movq %rdx, %r8
-    movq %rcx, %r9
+    movq $13, %rax
+    movq $5, %rbx
+    movq %rbx, %rcx
+    movq %rax, %rdx
+    movq $7, %rsi
+    movq $9, %rdi
+    movq %rdi, %r8
+    movq %rsi, %r9
     movq %r8, %r10
     movq %r9, %r11
     call _test

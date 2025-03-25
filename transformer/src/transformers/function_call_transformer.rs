@@ -3,7 +3,7 @@ use nilang_types::nodes::ExpressionNode;
 
 use crate::{temporaries::Temporaries, FunctionsRef, Instruction, Type, TypesRef};
 
-use super::{transform_expression, variable_reference_transformer::object_fields_recursive};
+use super::{object_fields_recursive, transform_expression};
 
 pub fn transform_function_call(
     context: (&FunctionsRef, &TypesRef),
@@ -32,13 +32,16 @@ pub fn transform_function_call(
                 &argument_type.clone(),
             )?);
 
-            arguments_names.append(
-                &mut object_fields_recursive(context.1, argument_type)?
-                    .unwrap()
-                    .iter()
-                    .map(|(field, _)| format!("{}.{}", argument_temporary, field).into())
-                    .collect(),
-            );
+            if let Type::Object(object_type) = argument_type {
+                arguments_names.append(
+                    &mut object_fields_recursive(context.1, object_type)?
+                        .iter()
+                        .map(|(field, _)| format!("{}.{}", argument_temporary, field).into())
+                        .collect(),
+                );
+            } else {
+                arguments_names.push(argument_temporary);
+            }
         } else {
             panic!("Too many arguments");
         }

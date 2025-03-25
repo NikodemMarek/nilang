@@ -6,10 +6,10 @@ use std::collections::HashMap;
 use errors::TransformerErrors;
 use nilang_types::{
     instructions::Instruction,
-    nodes::{FunctionDeclaration, Parameter, Program, Structure},
+    nodes::{FunctionDeclaration, Program, Structure},
 };
 use temporaries::Temporaries;
-use transformers::variable_reference_transformer::object_fields_recursive;
+use transformers::object_fields_recursive;
 
 #[derive(Debug, Default)]
 struct TypesRef(HashMap<Box<str>, HashMap<Box<str>, Type>>);
@@ -124,12 +124,16 @@ pub fn transform(
         let mut i = 0;
         for (parameter_name, parameter_type) in parameters.iter() {
             let parameter_type: Type = parameter_type.into();
-            for (field, field_type) in
-                object_fields_recursive(&types_ref, &parameter_type)?.unwrap()
-            {
-                let field = Into::<Box<str>>::into(format!("{}.{}", parameter_name, field));
-                temporaries.declare_named(field.clone(), field_type);
-                body.push(Instruction::LoadArgument(i, field));
+            if let Type::Object(object_type) = &parameter_type {
+                for (field, field_type) in object_fields_recursive(&types_ref, object_type)? {
+                    let field = Into::<Box<str>>::into(format!("{}.{}", parameter_name, field));
+                    temporaries.declare_named(field.clone(), field_type);
+                    body.push(Instruction::LoadArgument(i, field));
+                    i += 1;
+                }
+            } else {
+                temporaries.declare_named(parameter_name.clone(), parameter_type);
+                body.push(Instruction::LoadArgument(i, parameter_name.clone()));
                 i += 1;
             }
         }

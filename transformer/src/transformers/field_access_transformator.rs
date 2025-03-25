@@ -3,7 +3,7 @@ use nilang_types::{instructions::Instruction, nodes::ExpressionNode};
 
 use crate::{temporaries::Temporaries, FunctionsRef, Type, TypesRef};
 
-use super::variable_reference_transformer::copy_all_fields;
+use super::copy_all_fields;
 
 pub fn transform_field_access(
     context: (&FunctionsRef, &TypesRef),
@@ -16,7 +16,6 @@ pub fn transform_field_access(
     r#type: &Type,
 ) -> Result<Vec<Instruction>, TransformerErrors> {
     let flattened_field = flatten_field_access(structure, field)?;
-
     copy_all_fields(context, temporaries, flattened_field.into(), result, r#type)
 }
 
