@@ -30,7 +30,7 @@ args@{
   ignoreLockHash,
 }:
 let
-  nixifiedLockHash = "361abe9d9713f250aba25052912447ee8770c346ccaae4928151a0dd47d2500f";
+  nixifiedLockHash = "6123bc5d7526fabb5f3975c6fd69b43628fbb7e0274924a94442a21f23e94117";
   workspaceSrc = if args.workspaceSrc == null then ./. else args.workspaceSrc;
   currentLockHash = builtins.hashFile "sha256" (workspaceSrc + /Cargo.lock);
   lockHashIgnored = if ignoreLockHash
@@ -161,6 +161,7 @@ in
       nilang_lexer = (rustPackages."unknown".nilang-lexer."0.1.0" { inherit profileName; }).out;
       nilang_parser = (rustPackages."unknown".nilang-parser."0.1.0" { inherit profileName; }).out;
       nilang_transformer = (rustPackages."unknown".nilang-transformer."0.1.0" { inherit profileName; }).out;
+      nilang_types = (rustPackages."unknown".nilang-types."0.1.0" { inherit profileName; }).out;
     };
   });
   

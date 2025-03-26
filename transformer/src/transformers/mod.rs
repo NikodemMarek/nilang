@@ -10,7 +10,7 @@ use errors::TransformerErrors;
 
 use field_access_transformator::transform_field_access;
 use function_call_transformer::transform_function_call;
-use nilang_types::nodes::{ExpressionNode, StatementNode};
+use nilang_types::nodes::{ExpressionNode, FunctionCall, StatementNode};
 use object_transformer::transform_object;
 use operation_transformer::transform_operation;
 use return_transformer::transform_return;
@@ -32,6 +32,14 @@ pub fn transform_statement(
             r#type,
             value,
         } => transform_variable_declaration(context, temporaries, name, &r#type.into(), *value),
+        StatementNode::FunctionCall(FunctionCall { name, arguments }) => transform_function_call(
+            context,
+            temporaries,
+            name,
+            &arguments,
+            "".into(),
+            &Type::Void,
+        ),
     }
 }
 
@@ -58,7 +66,7 @@ pub fn transform_expression(
         ExpressionNode::Object { r#type, fields } => {
             transform_object(context, temporaries, fields, result, &r#type.into())
         }
-        ExpressionNode::FunctionCall { name, arguments } => {
+        ExpressionNode::FunctionCall(FunctionCall { name, arguments }) => {
             transform_function_call(context, temporaries, name, &arguments, result, r#type)
         }
     }

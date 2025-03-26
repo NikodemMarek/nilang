@@ -59,6 +59,12 @@ where
 {
     Ok(match instruction {
         Instruction::FunctionCall(name, arguments, return_temporary) => {
+            if let Some(instructions) =
+                builtin_functions::<C>(mm, &name, &arguments, return_temporary.clone())
+            {
+                return instructions;
+            }
+
             C::generate_function_call(mm, &name, &arguments, return_temporary)?
         }
         Instruction::LoadNumber(temporary, number) => {
@@ -153,4 +159,21 @@ where
             todo!()
         }
     })
+}
+
+fn builtin_functions<C: CallingConvention>(
+    mm: &mut MemoryManager<C::R>,
+    name: &str,
+    arguments: &[Box<str>],
+    return_temporary: Box<str>,
+) -> Option<Result<Vec<FullInstruction<C::R>>, GeneratorErrors>> {
+    match name {
+        "print" => Some(C::generate_function_call(
+            mm,
+            "printf",
+            &["print_format".into(), arguments.first().unwrap().clone()],
+            return_temporary,
+        )),
+        _ => None,
+    }
 }

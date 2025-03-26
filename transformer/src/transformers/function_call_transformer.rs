@@ -24,7 +24,7 @@ pub fn transform_function_call(
     for node in arguments {
         if let Some((_, argument_type)) = function_parameters.next() {
             let argument_temporary = temporaries.declare(argument_type.clone());
-            instructions.append(&mut copy_argument(
+            instructions.append(&mut transform_expression(
                 context,
                 temporaries,
                 node.clone(),
@@ -53,18 +53,4 @@ pub fn transform_function_call(
         result.clone(),
     ));
     Ok(instructions.to_vec())
-}
-
-fn copy_argument(
-    context: (&FunctionsRef, &TypesRef),
-    temporaries: &mut Temporaries,
-
-    argument: ExpressionNode,
-
-    result: Box<str>,
-    r#type: &Type,
-) -> Result<Vec<Instruction>, TransformerErrors> {
-    let instructions = transform_expression(context, temporaries, argument, result, r#type)?;
-
-    Ok(instructions)
 }

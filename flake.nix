@@ -32,7 +32,7 @@
             alias-link = pkgs.writeShellScriptBin "lk" ''gcc test.o -o test -nostartfiles'';
             alias-execute = pkgs.writeShellScriptBin "ee" ''./test'';
             alias-assemble-link-execute = pkgs.writeShellScriptBin "alr" ''ae && lk && ee'';
-            alias-run-assemble-link-execute = pkgs.writeShellScriptBin "ralr" ''r && ae && lk && ee ; echo $?'';
+            alias-run-assemble-link-execute = pkgs.writeShellScriptBin "ralr" ''r && ae && lk && ee'';
           in
             rustPkgs.workspaceShell
             {

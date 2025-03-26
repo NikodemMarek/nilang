@@ -6,6 +6,7 @@ use crate::registers::{Registers, X86Registers};
 pub enum Location<R: Registers> {
     Register(R),
     Stack(usize),
+    Hardcoded(Box<str>),
 }
 
 #[derive(Debug)]
@@ -134,7 +135,10 @@ impl Default for MemoryManager<X86Registers> {
                 X86Registers::Rax,
             ],
             next_locations: Vec::from([Location::Register(X86Registers::Rax)]),
-            reservations: HashMap::new(),
+            reservations: HashMap::from([(
+                "print_format".into(),
+                Location::Hardcoded("print_format".into()),
+            )]),
         }
     }
 }
@@ -145,7 +149,7 @@ mod tests {
 
     use crate::{
         memory_manager::{Location, MemoryManager},
-        registers::{tests::TestRegisters, X86Registers},
+        registers::tests::TestRegisters,
     };
 
     impl Default for MemoryManager<TestRegisters> {

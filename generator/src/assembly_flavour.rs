@@ -21,6 +21,7 @@ impl<R: Registers> AssemblyFlavour<R> for AtAndTFlavour {
             AssemblyInstructionParameter::Memory(memory) => format!("-{}(%rax)", memory),
             AssemblyInstructionParameter::Number(number) => format!("${}", number),
             AssemblyInstructionParameter::Function(name) => name.to_string(),
+            AssemblyInstructionParameter::Data(pointer) => format!("${}", pointer),
         }
     }
 
@@ -37,7 +38,7 @@ impl<R: Registers> AssemblyFlavour<R> for AtAndTFlavour {
                     Self::generate_parameter(&parameters[0])
                 ),
                 AssemblyInstruction::Call => {
-                    format!("call _{}", Self::generate_parameter(&parameters[0]))
+                    format!("call {}", Self::generate_parameter(&parameters[0]))
                 }
                 AssemblyInstruction::Add => format!(
                     "addq {}, {}",
@@ -64,24 +65,29 @@ impl<R: Registers> AssemblyFlavour<R> for AtAndTFlavour {
     }
 
     fn generate_program(functions: &[Box<str>]) -> Box<str> {
+        let data_section = r#"
+print_format: .asciz "%d\n"
+"#;
         let start_fn = r#"
 .globl _start
 _start:
-    call _main
-    # movq $60, %rax
-    # xorq %rdi, %rdi
-    # syscall
-    movq %rax, %rbx
-    movq $1, %rax
-    int $0x80
-    ret
+    call main
+    movq $60, %rax
+    xorq %rdi, %rdi
+    syscall
         "#;
 
-        format!(".text\n{}\n{}", start_fn, functions.join("\n\n")).into()
+        format!(
+            ".data{}\n.text{}\n{}",
+            data_section,
+            start_fn,
+            functions.join("\n\n")
+        )
+        .into()
     }
 
     fn generate_function(name: &str, instructions: &[FullInstruction<R>]) -> Box<str> {
-        let function_declaration = format!(".globl _{}\n_{}:", name, name);
+        let function_declaration = format!(".globl {}\n{}:", name, name);
         let prologue = r#"
     # Prologue
     pushq %rbp
@@ -142,6 +148,7 @@ pub enum AssemblyInstructionParameter<R: Registers> {
     Memory(usize),
     Number(f64),
     Function(Box<str>),
+    Data(Box<str>),
 }
 
 impl<R: Registers> From<crate::memory_manager::Location<R>> for AssemblyInstructionParameter<R> {
@@ -152,6 +159,9 @@ impl<R: Registers> From<crate::memory_manager::Location<R>> for AssemblyInstruct
             }
             crate::memory_manager::Location::Stack(offset) => {
                 AssemblyInstructionParameter::Memory(offset)
+            }
+            crate::memory_manager::Location::Hardcoded(hardcoded) => {
+                AssemblyInstructionParameter::Data(hardcoded)
             }
         }
     }
@@ -164,6 +174,9 @@ impl<R: Registers> From<&crate::memory_manager::Location<R>> for AssemblyInstruc
             }
             crate::memory_manager::Location::Stack(offset) => {
                 AssemblyInstructionParameter::Memory(*offset)
+            }
+            crate::memory_manager::Location::Hardcoded(hardcoded) => {
+                AssemblyInstructionParameter::Data(hardcoded.clone())
             }
         }
     }

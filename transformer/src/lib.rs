@@ -38,6 +38,7 @@ impl From<HashMap<Box<str>, Structure>> for TypesRef {
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 enum Type {
+    Void,
     Int,
     Object(Box<str>),
 }
@@ -65,7 +66,7 @@ impl FunctionsRef {
 
 impl From<HashMap<Box<str>, FunctionDeclaration>> for FunctionsRef {
     fn from(functions: HashMap<Box<str>, FunctionDeclaration>) -> Self {
-        FunctionsRef(
+        let mut functions = FunctionsRef(
             functions
                 .into_iter()
                 .map(
@@ -90,7 +91,14 @@ impl From<HashMap<Box<str>, FunctionDeclaration>> for FunctionsRef {
                     },
                 )
                 .collect(),
-        )
+        );
+
+        functions.0.insert(
+            "print".into(),
+            (Type::Void, Box::new([("value".into(), Type::Int)])),
+        );
+
+        functions
     }
 }
 

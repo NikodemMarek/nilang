@@ -22,10 +22,7 @@ pub struct Structure {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ExpressionNode {
-    FunctionCall {
-        name: Box<str>,
-        arguments: Box<[ExpressionNode]>,
-    },
+    FunctionCall(FunctionCall),
     Number(f64),
     Operation {
         operator: Operator,
@@ -53,6 +50,13 @@ pub enum StatementNode {
         value: Box<ExpressionNode>,
     },
     Return(Box<ExpressionNode>),
+    FunctionCall(FunctionCall),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct FunctionCall {
+    pub name: Box<str>,
+    pub arguments: Box<[ExpressionNode]>,
 }
 
 #[derive(Copy, Clone, PartialEq)]

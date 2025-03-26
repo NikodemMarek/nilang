@@ -1,4 +1,5 @@
 use errors::ParserErrors;
+use function_call_parser::parse_function_call_statement;
 use identifier_parser::parse_identifier;
 use literal_parser::parse_literal;
 use nilang_types::{
@@ -41,12 +42,17 @@ pub fn parse_statement<I: PeekableAssumingIterator>(
                 panic!("function and structure declarations are not statements")
             }
         },
+        TokenType::Identifier(_) => {
+            let (_, _, name) = tokens.assume_identifier()?;
+            let function_call = parse_function_call_statement(tokens, name)?;
+            tokens.assume(TokenType::Semicolon)?;
+            function_call
+        }
         TokenType::Operator(_)
         | TokenType::ClosingParenthesis
         | TokenType::ClosingBrace
         | TokenType::OpeningBrace
         | TokenType::Literal(_)
-        | TokenType::Identifier(_)
         | TokenType::OpeningParenthesis
         | TokenType::Equals
         | TokenType::Semicolon

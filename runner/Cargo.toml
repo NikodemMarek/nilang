@@ -14,3 +14,4 @@ nilang-generator = { version = "0.1.0", path = "../generator" }
 
 eyre = "0.6.12"
 colored = "2.1.0"
+nilang-types = { version = "0.1.0", path = "../types" }

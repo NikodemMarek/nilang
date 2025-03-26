@@ -8,11 +8,7 @@ st Rect {
     end: Point
 }
 
-fn test(a: int, b: Point): int {
-    rt a * b.x + 5;
-}
-
 fn main(): int {
-    vr p: Point = Point { x: 6, y: 5 };
-    rt test(5, p);
+    print(5);
+    rt 0;
 }

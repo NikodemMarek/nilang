@@ -1,5 +1,8 @@
 use errors::ParserErrors;
-use nilang_types::{nodes::ExpressionNode, tokens::TokenType};
+use nilang_types::{
+    nodes::{ExpressionNode, FunctionCall, StatementNode},
+    tokens::TokenType,
+};
 
 use crate::assuming_iterator::PeekableAssumingIterator;
 
@@ -8,22 +11,31 @@ use super::{
     operation_parser::parse_operation_if_operator_follows,
 };
 
-pub fn parse_function_call<I: PeekableAssumingIterator>(
+pub fn parse_function_call_statement<I: PeekableAssumingIterator>(
+    tokens: &mut I,
+    name: Box<str>,
+) -> Result<StatementNode, ParserErrors> {
+    let function_call = parse_function_call_only(tokens, name)?;
+    Ok(StatementNode::FunctionCall(function_call))
+}
+
+pub fn parse_function_call_expression<I: PeekableAssumingIterator>(
     tokens: &mut I,
     name: Box<str>,
 ) -> Result<ExpressionNode, ParserErrors> {
     let function_call = parse_function_call_only(tokens, name)?;
-    let function_call_field_access = expand_function_call_if_dot_follows(tokens, function_call)?;
+    let function_call_field_access =
+        expand_function_call_if_dot_follows(tokens, ExpressionNode::FunctionCall(function_call))?;
     parse_operation_if_operator_follows(tokens, function_call_field_access)
 }
 
 fn parse_function_call_only<I: PeekableAssumingIterator>(
     tokens: &mut I,
     name: Box<str>,
-) -> Result<ExpressionNode, ParserErrors> {
+) -> Result<FunctionCall, ParserErrors> {
     let arguments = parse_argument_list(tokens)?;
 
-    Ok(ExpressionNode::FunctionCall { name, arguments })
+    Ok(FunctionCall { name, arguments })
 }
 
 fn expand_function_call_if_dot_follows<I: PeekableAssumingIterator>(
@@ -47,16 +59,16 @@ fn expand_function_call_if_dot_follows<I: PeekableAssumingIterator>(
 #[cfg(test)]
 mod tests {
     use nilang_types::{
-        nodes::ExpressionNode,
+        nodes::{ExpressionNode, FunctionCall},
         tokens::{Token, TokenType},
     };
 
-    use crate::parsers::function_call_parser::parse_function_call;
+    use crate::parsers::function_call_parser::parse_function_call_expression;
 
     #[test]
     fn test_parse_function_call() {
         assert_eq!(
-            parse_function_call(
+            parse_function_call_expression(
                 &mut [
                     Ok(Token {
                         token: TokenType::OpeningParenthesis,
@@ -79,14 +91,14 @@ mod tests {
                 "x".into()
             )
             .unwrap(),
-            ExpressionNode::FunctionCall {
+            ExpressionNode::FunctionCall(FunctionCall {
                 name: "x".into(),
                 arguments: [].into()
-            }
+            })
         );
 
         assert_eq!(
-            parse_function_call(
+            parse_function_call_expression(
                 &mut [
                     Ok(Token {
                         token: TokenType::OpeningParenthesis,
@@ -120,10 +132,10 @@ mod tests {
             )
             .unwrap(),
             ExpressionNode::FieldAccess {
-                structure: Box::new(ExpressionNode::FunctionCall {
+                structure: Box::new(ExpressionNode::FunctionCall(FunctionCall {
                     name: "x".into(),
                     arguments: [].into()
-                }),
+                })),
                 field: "test".into()
             }
         );

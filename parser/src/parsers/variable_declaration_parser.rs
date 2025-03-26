@@ -33,7 +33,7 @@ pub fn parse_variable_declaration<I: PeekableAssumingIterator>(
 #[cfg(test)]
 mod tests {
     use nilang_types::{
-        nodes::{ExpressionNode, Operator, StatementNode},
+        nodes::{ExpressionNode, FunctionCall, Operator, StatementNode},
         tokens::{Keyword, Token, TokenType},
     };
 
@@ -360,7 +360,7 @@ mod tests {
             StatementNode::VariableDeclaration {
                 name: "test".into(),
                 r#type: "int".into(),
-                value: Box::new(ExpressionNode::FunctionCall {
+                value: Box::new(ExpressionNode::FunctionCall(FunctionCall {
                     name: "abc".into(),
                     arguments: [ExpressionNode::Operation {
                         operator: Operator::Add,
@@ -368,7 +368,7 @@ mod tests {
                         b: Box::new(ExpressionNode::Number(9.)),
                     }]
                     .into()
-                })
+                }))
             }
         );
     }

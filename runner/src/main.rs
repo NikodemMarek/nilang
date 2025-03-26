@@ -38,7 +38,6 @@ fn compile(code: &str) -> Box<str> {
             panic!("{}", err);
         }
     };
-    dbg!(&transformed);
 
     match nilang_generator::generate::<SystemVAmd64Abi, AtAndTFlavour>(transformed) {
         Ok(generated) => generated,
