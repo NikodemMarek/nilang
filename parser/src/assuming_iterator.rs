@@ -11,20 +11,27 @@ type Loc = (usize, usize);
 pub trait AssumingIterator: Iterator {
     fn assume_next(&mut self) -> Result<Token, ParserErrors>;
 
+    fn assume(&mut self, token: TokenType) -> Result<Loc, ParserErrors>;
     fn assume_literal(&mut self) -> Result<(Loc, Loc, Box<str>), ParserErrors>;
     fn assume_identifier(&mut self) -> Result<(Loc, Loc, Box<str>), ParserErrors>;
     fn assume_keyword(&mut self, keyword: Keyword) -> Result<(Loc, Loc), ParserErrors>;
     fn assume_operator(&mut self) -> Result<(Loc, Loc, Operator), ParserErrors>;
-    fn assume_equals(&mut self) -> Result<Loc, ParserErrors>;
-    fn assume_opening_parenthesis(&mut self) -> Result<Loc, ParserErrors>;
-    fn assume_closing_parenthesis(&mut self) -> Result<Loc, ParserErrors>;
-    fn assume_opening_brace(&mut self) -> Result<Loc, ParserErrors>;
-    fn assume_closing_brace(&mut self) -> Result<Loc, ParserErrors>;
-    fn assume_comma(&mut self) -> Result<Loc, ParserErrors>;
-    fn assume_semicolon(&mut self) -> Result<Loc, ParserErrors>;
 }
 
 impl<I: Iterator<Item = Result<Token, LexerErrors>>> AssumingIterator for I {
+    #[inline]
+    fn assume(&mut self, token: TokenType) -> Result<Loc, ParserErrors> {
+        match self.assume_next()? {
+            Token {
+                start, token: t, ..
+            } if t == token => Ok(start),
+            Token { start, .. } => Err(ParserErrors::ExpectedTokens {
+                tokens: Vec::from([token]),
+                loc: start,
+            }),
+        }
+    }
+
     #[inline]
     fn assume_next(&mut self) -> Result<Token, ParserErrors> {
         match self.next() {
@@ -100,111 +107,6 @@ impl<I: Iterator<Item = Result<Token, LexerErrors>>> AssumingIterator for I {
             } => Ok((start, end, operator)),
             Token { start, .. } => Err(ParserErrors::ExpectedTokens {
                 tokens: Vec::from([TokenType::OpeningParenthesis]),
-                loc: start,
-            }),
-        }
-    }
-
-    #[inline]
-    fn assume_equals(&mut self) -> Result<Loc, ParserErrors> {
-        match self.assume_next()? {
-            Token {
-                start,
-                token: TokenType::Equals,
-                ..
-            } => Ok(start),
-            Token { start, .. } => Err(ParserErrors::ExpectedTokens {
-                tokens: Vec::from([TokenType::Equals]),
-                loc: start,
-            }),
-        }
-    }
-
-    #[inline]
-    fn assume_opening_parenthesis(&mut self) -> Result<Loc, ParserErrors> {
-        match self.assume_next()? {
-            Token {
-                start,
-                token: TokenType::OpeningParenthesis,
-                ..
-            } => Ok(start),
-            Token { start, .. } => Err(ParserErrors::ExpectedTokens {
-                tokens: Vec::from([TokenType::OpeningParenthesis]),
-                loc: start,
-            }),
-        }
-    }
-
-    #[inline]
-    fn assume_closing_parenthesis(&mut self) -> Result<Loc, ParserErrors> {
-        match self.assume_next()? {
-            Token {
-                start,
-                token: TokenType::ClosingParenthesis,
-                ..
-            } => Ok(start),
-            Token { start, .. } => Err(ParserErrors::ExpectedTokens {
-                tokens: Vec::from([TokenType::ClosingParenthesis]),
-                loc: start,
-            }),
-        }
-    }
-
-    #[inline]
-    fn assume_opening_brace(&mut self) -> Result<Loc, ParserErrors> {
-        match self.assume_next()? {
-            Token {
-                start,
-                token: TokenType::OpeningBrace,
-                ..
-            } => Ok(start),
-            Token { start, .. } => Err(ParserErrors::ExpectedTokens {
-                tokens: Vec::from([TokenType::OpeningBrace]),
-                loc: start,
-            }),
-        }
-    }
-
-    #[inline]
-    fn assume_closing_brace(&mut self) -> Result<Loc, ParserErrors> {
-        match self.assume_next()? {
-            Token {
-                start,
-                token: TokenType::ClosingBrace,
-                ..
-            } => Ok(start),
-            Token { start, .. } => Err(ParserErrors::ExpectedTokens {
-                tokens: Vec::from([TokenType::ClosingBrace]),
-                loc: start,
-            }),
-        }
-    }
-
-    #[inline]
-    fn assume_comma(&mut self) -> Result<Loc, ParserErrors> {
-        match self.assume_next()? {
-            Token {
-                start,
-                token: TokenType::Comma,
-                ..
-            } => Ok(start),
-            Token { start, .. } => Err(ParserErrors::ExpectedTokens {
-                tokens: Vec::from([TokenType::Comma]),
-                loc: start,
-            }),
-        }
-    }
-
-    #[inline]
-    fn assume_semicolon(&mut self) -> Result<Loc, ParserErrors> {
-        match self.assume_next()? {
-            Token {
-                start,
-                token: TokenType::Semicolon,
-                ..
-            } => Ok(start),
-            Token { start, .. } => Err(ParserErrors::ExpectedTokens {
-                tokens: Vec::from([TokenType::Semicolon]),
                 loc: start,
             }),
         }

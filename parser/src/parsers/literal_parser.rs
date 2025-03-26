@@ -1,13 +1,15 @@
 use errors::ParserErrors;
-use nilang_types::nodes::Node;
+use nilang_types::nodes::ExpressionNode;
 
 use crate::assuming_iterator::PeekableAssumingIterator;
 
-pub fn parse_literal<I: PeekableAssumingIterator>(tokens: &mut I) -> Result<Node, ParserErrors> {
+pub fn parse_literal<I: PeekableAssumingIterator>(
+    tokens: &mut I,
+) -> Result<ExpressionNode, ParserErrors> {
     let (start, end, value) = tokens.assume_literal()?;
 
     Ok(match value.parse() {
-        Ok(parsed) => Node::Number(parsed),
+        Ok(parsed) => ExpressionNode::Number(parsed),
         Err(_) => Err(ParserErrors::NotANumber {
             from: start,
             to: end,
@@ -18,7 +20,7 @@ pub fn parse_literal<I: PeekableAssumingIterator>(tokens: &mut I) -> Result<Node
 #[cfg(test)]
 mod tests {
     use nilang_types::{
-        nodes::Node,
+        nodes::ExpressionNode,
         tokens::{Token, TokenType},
     };
 
@@ -37,7 +39,7 @@ mod tests {
                 .peekable()
             )
             .unwrap(),
-            Node::Number(54.)
+            ExpressionNode::Number(54.)
         );
         assert_eq!(
             parse_literal(
@@ -50,7 +52,7 @@ mod tests {
                 .peekable()
             )
             .unwrap(),
-            Node::Number(6.)
+            ExpressionNode::Number(6.)
         );
         assert_eq!(
             parse_literal(
@@ -63,7 +65,7 @@ mod tests {
                 .peekable()
             )
             .unwrap(),
-            Node::Number(0.2)
+            ExpressionNode::Number(0.2)
         );
         assert_eq!(
             parse_literal(
@@ -76,7 +78,7 @@ mod tests {
                 .peekable()
             )
             .unwrap(),
-            Node::Number(8.5)
+            ExpressionNode::Number(8.5)
         );
     }
 }

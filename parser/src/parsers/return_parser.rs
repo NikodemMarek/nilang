@@ -1,60 +1,29 @@
 use errors::ParserErrors;
 use nilang_types::{
-    nodes::Node,
-    tokens::{Keyword, Token, TokenType},
+    nodes::StatementNode,
+    tokens::{Keyword, TokenType},
 };
 
 use crate::assuming_iterator::PeekableAssumingIterator;
 
-use super::{
-    identifier_parser::parse_identifier, literal_parser::parse_literal,
-    operation_parser::parse_operation_if_operator_follows, parenthesis_parser::parse_parenthesis,
-};
+use super::parse_expression;
 
-pub fn parse_return<I: PeekableAssumingIterator>(tokens: &mut I) -> Result<Node, ParserErrors> {
+pub fn parse_return<I: PeekableAssumingIterator>(
+    tokens: &mut I,
+) -> Result<StatementNode, ParserErrors> {
     tokens.assume_keyword(Keyword::Return)?;
 
-    let value = match tokens.peek_valid()? {
-        Token {
-            token: TokenType::Literal(_),
-            ..
-        } => {
-            let literal = parse_literal(tokens)?;
-            parse_operation_if_operator_follows(tokens, literal)?
-        }
-        Token {
-            token: TokenType::Identifier(_),
-            ..
-        } => {
-            let identifier = parse_identifier(tokens)?;
-            parse_operation_if_operator_follows(tokens, identifier)?
-        }
-        Token {
-            token: TokenType::OpeningParenthesis,
-            ..
-        } => {
-            let parenthesis = parse_parenthesis(tokens)?;
-            parse_operation_if_operator_follows(tokens, parenthesis)?
-        }
-        Token { end, .. } => Err(ParserErrors::ExpectedTokens {
-            tokens: Vec::from([
-                TokenType::Literal("".into()),
-                TokenType::Identifier("".into()),
-                TokenType::OpeningParenthesis,
-            ]),
-            loc: *end,
-        })?,
-    };
+    let value = parse_expression(tokens)?;
 
-    tokens.assume_semicolon()?;
+    tokens.assume(TokenType::Semicolon)?;
 
-    Ok(Node::Return(Box::new(value)))
+    Ok(StatementNode::Return(Box::new(value)))
 }
 
 #[cfg(test)]
 mod tests {
     use nilang_types::{
-        nodes::{Node, Operator},
+        nodes::{ExpressionNode, Operator, StatementNode},
         tokens::{Keyword, Token, TokenType},
     };
 
@@ -85,7 +54,7 @@ mod tests {
                 .peekable(),
             )
             .unwrap(),
-            Node::Return(Box::new(Node::Number(6.)))
+            StatementNode::Return(Box::new(ExpressionNode::Number(6.)))
         );
 
         assert_eq!(
@@ -131,10 +100,10 @@ mod tests {
                 .peekable(),
             )
             .unwrap(),
-            Node::Return(Box::new(Node::Operation {
+            StatementNode::Return(Box::new(ExpressionNode::Operation {
                 operator: Operator::Add,
-                a: Box::new(Node::Number(6.)),
-                b: Box::new(Node::Number(9.)),
+                a: Box::new(ExpressionNode::Number(6.)),
+                b: Box::new(ExpressionNode::Number(9.)),
             }))
         );
 
@@ -171,10 +140,10 @@ mod tests {
                 .peekable(),
             )
             .unwrap(),
-            Node::Return(Box::new(Node::Operation {
+            StatementNode::Return(Box::new(ExpressionNode::Operation {
                 operator: Operator::Add,
-                a: Box::new(Node::Number(6.)),
-                b: Box::new(Node::Number(9.)),
+                a: Box::new(ExpressionNode::Number(6.)),
+                b: Box::new(ExpressionNode::Number(9.)),
             }))
         );
 
@@ -221,14 +190,14 @@ mod tests {
                 .peekable(),
             )
             .unwrap(),
-            Node::Return(Box::new(Node::Operation {
+            StatementNode::Return(Box::new(ExpressionNode::Operation {
                 operator: Operator::Add,
-                a: Box::new(Node::Operation {
+                a: Box::new(ExpressionNode::Operation {
                     operator: Operator::Add,
-                    a: Box::new(Node::Number(6.)),
-                    b: Box::new(Node::Number(9.)),
+                    a: Box::new(ExpressionNode::Number(6.)),
+                    b: Box::new(ExpressionNode::Number(9.)),
                 }),
-                b: Box::new(Node::Number(5.)),
+                b: Box::new(ExpressionNode::Number(5.)),
             }))
         );
     }

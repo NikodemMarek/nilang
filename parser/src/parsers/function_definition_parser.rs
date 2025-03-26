@@ -1,23 +1,28 @@
 use errors::ParserErrors;
 use nilang_types::{
-    nodes::Node,
+    nodes::FunctionDeclaration,
     tokens::{Keyword, Token, TokenType},
 };
 
 use crate::assuming_iterator::PeekableAssumingIterator;
 
-use super::{parameter_list_parser::parse_parameter_list, parse};
+use super::{
+    parameter_list_parser::parse_parameter_list, parse_statement,
+    type_annotation_parser::parse_type_annotation,
+};
 
 pub fn parse_function_definition<I: PeekableAssumingIterator>(
     tokens: &mut I,
-) -> Result<Node, ParserErrors> {
+) -> Result<FunctionDeclaration, ParserErrors> {
     tokens.assume_keyword(Keyword::Function)?;
 
     let (_, _, name) = tokens.assume_identifier()?;
 
     let parameters = parse_parameter_list(tokens)?;
 
-    tokens.assume_opening_brace()?;
+    let return_type = parse_type_annotation(tokens)?;
+
+    tokens.assume(TokenType::OpeningBrace)?;
 
     let body = {
         let mut program = Vec::new();
@@ -32,7 +37,7 @@ pub fn parse_function_definition<I: PeekableAssumingIterator>(
                     break;
                 }
                 Token { .. } => {
-                    program.push(parse(tokens)?);
+                    program.push(parse_statement(tokens)?);
                 }
             }
         }
@@ -40,17 +45,18 @@ pub fn parse_function_definition<I: PeekableAssumingIterator>(
         program
     };
 
-    Ok(Node::FunctionDeclaration {
-        name: name.to_string(),
+    Ok(FunctionDeclaration {
+        name,
         parameters,
-        body: Box::new(Node::Scope(body)),
+        return_type,
+        body: body.into(),
     })
 }
 
 #[cfg(test)]
 mod tests {
     use nilang_types::{
-        nodes::Node,
+        nodes::{ExpressionNode, FunctionDeclaration, StatementNode},
         tokens::{Keyword, Token, TokenType},
     };
 
@@ -59,7 +65,7 @@ mod tests {
     #[test]
     fn test_parse_function_definition() {
         assert_eq!(
-            &parse_function_definition(
+            parse_function_definition(
                 &mut [
                     Ok(Token {
                         token: TokenType::Keyword(Keyword::Function),
@@ -82,14 +88,24 @@ mod tests {
                         end: (0, 8),
                     }),
                     Ok(Token {
-                        token: TokenType::OpeningBrace,
+                        token: TokenType::Colon,
                         start: (0, 9),
-                        end: (0, 9),
+                        end: (0, 9)
+                    }),
+                    Ok(Token {
+                        token: TokenType::Identifier("int".into()),
+                        start: (0, 10),
+                        end: (0, 12)
+                    }),
+                    Ok(Token {
+                        token: TokenType::OpeningBrace,
+                        start: (0, 13),
+                        end: (0, 13),
                     }),
                     Ok(Token {
                         token: TokenType::Keyword(Keyword::Return),
-                        start: (0, 11),
-                        end: (0, 12),
+                        start: (0, 14),
+                        end: (0, 15),
                     }),
                     Ok(Token {
                         token: TokenType::Literal("6".into()),
@@ -111,12 +127,11 @@ mod tests {
                 .peekable(),
             )
             .unwrap(),
-            &Node::FunctionDeclaration {
-                name: "main".to_string(),
-                parameters: Vec::new(),
-                body: Box::new(Node::Scope(Vec::from(&[Node::Return(Box::new(
-                    Node::Number(6.)
-                ))]))),
+            FunctionDeclaration {
+                name: "main".into(),
+                parameters: [].into(),
+                return_type: "int".into(),
+                body: Box::new([StatementNode::Return(Box::new(ExpressionNode::Number(6.)))]),
             }
         );
     }

@@ -1,81 +1,156 @@
-#![feature(box_patterns)]
-
-mod transformers;
+mod assembly_flavour;
+mod calling_convention;
+mod memory_manager;
+mod registers;
 mod utils;
 
+pub mod options {
+    pub use crate::assembly_flavour::AtAndTFlavour;
+    pub use crate::calling_convention::SystemVAmd64Abi;
+}
+
+use std::collections::HashMap;
+
+use assembly_flavour::{
+    AssemblyFlavour, AssemblyInstruction, AssemblyInstructionParameter, FullInstruction,
+};
+use calling_convention::CallingConvention;
 use errors::GeneratorErrors;
-use nilang_types::nodes::Node;
-use transformers::{scope::Scope, transform};
-use utils::generate_function;
+use memory_manager::MemoryManager;
+use nilang_types::instructions::Instruction;
+use registers::X86Registers;
 
-pub fn generate(program: Node) -> eyre::Result<String> {
-    if let Node::Program(program) = program {
-        let mut scope = Scope::default();
+pub fn generate<C, A>(
+    functions: HashMap<Box<str>, Vec<Instruction>>,
+) -> Result<Box<str>, GeneratorErrors>
+where
+    C: CallingConvention<R = X86Registers>,
+    A: AssemblyFlavour<C::R>,
+{
+    let mut code = Vec::new();
 
-        let mut code = Vec::with_capacity(4096);
-        for node in program {
-            code.append(&mut transform(&node, &mut scope)?);
+    for (name, instructions) in functions.into_iter() {
+        code.push(A::generate_function(
+            &name,
+            &generate_function::<C>(&instructions)?,
+        ));
+    }
+
+    Ok(A::generate_program(&code))
+}
+
+fn generate_function<C>(code: &[Instruction]) -> Result<Vec<FullInstruction<C::R>>, GeneratorErrors>
+where
+    C: CallingConvention<R = X86Registers>,
+{
+    let mm = &mut MemoryManager::default();
+    code.iter().try_fold(Vec::new(), |mut acc, instruction| {
+        acc.extend(generate_instruction::<C>(mm, instruction.clone())?);
+        Ok(acc)
+    })
+}
+
+fn generate_instruction<C>(
+    mm: &mut MemoryManager<C::R>,
+    instruction: Instruction,
+) -> Result<Vec<FullInstruction<C::R>>, GeneratorErrors>
+where
+    C: CallingConvention,
+{
+    Ok(match instruction {
+        Instruction::FunctionCall(name, arguments, return_temporary) => {
+            C::generate_function_call(mm, &name, &arguments, return_temporary)?
         }
-
-        Ok(generate_program(&[], &code))
-    } else {
-        Err(GeneratorErrors::InvalidNode { node: program })?
-    }
-}
-
-fn generate_program(data: &[String], code: &[String]) -> String {
-    let start_fn = generate_function(
-        "start",
-        &[
-            String::from("call _main"),
-            String::from("movl $1, %eax"),
-            // String::from("movl $0, %ebx"),
-            String::from("int $0x80"),
-        ],
-    );
-
-    format!(
-        ".data\n{}\n.text\n{}",
-        &data.join("\n"),
-        &[start_fn, code.to_vec()].concat().join("\n")
-    )
-}
-
-#[cfg(test)]
-mod tests {
-    use nilang_types::nodes::{Node, Operator};
-
-    use crate::{generate, generate_program};
-
-    #[test]
-    fn test_generate() {
-        let node = Node::Program(Vec::from([Node::FunctionDeclaration {
-            name: "main".to_string(),
-            parameters: Vec::new(),
-            body: Box::new(Node::Scope(Vec::from(&[Node::Return(Box::new(
-                Node::Operation {
-                    operator: Operator::Add,
-                    a: Box::new(Node::Number(1.)),
-                    b: Box::new(Node::Number(2.)),
-                },
-            ))]))),
-        }]));
-        let output = generate(node);
-
-        assert_eq!(
-            output.unwrap(),
-            ".data\n\n.text\n.globl _start\n_start:\n    call _main\n    movl $1, %eax\n    int $0x80\n    ret\n\n.globl _main\n_main:\n    pushq %rbp\n    movq %rsp, %rbp\n    movq $1, %rbx\n    add $2, %rbx\n    leave\n    ret\n"
-        )
-    }
-
-    #[test]
-    fn test_generate_program() {
-        assert_eq!(
-            generate_program(
-                &Vec::from([String::from("data")]),
-                &Vec::from([String::from("code")]),
-            ),
-            ".data\ndata\n.text\n.globl _start\n_start:\n    call _main\n    movl $1, %eax\n    int $0x80\n    ret\n\ncode"
-        );
-    }
+        Instruction::LoadNumber(temporary, number) => {
+            let location = mm.reserve(&temporary);
+            vec![(
+                AssemblyInstruction::Move,
+                vec![
+                    location.into(),
+                    AssemblyInstructionParameter::Number(number),
+                ],
+                format!("Load number '{number}' into `{temporary}`").into(),
+            )]
+        }
+        Instruction::ReturnVariable(variable) => {
+            let location = mm.get_location(&variable).unwrap().clone();
+            vec![(
+                AssemblyInstruction::Move,
+                vec![C::return_location().into(), location.into()],
+                format!("Return `{variable}`").into(),
+            )]
+        }
+        Instruction::LoadArgument(argument, temporary) => {
+            let location = C::nth_argument_location(argument);
+            mm.reserve_location(&temporary, location.clone());
+            vec![(
+                AssemblyInstruction::Move,
+                vec![location.clone().into(), location.into()],
+                format!("Load `{temporary}` as argument {argument}").into(),
+            )]
+        }
+        Instruction::Copy(to, from) => {
+            let from_loc = mm.get_location(&from).unwrap().clone();
+            let to_loc = mm.reserve(&to);
+            vec![(
+                AssemblyInstruction::Move,
+                vec![to_loc.into(), from_loc.into()],
+                format!("Copy `{from}` into `{to}`").into(),
+            )]
+        }
+        Instruction::AddVariables(result, a, b) => {
+            let a_loc = mm.get_location(&a).unwrap().clone();
+            let b_loc = mm.get_location(&b).unwrap().clone();
+            let result_loc = mm.reserve(&result);
+            vec![
+                (
+                    AssemblyInstruction::Move,
+                    vec![result_loc.clone().into(), a_loc.clone().into()],
+                    format!("Prepare `{result}` for addition").into(),
+                ),
+                (
+                    AssemblyInstruction::Add,
+                    vec![result_loc.into(), b_loc.into()],
+                    format!("Add `{a}` and `{b}` into `{result}`").into(),
+                ),
+            ]
+        }
+        Instruction::SubtractVariables(result, a, b) => {
+            let a_loc = mm.get_location(&a).unwrap().clone();
+            let b_loc = mm.get_location(&b).unwrap().clone();
+            let result_loc = mm.reserve(&result);
+            vec![
+                (
+                    AssemblyInstruction::Move,
+                    vec![result_loc.clone().into(), a_loc.clone().into()],
+                    format!("Prepare `{result}` for subtraction").into(),
+                ),
+                (
+                    AssemblyInstruction::Sub,
+                    vec![result_loc.into(), b_loc.into()],
+                    format!("Subtract `{b}` from `{result}`").into(),
+                ),
+            ]
+        }
+        Instruction::MultiplyVariables(result, a, b) => {
+            let a_loc = mm.get_location(&a).unwrap().clone();
+            let b_loc = mm.get_location(&b).unwrap().clone();
+            let result_loc = mm.reserve(&result);
+            vec![
+                (
+                    AssemblyInstruction::Move,
+                    vec![result_loc.clone().into(), a_loc.clone().into()],
+                    format!("Prepare `{result}` for multiplication").into(),
+                ),
+                (
+                    AssemblyInstruction::Mul,
+                    vec![result_loc.into(), b_loc.into()],
+                    format!("Multiply `{a}` and `{b}` into `{result}`").into(),
+                ),
+            ]
+        }
+        Instruction::DivideVariables(_, _, _) | Instruction::ModuloVariables(_, _, _) => {
+            todo!()
+        }
+    })
 }

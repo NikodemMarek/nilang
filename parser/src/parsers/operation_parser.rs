@@ -1,17 +1,17 @@
 use errors::ParserErrors;
 use nilang_types::{
-    nodes::{Node, Operator},
+    nodes::{ExpressionNode, Operator},
     tokens::{Token, TokenType},
 };
 
 use crate::assuming_iterator::PeekableAssumingIterator;
 
-use super::parse;
+use super::parse_single_expression;
 
 pub fn parse_operation_if_operator_follows<I: PeekableAssumingIterator>(
     tokens: &mut I,
-    node: Node,
-) -> Result<Node, ParserErrors> {
+    node: ExpressionNode,
+) -> Result<ExpressionNode, ParserErrors> {
     Ok(
         if let Token {
             token: TokenType::Operator(_),
@@ -28,8 +28,8 @@ pub fn parse_operation_if_operator_follows<I: PeekableAssumingIterator>(
 
 pub fn parse_operation_if_operator_follows_no_rearrange<I: PeekableAssumingIterator>(
     tokens: &mut I,
-    node: Node,
-) -> Result<Node, ParserErrors> {
+    node: ExpressionNode,
+) -> Result<ExpressionNode, ParserErrors> {
     Ok(
         if let Token {
             token: TokenType::Operator(_),
@@ -46,50 +46,53 @@ pub fn parse_operation_if_operator_follows_no_rearrange<I: PeekableAssumingItera
 
 fn parse_operation<I: PeekableAssumingIterator>(
     tokens: &mut I,
-    preceeding: Node,
+    preceeding: ExpressionNode,
     rearrange: bool,
-) -> Result<Node, ParserErrors> {
+) -> Result<ExpressionNode, ParserErrors> {
     let (start, _, operator) = tokens.assume_operator()?;
 
     Ok(match preceeding {
-        a @ Node::Number(_) => Node::Operation {
+        a @ ExpressionNode::Number(_) => ExpressionNode::Operation {
             operator,
             a: Box::new(a),
-            b: Box::new(parse(tokens)?),
+            b: Box::new(parse_single_expression(tokens)?),
         },
-        a @ Node::VariableReference(_) | a @ Node::FunctionCall { .. } => Node::Operation {
+        a @ ExpressionNode::FieldAccess { .. } => ExpressionNode::Operation {
             operator,
             a: Box::new(a),
-            b: Box::new(parse(tokens)?),
+            b: Box::new(parse_single_expression(tokens)?),
         },
-        a @ Node::Operation { .. } => {
-            let following = parse(tokens)?;
+        a @ ExpressionNode::VariableReference(_) | a @ ExpressionNode::FunctionCall { .. } => {
+            ExpressionNode::Operation {
+                operator,
+                a: Box::new(a),
+                b: Box::new(parse_single_expression(tokens)?),
+            }
+        }
+        a @ ExpressionNode::Operation { .. } => {
+            let following = parse_single_expression(tokens)?;
             if rearrange {
                 extend_operation(a, operator, following)?
             } else {
-                Node::Operation {
+                ExpressionNode::Operation {
                     operator,
                     a: Box::new(a),
                     b: Box::new(following),
                 }
             }
         }
-        a @ Node::Scope(_) => Node::Operation {
-            operator,
-            a: Box::new(a),
-            b: Box::new(parse(tokens)?),
-        },
-        Node::Return(_)
-        | Node::FunctionDeclaration { .. }
-        | Node::VariableDeclaration { .. }
-        | Node::Program(_) => Err(ParserErrors::InvalidOperand {
+        ExpressionNode::Object { .. } => Err(ParserErrors::InvalidOperand {
             loc: (start.0, start.1 - 1),
         })?,
     })
 }
 
-fn extend_operation(operation: Node, operator: Operator, node: Node) -> Result<Node, ParserErrors> {
-    if let Node::Operation {
+fn extend_operation(
+    operation: ExpressionNode,
+    operator: Operator,
+    node: ExpressionNode,
+) -> Result<ExpressionNode, ParserErrors> {
+    if let ExpressionNode::Operation {
         operator: prev_operator,
         a: prev_a,
         b: prev_b,
@@ -97,44 +100,48 @@ fn extend_operation(operation: Node, operator: Operator, node: Node) -> Result<N
     {
         Ok(match operator {
             Operator::Add | Operator::Subtract => match prev_operator {
-                Operator::Add | Operator::Subtract => Node::Operation {
+                Operator::Add | Operator::Subtract => ExpressionNode::Operation {
                     operator,
-                    a: Box::new(Node::Operation {
+                    a: Box::new(ExpressionNode::Operation {
                         operator: prev_operator,
                         a: prev_a,
                         b: prev_b,
                     }),
                     b: Box::new(node),
                 },
-                Operator::Multiply | Operator::Divide | Operator::Modulo => Node::Operation {
-                    operator,
-                    a: Box::new(Node::Operation {
-                        operator: prev_operator,
-                        a: prev_a,
-                        b: prev_b,
-                    }),
-                    b: Box::new(node),
-                },
+                Operator::Multiply | Operator::Divide | Operator::Modulo => {
+                    ExpressionNode::Operation {
+                        operator,
+                        a: Box::new(ExpressionNode::Operation {
+                            operator: prev_operator,
+                            a: prev_a,
+                            b: prev_b,
+                        }),
+                        b: Box::new(node),
+                    }
+                }
             },
             Operator::Multiply | Operator::Divide | Operator::Modulo => match prev_operator {
-                Operator::Add | Operator::Subtract => Node::Operation {
+                Operator::Add | Operator::Subtract => ExpressionNode::Operation {
                     operator: prev_operator,
                     a: prev_a,
-                    b: Box::new(Node::Operation {
+                    b: Box::new(ExpressionNode::Operation {
                         operator,
                         a: prev_b,
                         b: Box::new(node),
                     }),
                 },
-                Operator::Multiply | Operator::Divide | Operator::Modulo => Node::Operation {
-                    operator,
-                    a: Box::new(Node::Operation {
-                        operator: prev_operator,
-                        a: prev_a,
-                        b: prev_b,
-                    }),
-                    b: Box::new(node),
-                },
+                Operator::Multiply | Operator::Divide | Operator::Modulo => {
+                    ExpressionNode::Operation {
+                        operator,
+                        a: Box::new(ExpressionNode::Operation {
+                            operator: prev_operator,
+                            a: prev_a,
+                            b: prev_b,
+                        }),
+                        b: Box::new(node),
+                    }
+                }
             },
         })
     } else {
@@ -145,7 +152,7 @@ fn extend_operation(operation: Node, operator: Operator, node: Node) -> Result<N
 #[cfg(test)]
 mod tests {
     use nilang_types::{
-        nodes::{Node, Operator},
+        nodes::{ExpressionNode, Operator},
         tokens::{Token, TokenType},
     };
 
@@ -186,17 +193,17 @@ mod tests {
                 ]
                 .into_iter()
                 .peekable(),
-                Node::Number(6.)
+                ExpressionNode::Number(6.)
             )
             .unwrap(),
-            Node::Operation {
+            ExpressionNode::Operation {
                 operator: Operator::Add,
-                a: Box::new(Node::Operation {
+                a: Box::new(ExpressionNode::Operation {
                     operator: Operator::Add,
-                    a: Box::new(Node::Number(6.)),
-                    b: Box::new(Node::Number(9.)),
+                    a: Box::new(ExpressionNode::Number(6.)),
+                    b: Box::new(ExpressionNode::Number(9.)),
                 }),
-                b: Box::new(Node::Number(5.)),
+                b: Box::new(ExpressionNode::Number(5.)),
             }
         );
     }
@@ -224,14 +231,14 @@ mod tests {
                 ]
                 .into_iter()
                 .peekable(),
-                Node::Number(6.),
+                ExpressionNode::Number(6.),
                 true
             )
             .unwrap(),
-            Node::Operation {
+            ExpressionNode::Operation {
                 operator: Operator::Add,
-                a: Box::new(Node::Number(6.)),
-                b: Box::new(Node::Number(9.)),
+                a: Box::new(ExpressionNode::Number(6.)),
+                b: Box::new(ExpressionNode::Number(9.)),
             }
         );
 
@@ -256,14 +263,14 @@ mod tests {
                 ]
                 .into_iter()
                 .peekable(),
-                Node::Number(5.),
+                ExpressionNode::Number(5.),
                 true
             )
             .unwrap(),
-            Node::Operation {
+            ExpressionNode::Operation {
                 operator: Operator::Subtract,
-                a: Box::new(Node::Number(5.)),
-                b: Box::new(Node::Number(7.5)),
+                a: Box::new(ExpressionNode::Number(5.)),
+                b: Box::new(ExpressionNode::Number(7.5)),
             }
         );
 
@@ -288,14 +295,14 @@ mod tests {
                 ]
                 .into_iter()
                 .peekable(),
-                Node::Number(0.3),
+                ExpressionNode::Number(0.3),
                 true
             )
             .unwrap(),
-            Node::Operation {
+            ExpressionNode::Operation {
                 operator: Operator::Multiply,
-                a: Box::new(Node::Number(0.3)),
-                b: Box::new(Node::Number(4.)),
+                a: Box::new(ExpressionNode::Number(0.3)),
+                b: Box::new(ExpressionNode::Number(4.)),
             }
         );
 
@@ -320,14 +327,14 @@ mod tests {
                 ]
                 .into_iter()
                 .peekable(),
-                Node::Number(2.),
+                ExpressionNode::Number(2.),
                 true
             )
             .unwrap(),
-            Node::Operation {
+            ExpressionNode::Operation {
                 operator: Operator::Divide,
-                a: Box::new(Node::Number(2.)),
-                b: Box::new(Node::Number(1.)),
+                a: Box::new(ExpressionNode::Number(2.)),
+                b: Box::new(ExpressionNode::Number(1.)),
             }
         );
 
@@ -352,14 +359,14 @@ mod tests {
                 ]
                 .into_iter()
                 .peekable(),
-                Node::Number(5.),
+                ExpressionNode::Number(5.),
                 true
             )
             .unwrap(),
-            Node::Operation {
+            ExpressionNode::Operation {
                 operator: Operator::Modulo,
-                a: Box::new(Node::Number(5.)),
-                b: Box::new(Node::Number(1.5)),
+                a: Box::new(ExpressionNode::Number(5.)),
+                b: Box::new(ExpressionNode::Number(1.5)),
             }
         );
     }
@@ -397,17 +404,17 @@ mod tests {
                 ]
                 .into_iter()
                 .peekable(),
-                Node::Number(6.),
+                ExpressionNode::Number(6.),
             )
             .unwrap(),
-            Node::Operation {
+            ExpressionNode::Operation {
                 operator: Operator::Add,
-                a: Box::new(Node::Operation {
+                a: Box::new(ExpressionNode::Operation {
                     operator: Operator::Add,
-                    a: Box::new(Node::Number(6.)),
-                    b: Box::new(Node::Number(9.)),
+                    a: Box::new(ExpressionNode::Number(6.)),
+                    b: Box::new(ExpressionNode::Number(9.)),
                 }),
-                b: Box::new(Node::Number(5.)),
+                b: Box::new(ExpressionNode::Number(5.)),
             }
         );
 
@@ -442,17 +449,17 @@ mod tests {
                 ]
                 .into_iter()
                 .peekable(),
-                Node::Number(6.),
+                ExpressionNode::Number(6.),
             )
             .unwrap(),
-            Node::Operation {
+            ExpressionNode::Operation {
                 operator: Operator::Subtract,
-                a: Box::new(Node::Operation {
+                a: Box::new(ExpressionNode::Operation {
                     operator: Operator::Add,
-                    a: Box::new(Node::Number(6.)),
-                    b: Box::new(Node::Number(9.)),
+                    a: Box::new(ExpressionNode::Number(6.)),
+                    b: Box::new(ExpressionNode::Number(9.)),
                 }),
-                b: Box::new(Node::Number(5.)),
+                b: Box::new(ExpressionNode::Number(5.)),
             }
         );
 
@@ -487,17 +494,17 @@ mod tests {
                 ]
                 .into_iter()
                 .peekable(),
-                Node::Number(6.),
+                ExpressionNode::Number(6.),
             )
             .unwrap(),
-            Node::Operation {
+            ExpressionNode::Operation {
                 operator: Operator::Multiply,
-                a: Box::new(Node::Operation {
+                a: Box::new(ExpressionNode::Operation {
                     operator: Operator::Multiply,
-                    a: Box::new(Node::Number(6.)),
-                    b: Box::new(Node::Number(0.5)),
+                    a: Box::new(ExpressionNode::Number(6.)),
+                    b: Box::new(ExpressionNode::Number(0.5)),
                 }),
-                b: Box::new(Node::Number(7.)),
+                b: Box::new(ExpressionNode::Number(7.)),
             }
         );
 
@@ -532,17 +539,17 @@ mod tests {
                 ]
                 .into_iter()
                 .peekable(),
-                Node::Number(6.),
+                ExpressionNode::Number(6.),
             )
             .unwrap(),
-            Node::Operation {
+            ExpressionNode::Operation {
                 operator: Operator::Divide,
-                a: Box::new(Node::Operation {
+                a: Box::new(ExpressionNode::Operation {
                     operator: Operator::Multiply,
-                    a: Box::new(Node::Number(6.)),
-                    b: Box::new(Node::Number(0.5)),
+                    a: Box::new(ExpressionNode::Number(6.)),
+                    b: Box::new(ExpressionNode::Number(0.5)),
                 }),
-                b: Box::new(Node::Number(7.0)),
+                b: Box::new(ExpressionNode::Number(7.0)),
             }
         );
 
@@ -577,17 +584,17 @@ mod tests {
                 ]
                 .into_iter()
                 .peekable(),
-                Node::Number(6.),
+                ExpressionNode::Number(6.),
             )
             .unwrap(),
-            Node::Operation {
+            ExpressionNode::Operation {
                 operator: Operator::Add,
-                a: Box::new(Node::Operation {
+                a: Box::new(ExpressionNode::Operation {
                     operator: Operator::Multiply,
-                    a: Box::new(Node::Number(6.)),
-                    b: Box::new(Node::Number(0.5)),
+                    a: Box::new(ExpressionNode::Number(6.)),
+                    b: Box::new(ExpressionNode::Number(0.5)),
                 }),
-                b: Box::new(Node::Number(7.)),
+                b: Box::new(ExpressionNode::Number(7.)),
             }
         );
 
@@ -632,20 +639,20 @@ mod tests {
                 ]
                 .into_iter()
                 .peekable(),
-                Node::Number(6.),
+                ExpressionNode::Number(6.),
             )
             .unwrap(),
-            Node::Operation {
+            ExpressionNode::Operation {
                 operator: Operator::Add,
-                a: Box::new(Node::Operation {
+                a: Box::new(ExpressionNode::Operation {
                     operator: Operator::Divide,
-                    a: Box::new(Node::Number(6.)),
-                    b: Box::new(Node::Number(0.5)),
+                    a: Box::new(ExpressionNode::Number(6.)),
+                    b: Box::new(ExpressionNode::Number(0.5)),
                 }),
-                b: Box::new(Node::Operation {
+                b: Box::new(ExpressionNode::Operation {
                     operator: Operator::Multiply,
-                    a: Box::new(Node::Number(7.)),
-                    b: Box::new(Node::Number(3.)),
+                    a: Box::new(ExpressionNode::Number(7.)),
+                    b: Box::new(ExpressionNode::Number(3.)),
                 }),
             }
         );
@@ -691,21 +698,21 @@ mod tests {
                 ]
                 .into_iter()
                 .peekable(),
-                Node::Number(0.2),
+                ExpressionNode::Number(0.2),
             )
             .unwrap(),
-            Node::Operation {
+            ExpressionNode::Operation {
                 operator: Operator::Add,
-                a: Box::new(Node::Operation {
+                a: Box::new(ExpressionNode::Operation {
                     operator: Operator::Subtract,
-                    a: Box::new(Node::Number(0.2)),
-                    b: Box::new(Node::Operation {
+                    a: Box::new(ExpressionNode::Number(0.2)),
+                    b: Box::new(ExpressionNode::Operation {
                         operator: Operator::Multiply,
-                        a: Box::new(Node::Number(5.5)),
-                        b: Box::new(Node::Number(8.)),
+                        a: Box::new(ExpressionNode::Number(5.5)),
+                        b: Box::new(ExpressionNode::Number(8.)),
                     }),
                 }),
-                b: Box::new(Node::Number(0.7)),
+                b: Box::new(ExpressionNode::Number(0.7)),
             }
         );
     }
@@ -714,111 +721,89 @@ mod tests {
     fn test_extend_complex_operation() {
         assert_eq!(
             extend_operation(
-                Node::Operation {
+                ExpressionNode::Operation {
                     operator: Operator::Add,
-                    a: Box::new(Node::Number(6.)),
-                    b: Box::new(Node::Number(8.))
+                    a: Box::new(ExpressionNode::Number(6.)),
+                    b: Box::new(ExpressionNode::Number(8.))
                 },
                 Operator::Add,
-                Node::Number(4.)
+                ExpressionNode::Number(4.)
             )
             .unwrap(),
-            Node::Operation {
+            ExpressionNode::Operation {
                 operator: Operator::Add,
-                a: Box::new(Node::Operation {
+                a: Box::new(ExpressionNode::Operation {
                     operator: Operator::Add,
-                    a: Box::new(Node::Number(6.)),
-                    b: Box::new(Node::Number(8.))
+                    a: Box::new(ExpressionNode::Number(6.)),
+                    b: Box::new(ExpressionNode::Number(8.))
                 }),
-                b: Box::new(Node::Number(4.))
+                b: Box::new(ExpressionNode::Number(4.))
             }
         );
 
         assert_eq!(
             extend_operation(
-                Node::Operation {
+                ExpressionNode::Operation {
                     operator: Operator::Add,
-                    a: Box::new(Node::Number(6.)),
-                    b: Box::new(Node::Number(8.))
+                    a: Box::new(ExpressionNode::Number(6.)),
+                    b: Box::new(ExpressionNode::Number(8.))
                 },
                 Operator::Multiply,
-                Node::Number(4.)
+                ExpressionNode::Number(4.)
             )
             .unwrap(),
-            Node::Operation {
+            ExpressionNode::Operation {
                 operator: Operator::Add,
-                a: Box::new(Node::Number(6.)),
-                b: Box::new(Node::Operation {
+                a: Box::new(ExpressionNode::Number(6.)),
+                b: Box::new(ExpressionNode::Operation {
                     operator: Operator::Multiply,
-                    a: Box::new(Node::Number(8.)),
-                    b: Box::new(Node::Number(4.))
+                    a: Box::new(ExpressionNode::Number(8.)),
+                    b: Box::new(ExpressionNode::Number(4.))
                 })
             }
         );
 
         assert_eq!(
             extend_operation(
-                Node::Operation {
+                ExpressionNode::Operation {
                     operator: Operator::Multiply,
-                    a: Box::new(Node::Number(6.)),
-                    b: Box::new(Node::Number(8.))
+                    a: Box::new(ExpressionNode::Number(6.)),
+                    b: Box::new(ExpressionNode::Number(8.))
                 },
                 Operator::Add,
-                Node::Number(4.)
+                ExpressionNode::Number(4.)
             )
             .unwrap(),
-            Node::Operation {
+            ExpressionNode::Operation {
                 operator: Operator::Add,
-                a: Box::new(Node::Operation {
+                a: Box::new(ExpressionNode::Operation {
                     operator: Operator::Multiply,
-                    a: Box::new(Node::Number(6.)),
-                    b: Box::new(Node::Number(8.))
+                    a: Box::new(ExpressionNode::Number(6.)),
+                    b: Box::new(ExpressionNode::Number(8.))
                 }),
-                b: Box::new(Node::Number(4.))
+                b: Box::new(ExpressionNode::Number(4.))
             }
         );
 
         assert_eq!(
             extend_operation(
-                Node::Operation {
+                ExpressionNode::Operation {
                     operator: Operator::Multiply,
-                    a: Box::new(Node::Number(6.)),
-                    b: Box::new(Node::Number(8.))
+                    a: Box::new(ExpressionNode::Number(6.)),
+                    b: Box::new(ExpressionNode::Number(8.))
                 },
                 Operator::Multiply,
-                Node::Number(4.)
+                ExpressionNode::Number(4.)
             )
             .unwrap(),
-            Node::Operation {
+            ExpressionNode::Operation {
                 operator: Operator::Multiply,
-                a: Box::new(Node::Operation {
+                a: Box::new(ExpressionNode::Operation {
                     operator: Operator::Multiply,
-                    a: Box::new(Node::Number(6.)),
-                    b: Box::new(Node::Number(8.))
+                    a: Box::new(ExpressionNode::Number(6.)),
+                    b: Box::new(ExpressionNode::Number(8.))
                 }),
-                b: Box::new(Node::Number(4.))
-            }
-        );
-
-        assert_eq!(
-            extend_operation(
-                Node::Operation {
-                    operator: Operator::Add,
-                    a: Box::new(Node::Number(6.)),
-                    b: Box::new(Node::Number(8.))
-                },
-                Operator::Subtract,
-                Node::Scope(vec![Node::Return(Box::new(Node::Number(4.)))]),
-            )
-            .unwrap(),
-            Node::Operation {
-                operator: Operator::Subtract,
-                a: Box::new(Node::Operation {
-                    operator: Operator::Add,
-                    a: Box::new(Node::Number(6.)),
-                    b: Box::new(Node::Number(8.))
-                }),
-                b: Box::new(Node::Scope(vec![Node::Return(Box::new(Node::Number(4.)))]))
+                b: Box::new(ExpressionNode::Number(4.))
             }
         );
     }
