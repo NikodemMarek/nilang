@@ -43,7 +43,11 @@ pub fn transform_function_call(
                 arguments_names.push(argument_temporary);
             }
         } else {
-            panic!("Too many arguments");
+            return Err(TransformerErrors::FunctionCallArgumentsMismatch {
+                name,
+                expected: function_parameters.len() + 1,
+                got: arguments.len(),
+            });
         }
     }
 

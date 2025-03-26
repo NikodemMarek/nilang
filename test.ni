@@ -15,9 +15,16 @@ fn test(p: int): void {
 fn main(): int {
     printc('H');
     printc('e');
-    test(5);
-
-    printi(9);
+    printc('l');
+    printc('l');
+    printc('o');
+    printc(' ');
+    printc('W');
+    printc('o');
+    printc('r');
+    printc('l');
+    printc('d');
+    printc('!');
 
     rt 0;
 }

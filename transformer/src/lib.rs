@@ -55,6 +55,28 @@ impl<T: ToString> From<T> for Type {
     }
 }
 
+impl From<Type> for Box<str> {
+    fn from(val: Type) -> Self {
+        match val {
+            Type::Void => "void".into(),
+            Type::Int => "int".into(),
+            Type::Char => "char".into(),
+            Type::Object(object) => object,
+        }
+    }
+}
+
+impl From<&Type> for Box<str> {
+    fn from(val: &Type) -> Self {
+        match val {
+            Type::Void => "void".into(),
+            Type::Int => "int".into(),
+            Type::Char => "char".into(),
+            Type::Object(object) => object.clone(),
+        }
+    }
+}
+
 #[derive(Debug, Default)]
 struct FunctionsRef(HashMap<Box<str>, (Type, Box<[(Box<str>, Type)]>)>);
 

@@ -5,12 +5,20 @@ pub enum TransformerErrors {
     TemporaryNotFound {
         name: Box<str>,
     },
-    InvalidType {
+    TypeMismatch {
         expected: Box<str>,
-        received: Box<str>,
+        found: Box<str>,
     },
     FunctionNotFound {
         name: Box<str>,
+    },
+    TypeNotFound {
+        name: Box<str>,
+    },
+    FunctionCallArgumentsMismatch {
+        name: Box<str>,
+        expected: usize,
+        got: usize,
     },
 }
 
@@ -23,16 +31,31 @@ impl std::fmt::Display for TransformerErrors {
                 TransformerErrors::TemporaryNotFound { name } => {
                     format!("Temporary not found: `{}`", name).as_str().red()
                 }
-                TransformerErrors::InvalidType { expected, received } => {
+                TransformerErrors::TypeMismatch { expected, found } => {
                     format!(
-                        "Invalid type: expected `{}`, received `{}`",
-                        expected, received
+                        "Type mismatch: expected `{}`, received `{}`",
+                        expected, found
                     )
                     .as_str()
                     .red()
                 }
                 TransformerErrors::FunctionNotFound { name } => {
                     format!("Function not found: `{}`", name).as_str().red()
+                }
+                TransformerErrors::TypeNotFound { name } => {
+                    format!("Type not found: `{}`", name).as_str().red()
+                }
+                TransformerErrors::FunctionCallArgumentsMismatch {
+                    name,
+                    expected,
+                    got,
+                } => {
+                    format!(
+                        "Function call arguments mismatch: `{}` expected `{}`, got `{}`",
+                        name, expected, got
+                    )
+                    .as_str()
+                    .red()
                 }
             }
         )

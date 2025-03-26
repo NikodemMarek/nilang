@@ -39,7 +39,10 @@ pub fn parse_statement<I: PeekableAssumingIterator>(
             Keyword::Variable => parse_variable_declaration(tokens)?,
             Keyword::Return => parse_return(tokens)?,
             Keyword::Function | Keyword::Structure => {
-                panic!("function and structure declarations are not statements")
+                return Err(ParserErrors::UnexpectedToken {
+                    token: peek_valid.token.clone(),
+                    loc: peek_valid.start,
+                })
             }
         },
         TokenType::Identifier(_) => {

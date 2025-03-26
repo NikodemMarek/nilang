@@ -19,8 +19,11 @@ pub fn transform_operation(
     result: Box<str>,
     r#type: &Type,
 ) -> Result<Vec<Instruction>, TransformerErrors> {
-    if *r#type != "int".into() {
-        panic!("Only int operations are supported");
+    if *r#type != Type::Int {
+        return Err(TransformerErrors::TypeMismatch {
+            expected: "int".into(),
+            found: r#type.into(),
+        });
     }
 
     let a_temporary = temporaries.declare("int".into());

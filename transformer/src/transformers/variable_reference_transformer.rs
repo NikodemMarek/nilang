@@ -15,6 +15,13 @@ pub fn transform_variable_reference(
 ) -> Result<Vec<Instruction>, TransformerErrors> {
     let source_type = temporaries.type_of(&variable)?.to_owned();
 
+    if r#type != &source_type {
+        return Err(TransformerErrors::TypeMismatch {
+            expected: r#type.into(),
+            found: source_type.into(),
+        });
+    }
+
     copy_all_fields(context, temporaries, variable, result, &source_type)
 }
 

@@ -145,7 +145,12 @@ impl<'a> Iterator for Tokenizer<'a> {
                                 self.loc.1 += 1;
                                 aggregation.push(char);
                             }
-                            None => unreachable!(),
+                            None => {
+                                return Some(Err(LexerErrors::ExpectedCharacter {
+                                    char: '"',
+                                    loc: self.loc,
+                                }));
+                            }
                         }
                     }
 

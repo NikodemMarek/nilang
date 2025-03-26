@@ -1,6 +1,7 @@
 #[derive(Debug, Clone)]
 pub enum LexerErrors {
     UnexpectedCharacter { char: char, loc: (usize, usize) },
+    ExpectedCharacter { char: char, loc: (usize, usize) },
 }
 
 impl std::fmt::Display for LexerErrors {
@@ -16,6 +17,9 @@ impl From<&LexerErrors> for ((usize, usize), (usize, usize), String) {
         match val {
             LexerErrors::UnexpectedCharacter { char, loc } => {
                 (*loc, *loc, format!("Unxpected character '{}'", char))
+            }
+            LexerErrors::ExpectedCharacter { char, loc } => {
+                (*loc, *loc, format!("Expected character '{}'", char))
             }
         }
     }

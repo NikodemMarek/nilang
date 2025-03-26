@@ -87,6 +87,7 @@ pub fn copy_all_fields(
             object_fields_from_to(context.1, source, destination, object_type)?
         {
             temporaries.declare_named(source_temporary.clone(), field_type);
+            temporaries.access(&source_temporary.clone())?;
             instructions.push(Instruction::Copy(destination_temporary, source_temporary));
         }
         return Ok(instructions);
@@ -121,7 +122,9 @@ pub fn object_fields_recursive(
     let fields_map = if let Some(fields) = context.get_fields(object_type) {
         fields
     } else {
-        panic!("Type {} not found", object_type);
+        return Err(TransformerErrors::TypeNotFound {
+            name: object_type.into(),
+        });
     };
 
     let mut fields = Vec::new();
