@@ -98,10 +98,59 @@ where
                 format!("Copy `{from}` into `{to}`").into(),
             )]
         }
-        Instruction::AddVariables(_, _, _) => todo!(),
-        Instruction::SubtractVariables(_, _, _) => todo!(),
-        Instruction::MultiplyVariables(_, _, _) => todo!(),
-        Instruction::DivideVariables(_, _, _) => todo!(),
-        Instruction::ModuloVariables(_, _, _) => todo!(),
+        Instruction::AddVariables(result, a, b) => {
+            let a_loc = mm.get_location(&a).unwrap().clone();
+            let b_loc = mm.get_location(&b).unwrap().clone();
+            let result_loc = mm.reserve(&result);
+            vec![
+                (
+                    AssemblyInstruction::Move,
+                    vec![result_loc.clone().into(), a_loc.clone().into()],
+                    format!("Prepare `{result}` for addition").into(),
+                ),
+                (
+                    AssemblyInstruction::Add,
+                    vec![result_loc.into(), b_loc.into()],
+                    format!("Add `{a}` and `{b}` into `{result}`").into(),
+                ),
+            ]
+        }
+        Instruction::SubtractVariables(result, a, b) => {
+            let a_loc = mm.get_location(&a).unwrap().clone();
+            let b_loc = mm.get_location(&b).unwrap().clone();
+            let result_loc = mm.reserve(&result);
+            vec![
+                (
+                    AssemblyInstruction::Move,
+                    vec![result_loc.clone().into(), a_loc.clone().into()],
+                    format!("Prepare `{result}` for subtraction").into(),
+                ),
+                (
+                    AssemblyInstruction::Sub,
+                    vec![result_loc.into(), b_loc.into()],
+                    format!("Subtract `{b}` from `{result}`").into(),
+                ),
+            ]
+        }
+        Instruction::MultiplyVariables(result, a, b) => {
+            let a_loc = mm.get_location(&a).unwrap().clone();
+            let b_loc = mm.get_location(&b).unwrap().clone();
+            let result_loc = mm.reserve(&result);
+            vec![
+                (
+                    AssemblyInstruction::Move,
+                    vec![result_loc.clone().into(), a_loc.clone().into()],
+                    format!("Prepare `{result}` for multiplication").into(),
+                ),
+                (
+                    AssemblyInstruction::Mul,
+                    vec![result_loc.into(), b_loc.into()],
+                    format!("Multiply `{a}` and `{b}` into `{result}`").into(),
+                ),
+            ]
+        }
+        Instruction::DivideVariables(_, _, _) | Instruction::ModuloVariables(_, _, _) => {
+            todo!()
+        }
     })
 }

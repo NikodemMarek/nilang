@@ -29,22 +29,38 @@ impl<R: Registers> AssemblyFlavour<R> for AtAndTFlavour {
         parameters: &[AssemblyInstructionParameter<R>],
         comment: &str,
     ) -> String {
-        match instruction {
-            AssemblyInstruction::Move => asm_with_comment(
-                &format!(
+        asm_with_comment(
+            &match instruction {
+                AssemblyInstruction::Move => format!(
                     "movq {}, {}",
                     Self::generate_parameter(&parameters[1]),
                     Self::generate_parameter(&parameters[0])
                 ),
-                comment,
-            )
-            .into(),
-            AssemblyInstruction::Call => asm_with_comment(
-                &format!("call _{}", Self::generate_parameter(&parameters[0])),
-                comment,
-            )
-            .into(),
-        }
+                AssemblyInstruction::Call => {
+                    format!("call _{}", Self::generate_parameter(&parameters[0]))
+                }
+                AssemblyInstruction::Add => format!(
+                    "addq {}, {}",
+                    Self::generate_parameter(&parameters[1]),
+                    Self::generate_parameter(&parameters[0])
+                ),
+                AssemblyInstruction::Sub => format!(
+                    "subq {}, {}",
+                    Self::generate_parameter(&parameters[1]),
+                    Self::generate_parameter(&parameters[0])
+                ),
+                AssemblyInstruction::Mul => format!(
+                    "imulq {}, {}",
+                    Self::generate_parameter(&parameters[1]),
+                    Self::generate_parameter(&parameters[0])
+                ),
+                AssemblyInstruction::Div => {
+                    format!("idivq {}", Self::generate_parameter(&parameters[0]))
+                }
+            },
+            comment,
+        )
+        .into()
     }
 
     fn generate_program(functions: &[Box<str>]) -> Box<str> {
@@ -114,6 +130,10 @@ pub type FullInstruction<R> = (
 pub enum AssemblyInstruction {
     Move, // destination, source
     Call, // function
+    Add,  // destination & a, b
+    Sub,  // destination & a, b
+    Mul,  // destination & a, b
+    Div,  // destination & a
 }
 
 #[derive(Debug, Clone, PartialEq)]

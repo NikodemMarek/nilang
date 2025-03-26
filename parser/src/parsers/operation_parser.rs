@@ -57,7 +57,11 @@ fn parse_operation<I: PeekableAssumingIterator>(
             a: Box::new(a),
             b: Box::new(parse_single_expression(tokens)?),
         },
-        ExpressionNode::FieldAccess { .. } => todo!(),
+        a @ ExpressionNode::FieldAccess { .. } => ExpressionNode::Operation {
+            operator,
+            a: Box::new(a),
+            b: Box::new(parse_single_expression(tokens)?),
+        },
         a @ ExpressionNode::VariableReference(_) | a @ ExpressionNode::FunctionCall { .. } => {
             ExpressionNode::Operation {
                 operator,
