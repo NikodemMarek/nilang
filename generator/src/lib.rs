@@ -1,29 +1,98 @@
-#![feature(box_patterns)]
-
-mod flavour;
-mod flavours;
-mod generator;
-mod to_assembly;
+mod assembly_flavour;
+mod calling_convention;
+mod memory_manager;
+mod registers;
 mod utils;
+
+pub mod options {
+    pub use crate::assembly_flavour::AtAndTFlavour;
+    pub use crate::calling_convention::SystemVAmd64Abi;
+}
 
 use std::collections::HashMap;
 
-use flavour::Flavour;
-use flavours::{gnu_flavour::GnuFlavour, x86_registers::Gnu64Registers};
+use assembly_flavour::{
+    AssemblyFlavour, AssemblyInstruction, AssemblyInstructionParameter, FullInstruction,
+};
+use calling_convention::CallingConvention;
+use errors::GeneratorErrors;
+use memory_manager::MemoryManager;
 use nilang_types::instructions::Instruction;
 
-pub fn generate(functions: HashMap<Box<str>, Vec<Instruction>>) -> eyre::Result<Box<str>> {
-    let mut flavour = GnuFlavour::<Gnu64Registers>::default();
+pub fn generate<C: CallingConvention, A: AssemblyFlavour>(
+    functions: HashMap<Box<str>, Vec<Instruction>>,
+) -> Result<Box<str>, GeneratorErrors> {
     let mut code = Vec::new();
 
     for (name, instructions) in functions.into_iter() {
-        let mut function = GnuFlavour::<Gnu64Registers>::generate_function(
+        code.push(A::generate_function(
             &name,
-            &generator::generate(&mut flavour, &mut instructions.into_iter())?,
-        );
-
-        code.append(&mut function);
+            &generate_function::<C>(&instructions)?,
+        ));
     }
 
-    Ok(GnuFlavour::<Gnu64Registers>::generate_program(&code))
+    Ok(A::generate_program(&code))
+}
+
+fn generate_function<C: CallingConvention>(
+    code: &[Instruction],
+) -> Result<Vec<FullInstruction>, GeneratorErrors> {
+    let mm = &mut MemoryManager::default();
+    code.iter().try_fold(Vec::new(), |mut acc, instruction| {
+        acc.extend(generate_instruction::<C>(mm, instruction.clone())?);
+        Ok(acc)
+    })
+}
+
+fn generate_instruction<C: CallingConvention>(
+    mm: &mut MemoryManager,
+    instruction: Instruction,
+) -> Result<Vec<FullInstruction>, GeneratorErrors> {
+    Ok(match instruction {
+        Instruction::FunctionCall(name, arguments, return_temporary) => {
+            C::generate_function_call(mm, &name, &arguments, return_temporary)?
+        }
+        Instruction::LoadNumber(temporary, number) => {
+            let location = mm.reserve(&temporary);
+            vec![(
+                AssemblyInstruction::Move,
+                vec![
+                    location.into(),
+                    AssemblyInstructionParameter::Number(number),
+                ],
+                format!("Load number '{number}' into `{temporary}`").into(),
+            )]
+        }
+        Instruction::ReturnVariable(variable) => {
+            let location = mm.get_location(&variable).unwrap().clone();
+            vec![(
+                AssemblyInstruction::Move,
+                vec![C::return_location().into(), location.into()],
+                format!("Return `{variable}`").into(),
+            )]
+        }
+        Instruction::LoadArgument(argument, temporary) => {
+            let location = C::nth_argument_location(argument);
+            mm.reserve_location(&temporary, location.clone());
+            vec![(
+                AssemblyInstruction::Move,
+                vec![location.clone().into(), location.into()],
+                format!("Load `{temporary}` as argument {argument}").into(),
+            )]
+        }
+        Instruction::Copy(to, from) => {
+            let from_loc = mm.get_location(&from).unwrap().clone();
+            let to_loc = mm.reserve(&to);
+            vec![(
+                AssemblyInstruction::Move,
+                vec![to_loc.into(), from_loc.into()],
+                format!("Copy `{from}` into `{to}`").into(),
+            )]
+        }
+        Instruction::AddVariables(_, _, _) => todo!(),
+        Instruction::SubtractVariables(_, _, _) => todo!(),
+        Instruction::MultiplyVariables(_, _, _) => todo!(),
+        Instruction::DivideVariables(_, _, _) => todo!(),
+        Instruction::ModuloVariables(_, _, _) => todo!(),
+    })
 }

@@ -5,7 +5,7 @@ use errors::TransformerErrors;
 use crate::Type;
 
 #[derive(Debug, Default)]
-pub struct Temporaries(HashMap<Box<str>, (Type, u8)>);
+pub struct Temporaries(HashMap<Box<str>, (Type, u8)>, usize);
 
 impl Temporaries {
     pub fn declare_named(&mut self, name: Box<str>, r#type: Type) {
@@ -13,7 +13,8 @@ impl Temporaries {
     }
 
     pub fn declare(&mut self, r#type: Type) -> Box<str> {
-        let name = <Box<str>>::from(format!("temp_{}", self.0.len()));
+        let name = <Box<str>>::from(format!("temp_{}", self.1));
+        self.1 += 1;
         self.declare_named(name.clone(), r#type);
         name
     }

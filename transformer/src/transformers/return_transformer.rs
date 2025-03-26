@@ -35,19 +35,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_transform_return_number() {
-        let node = ExpressionNode::Number(42.0);
-        let result = transform_return(
-            (&FunctionsRef::default(), &TypesRef::default()),
-            &mut Temporaries::default(),
-            node,
-            &Type::Int,
-        )
-        .unwrap();
-        assert_eq!(result, [Instruction::ReturnNumber(42.0)]);
-    }
-
-    #[test]
     fn test_transform_return_variable() {
         let mut temporaries = Temporaries::default();
         temporaries.declare_named("x".into(), Type::Int);

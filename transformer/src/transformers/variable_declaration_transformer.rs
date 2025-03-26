@@ -47,26 +47,5 @@ mod tests {
         )
         .unwrap();
         assert_eq!(result, &[Instruction::Copy("b".into(), "a".into())]);
-
-        let result = transform_variable_declaration(
-            (&FunctionsRef::default(), &TypesRef::default()),
-            &mut temporaries,
-            "c".into(),
-            &Type::Int,
-            ExpressionNode::Object {
-                r#type: "int".into(),
-                fields: vec![("x".into(), ExpressionNode::Number(10.))]
-                    .into_iter()
-                    .collect(),
-            },
-        )
-        .unwrap();
-        assert_eq!(
-            result,
-            &[
-                Instruction::Allocate("c".into(), "int".into()),
-                Instruction::LoadNumber("c.x".into(), 10.)
-            ]
-        );
     }
 }

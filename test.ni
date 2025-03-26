@@ -8,13 +8,11 @@ st Rect {
     end: Point
 }
 
-fn test(a: Point): int {
-    rt a.x;
+fn test(a: int, b: Point): int {
+    rt a;
 }
 
 fn main(): int {
-    vr p1: Point = Point { x: 5, y: 13 };
-    vr r: Rect = Rect { start: p1, end: Point { x: 9, y: 7 } };
-    vr t: Point = r.end;
-    rt test(t);
+    vr p: Point = Point { x: 6, y: 5 };
+    rt test(9, p);
 }

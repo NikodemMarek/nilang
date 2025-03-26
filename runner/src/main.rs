@@ -3,6 +3,7 @@
 use std::fs::{read_to_string, write};
 
 use errors::NilangError;
+use nilang_generator::options::{AtAndTFlavour, SystemVAmd64Abi};
 
 fn main() {
     let code = read_to_string("test.ni").unwrap();
@@ -30,7 +31,6 @@ fn compile(code: &str) -> Box<str> {
             );
         }
     };
-    dbg!(&parsed);
 
     let transformed = match nilang_transformer::transform(parsed) {
         Ok(transformed) => transformed,
@@ -40,7 +40,7 @@ fn compile(code: &str) -> Box<str> {
     };
     dbg!(&transformed);
 
-    match nilang_generator::generate(transformed) {
+    match nilang_generator::generate::<SystemVAmd64Abi, AtAndTFlavour>(transformed) {
         Ok(generated) => generated,
         Err(err) => {
             panic!("{}", err);
