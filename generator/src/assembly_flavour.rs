@@ -20,6 +20,7 @@ impl<R: Registers> AssemblyFlavour<R> for AtAndTFlavour {
             AssemblyInstructionParameter::Register(register) => format!("%{}", register.name()),
             AssemblyInstructionParameter::Memory(memory) => format!("-{}(%rax)", memory),
             AssemblyInstructionParameter::Number(number) => format!("${}", number),
+            AssemblyInstructionParameter::Char(char) => format!("$'{}'", char),
             AssemblyInstructionParameter::Function(name) => name.to_string(),
             AssemblyInstructionParameter::Data(pointer) => format!("${}", pointer),
         }
@@ -66,7 +67,8 @@ impl<R: Registers> AssemblyFlavour<R> for AtAndTFlavour {
 
     fn generate_program(functions: &[Box<str>]) -> Box<str> {
         let data_section = r#"
-print_format: .asciz "%d\n"
+printi_format: .asciz "%d\n"
+printc_format: .asciz "%c\n"
 "#;
         let start_fn = r#"
 .globl _start
@@ -147,6 +149,7 @@ pub enum AssemblyInstructionParameter<R: Registers> {
     Register(R),
     Memory(usize),
     Number(f64),
+    Char(char),
     Function(Box<str>),
     Data(Box<str>),
 }

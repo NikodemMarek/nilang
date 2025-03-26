@@ -54,6 +54,11 @@ pub fn transform_expression(
 ) -> Result<Vec<Instruction>, TransformerErrors> {
     match node {
         ExpressionNode::Number(number) => Ok(vec![Instruction::LoadNumber(result, number)]),
+        ExpressionNode::Char(char) => Ok(vec![Instruction::LoadChar(result, char)]),
+        ExpressionNode::String(_) => todo!(),
+        ExpressionNode::Object { r#type, fields } => {
+            transform_object(context, temporaries, fields, result, &r#type.into())
+        }
         ExpressionNode::VariableReference(variable) => {
             transform_variable_reference(context, temporaries, variable, result, r#type)
         }
@@ -62,9 +67,6 @@ pub fn transform_expression(
         }
         ExpressionNode::Operation { operator, a, b } => {
             transform_operation(context, temporaries, operator, *a, *b, result, r#type)
-        }
-        ExpressionNode::Object { r#type, fields } => {
-            transform_object(context, temporaries, fields, result, &r#type.into())
         }
         ExpressionNode::FunctionCall(FunctionCall { name, arguments }) => {
             transform_function_call(context, temporaries, name, &arguments, result, r#type)

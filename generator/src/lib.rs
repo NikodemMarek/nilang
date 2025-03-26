@@ -78,6 +78,17 @@ where
                 format!("Load number '{number}' into `{temporary}`").into(),
             )]
         }
+        Instruction::LoadChar(temporary, character) => {
+            let location = mm.reserve(&temporary);
+            vec![(
+                AssemblyInstruction::Move,
+                vec![
+                    location.into(),
+                    AssemblyInstructionParameter::Char(character),
+                ],
+                format!("Load character '{character}' into `{temporary}`").into(),
+            )]
+        }
         Instruction::ReturnVariable(variable) => {
             let location = mm.get_location(&variable).unwrap().clone();
             vec![(
@@ -168,10 +179,16 @@ fn builtin_functions<C: CallingConvention>(
     return_temporary: Box<str>,
 ) -> Option<Result<Vec<FullInstruction<C::R>>, GeneratorErrors>> {
     match name {
-        "print" => Some(C::generate_function_call(
+        "printi" => Some(C::generate_function_call(
             mm,
             "printf",
-            &["print_format".into(), arguments.first().unwrap().clone()],
+            &["printi_format".into(), arguments.first().unwrap().clone()],
+            return_temporary,
+        )),
+        "printc" => Some(C::generate_function_call(
+            mm,
+            "printf",
+            &["printc_format".into(), arguments.first().unwrap().clone()],
             return_temporary,
         )),
         _ => None,

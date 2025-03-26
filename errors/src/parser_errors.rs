@@ -32,7 +32,7 @@ pub enum ParserErrors {
         from: (usize, usize),
         to: (usize, usize),
     },
-    NotANumber {
+    InvalidLiteral {
         from: (usize, usize),
         to: (usize, usize),
     },
@@ -85,7 +85,9 @@ impl From<&ParserErrors> for ((usize, usize), (usize, usize), String) {
             ParserErrors::EmptyParenthesis { from, to } => {
                 (*from, *to, String::from("Empty parenthesis"))
             }
-            ParserErrors::NotANumber { from, to } => (*from, *to, String::from("Not a number")),
+            ParserErrors::InvalidLiteral { from, to } => {
+                (*from, *to, String::from("Invalid literal"))
+            }
         }
     }
 }

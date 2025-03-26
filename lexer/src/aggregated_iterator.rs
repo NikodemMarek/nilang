@@ -3,12 +3,12 @@ use std::iter::Peekable;
 use errors::LexerErrors;
 use nilang_types::tokens::{Keyword, Token, TokenType};
 
-pub struct AggregatedIterator<'a> {
+pub struct Tokenizer<'a> {
     iter: Peekable<std::str::Chars<'a>>,
     loc: (usize, usize),
 }
 
-impl<'a> Iterator for AggregatedIterator<'a> {
+impl<'a> Iterator for Tokenizer<'a> {
     type Item = Result<Token, LexerErrors>;
 
     #[inline]
@@ -126,6 +126,60 @@ impl<'a> Iterator for AggregatedIterator<'a> {
                             "st" => TokenType::Keyword(Keyword::Structure),
                             _ => TokenType::Identifier(aggregation.into()),
                         },
+                        start,
+                        end,
+                    }));
+                }
+                '"' => {
+                    let start = self.loc;
+
+                    let mut aggregation = String::from(self.iter.next().unwrap());
+                    loop {
+                        match self.iter.next() {
+                            Some('"') => {
+                                self.loc.1 += 1;
+                                aggregation.push('"');
+                                break;
+                            }
+                            Some(char) => {
+                                self.loc.1 += 1;
+                                aggregation.push(char);
+                            }
+                            None => unreachable!(),
+                        }
+                    }
+
+                    let end = self.loc;
+
+                    self.loc.1 += 1;
+
+                    return Some(Ok(Token {
+                        token: TokenType::Literal(aggregation.into()),
+                        start,
+                        end,
+                    }));
+                }
+                '\'' => {
+                    let start = self.loc;
+                    let mut aggregation = String::from(self.iter.next().unwrap());
+
+                    aggregation.push(self.iter.next().unwrap());
+                    self.loc.1 += 1;
+
+                    if self.iter.peek() == Some(&'\'') {
+                        aggregation.push(self.iter.next().unwrap());
+                    } else {
+                        return Some(Err(LexerErrors::UnexpectedCharacter {
+                            char: '\'',
+                            loc: self.loc,
+                        }));
+                    }
+
+                    self.loc.1 += 1;
+                    let end = self.loc;
+
+                    return Some(Ok(Token {
+                        token: TokenType::Literal(aggregation.into()),
                         start,
                         end,
                     }));
@@ -258,10 +312,10 @@ impl<'a> Iterator for AggregatedIterator<'a> {
     }
 }
 
-impl AggregatedIterator<'_> {
+impl Tokenizer<'_> {
     #[inline]
-    pub fn new(iter: &str) -> AggregatedIterator<'_> {
-        AggregatedIterator {
+    pub fn new(iter: &str) -> Tokenizer<'_> {
+        Tokenizer {
             iter: iter.chars().peekable(),
             loc: (0, 0),
         }
@@ -275,11 +329,11 @@ mod tests {
         tokens::{Keyword, Token, TokenType},
     };
 
-    use crate::aggregated_iterator::AggregatedIterator;
+    use crate::aggregated_iterator::Tokenizer;
 
     #[test]
-    fn test_aggregated_iterator() {
-        let mut iter = AggregatedIterator::new("5 + 4");
+    fn test_tokenizer() {
+        let mut iter = Tokenizer::new("5 + 4");
 
         assert_eq!(
             iter.next().unwrap().unwrap(),
@@ -308,7 +362,7 @@ mod tests {
             }
         );
 
-        let mut iter = AggregatedIterator::new("test(123)");
+        let mut iter = Tokenizer::new("test(123)");
 
         assert_eq!(
             iter.next().unwrap().unwrap(),
@@ -346,7 +400,7 @@ mod tests {
             }
         );
 
-        let mut iter = AggregatedIterator::new("fn test(abc) {\n    rt abc + 5;\n}");
+        let mut iter = Tokenizer::new("fn test(abc) {\n    rt abc + 5;\n}");
 
         assert_eq!(
             iter.next().unwrap().unwrap(),
@@ -453,6 +507,49 @@ mod tests {
                 token: TokenType::ClosingBrace,
                 start: (2, 0),
                 end: (2, 0),
+            }
+        );
+    }
+
+    #[test]
+    fn test_tokenizer_literals() {
+        let mut iter = Tokenizer::new("5");
+        assert_eq!(
+            iter.next().unwrap().unwrap(),
+            Token {
+                token: TokenType::Literal("5".into()),
+                start: (0, 0),
+                end: (0, 0),
+            }
+        );
+
+        let mut iter = Tokenizer::new("5.5");
+        assert_eq!(
+            iter.next().unwrap().unwrap(),
+            Token {
+                token: TokenType::Literal("5.5".into()),
+                start: (0, 0),
+                end: (0, 2),
+            }
+        );
+
+        let mut iter = Tokenizer::new("'t'");
+        assert_eq!(
+            iter.next().unwrap().unwrap(),
+            Token {
+                token: TokenType::Literal("'t'".into()),
+                start: (0, 0),
+                end: (0, 2),
+            }
+        );
+
+        let mut iter = Tokenizer::new("\"test\"");
+        assert_eq!(
+            iter.next().unwrap().unwrap(),
+            Token {
+                token: TokenType::Literal("\"test\"".into()),
+                start: (0, 0),
+                end: (0, 5),
             }
         );
     }

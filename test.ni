@@ -9,6 +9,11 @@ st Rect {
 }
 
 fn main(): int {
-    print(5);
+    printc('H');
+    printc('e');
+    printc('l');
+    printc('l');
+    printc('o');
+
     rt 0;
 }

@@ -135,10 +135,16 @@ impl Default for MemoryManager<X86Registers> {
                 X86Registers::Rax,
             ],
             next_locations: Vec::from([Location::Register(X86Registers::Rax)]),
-            reservations: HashMap::from([(
-                "print_format".into(),
-                Location::Hardcoded("print_format".into()),
-            )]),
+            reservations: HashMap::from([
+                (
+                    "printi_format".into(),
+                    Location::Hardcoded("printi_format".into()),
+                ),
+                (
+                    "printc_format".into(),
+                    Location::Hardcoded("printc_format".into()),
+                ),
+            ]),
         }
     }
 }

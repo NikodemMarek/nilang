@@ -10,6 +10,7 @@ pub enum Instruction {
     ReturnVariable(Temporary),
 
     LoadNumber(Temporary, Number),
+    LoadChar(Temporary, char),
 
     Copy(Temporary, Temporary),
 

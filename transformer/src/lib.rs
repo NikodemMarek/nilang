@@ -40,13 +40,16 @@ impl From<HashMap<Box<str>, Structure>> for TypesRef {
 enum Type {
     Void,
     Int,
+    Char,
     Object(Box<str>),
 }
 
 impl<T: ToString> From<T> for Type {
     fn from(r#type: T) -> Self {
         match r#type.to_string().as_str() {
+            "void" => Type::Void,
             "int" => Type::Int,
+            "char" => Type::Char,
             r#type => Type::Object(r#type.into()),
         }
     }
@@ -94,8 +97,12 @@ impl From<HashMap<Box<str>, FunctionDeclaration>> for FunctionsRef {
         );
 
         functions.0.insert(
-            "print".into(),
+            "printi".into(),
             (Type::Void, Box::new([("value".into(), Type::Int)])),
+        );
+        functions.0.insert(
+            "printc".into(),
+            (Type::Void, Box::new([("value".into(), Type::Char)])),
         );
 
         functions

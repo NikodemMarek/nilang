@@ -81,9 +81,11 @@ fn parse_operation<I: PeekableAssumingIterator>(
                 }
             }
         }
-        ExpressionNode::Object { .. } => Err(ParserErrors::InvalidOperand {
-            loc: (start.0, start.1 - 1),
-        })?,
+        ExpressionNode::Object { .. } | ExpressionNode::Char(_) | ExpressionNode::String(_) => {
+            Err(ParserErrors::InvalidOperand {
+                loc: (start.0, start.1 - 1),
+            })?
+        }
     })
 }
 

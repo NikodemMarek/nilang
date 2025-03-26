@@ -8,9 +8,17 @@ pub fn parse_literal<I: PeekableAssumingIterator>(
 ) -> Result<ExpressionNode, ParserErrors> {
     let (start, end, value) = tokens.assume_literal()?;
 
+    if value.starts_with('\'') && value.ends_with('\'') {
+        return Ok(ExpressionNode::Char(value.chars().nth(1).unwrap()));
+    }
+
+    if value.starts_with('"') && value.ends_with('"') {
+        return Ok(ExpressionNode::String(value[1..value.len() - 1].into()));
+    }
+
     Ok(match value.parse() {
         Ok(parsed) => ExpressionNode::Number(parsed),
-        Err(_) => Err(ParserErrors::NotANumber {
+        Err(_) => Err(ParserErrors::InvalidLiteral {
             from: start,
             to: end,
         })?,

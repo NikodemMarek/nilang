@@ -22,22 +22,24 @@ pub struct Structure {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ExpressionNode {
-    FunctionCall(FunctionCall),
     Number(f64),
+    Char(char),
+    String(Box<str>),
+    Object {
+        r#type: Box<str>,
+        fields: HashMap<Box<str>, ExpressionNode>,
+    },
     Operation {
         operator: Operator,
         a: Box<ExpressionNode>,
         b: Box<ExpressionNode>,
     },
     VariableReference(Box<str>),
-    Object {
-        r#type: Box<str>,
-        fields: HashMap<Box<str>, ExpressionNode>,
-    },
     FieldAccess {
         structure: Box<ExpressionNode>,
         field: Box<str>,
     },
+    FunctionCall(FunctionCall),
 }
 
 pub type Parameter = (Box<str>, Box<str>);
