@@ -13,7 +13,7 @@ pub trait CallingConvention {
         mm: &mut MemoryManager<Self::R>,
         name: &str,
         args: &[Box<str>],
-        return_temporary: Box<str>,
+        return_temporary: Option<Box<str>>,
     ) -> Result<Vec<FullInstruction<Self::R>>, GeneratorErrors>;
 
     fn return_location() -> Location<Self::R>;
@@ -82,7 +82,7 @@ impl CallingConvention for SystemVAmd64Abi {
         mm: &mut MemoryManager<Self::R>,
         name: &str,
         args: &[Box<str>],
-        return_temporary: Box<str>,
+        return_temporary: Option<Box<str>>,
     ) -> Result<Vec<FullInstruction<Self::R>>, GeneratorErrors> {
         let arguments_locations = SystemVAmd64Abi::arguments_locations(args);
 
@@ -119,15 +119,20 @@ impl CallingConvention for SystemVAmd64Abi {
 
         let stack_cleanup = [];
 
-        let return_register = mm.reserve(&return_temporary);
-        let move_result = [(
-            AssemblyInstruction::Move,
-            vec![
-                return_register.into(),
-                SystemVAmd64Abi::return_location().into(),
-            ],
-            format!("Move result of `{name}` to return register").into(),
-        )];
+        let move_result = if let Some(return_temporary) = return_temporary {
+            let return_register = mm.reserve(&return_temporary);
+            [(
+                AssemblyInstruction::Move,
+                vec![
+                    return_register.into(),
+                    SystemVAmd64Abi::return_location().into(),
+                ],
+                format!("Move result of `{name}` to return register").into(),
+            )]
+            .into()
+        } else {
+            [].into()
+        };
 
         Ok([
             relocations,
@@ -135,7 +140,7 @@ impl CallingConvention for SystemVAmd64Abi {
             stack_alignment.into(),
             function_call.into(),
             stack_cleanup.into(),
-            move_result.into(),
+            move_result,
         ]
         .concat())
     }

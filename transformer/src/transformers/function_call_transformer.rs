@@ -50,7 +50,11 @@ pub fn transform_function_call(
     instructions.push(Instruction::FunctionCall(
         name,
         arguments_names.into(),
-        result.clone(),
+        if let Type::Void = r#type {
+            None
+        } else {
+            Some(result.clone())
+        },
     ));
     Ok(instructions.to_vec())
 }

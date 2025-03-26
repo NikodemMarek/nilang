@@ -10,6 +10,22 @@ _start:
     xorq %rdi, %rdi
     syscall
         
+.globl test
+test:
+
+    # Prologue
+    pushq %rbp
+    movq %rsp, %rbp
+        
+    movq %rdi, %rdi               # Load `p` as argument 0
+
+    # Epilogue
+    # leave
+    movq %rbp, %rsp
+    pop %rbp
+    ret
+        
+
 .globl main
 main:
 
@@ -21,33 +37,19 @@ main:
     movq $printc_format, %rdi     # Load `printc_format` as argument 0
     movq %rax, %rsi               # Load `temp_0` as argument 1
     call printf                   # Call function `printf`
-    movq %rax, %rbx               # Move result of `printf` to return register
-    movq $'e', %rcx               # Load character 'e' into `temp_1`
+    movq $'e', %rbx               # Load character 'e' into `temp_1`
     movq $printc_format, %rdi     # Load `printc_format` as argument 0
-    movq %rcx, %rsi               # Load `temp_1` as argument 1
+    movq %rbx, %rsi               # Load `temp_1` as argument 1
     call printf                   # Call function `printf`
-    movq %rax, %rdx               # Move result of `printf` to return register
-    movq $'l', %rsi               # Load character 'l' into `temp_2`
-    movq %rsi, %r8                # Move `temp_2` to a free location
-    movq $printc_format, %rdi     # Load `printc_format` as argument 0
-    movq %r8, %rsi                # Load `temp_2` as argument 1
+    movq $5, %rcx                 # Load number '5' into `temp_2`
+    movq %rcx, %rdi               # Load `temp_2` as argument 0
+    call test                     # Call function `test`
+    movq $9, %rdx                 # Load number '9' into `temp_3`
+    movq $printi_format, %rdi     # Load `printi_format` as argument 0
+    movq %rdx, %rsi               # Load `temp_3` as argument 1
     call printf                   # Call function `printf`
-    movq %rax, %rdi               # Move result of `printf` to return register
-    movq $'l', %rsi               # Load character 'l' into `temp_3`
-    movq %rdi, %r11               # Move `` to a free location
-    movq %rsi, %r10               # Move `temp_3` to a free location
-    movq $printc_format, %rdi     # Load `printc_format` as argument 0
-    movq %r10, %rsi               # Load `temp_3` as argument 1
-    call printf                   # Call function `printf`
-    movq %rax, %r9                # Move result of `printf` to return register
-    movq $'o', %rdi               # Load character 'o' into `temp_4`
-    movq %rdi, %r12               # Move `temp_4` to a free location
-    movq $printc_format, %rdi     # Load `printc_format` as argument 0
-    movq %r12, %rsi               # Load `temp_4` as argument 1
-    call printf                   # Call function `printf`
-    movq %rax, %rsi               # Move result of `printf` to return register
-    movq $0, %rdi                 # Load number '0' into `temp_5`
-    movq %rdi, %rax               # Return `temp_5`
+    movq $0, %rsi                 # Load number '0' into `temp_4`
+    movq %rsi, %rax               # Return `temp_4`
 
     # Epilogue
     # leave

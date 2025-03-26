@@ -8,12 +8,16 @@ st Rect {
     end: Point
 }
 
+fn test(p: int): void {
+
+}
+
 fn main(): int {
     printc('H');
     printc('e');
-    printc('l');
-    printc('l');
-    printc('o');
+    test(5);
+
+    printi(9);
 
     rt 0;
 }
