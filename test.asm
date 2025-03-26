@@ -10,14 +10,14 @@ _start:
     movq $1, %rax
     int $0x80
     ret
-
+        
 .globl _test
 _test:
 
     # Prologue
     pushq %rbp
     movq %rsp, %rbp
-
+        
     movq %rdi, %rdi               # Load `a` as argument 0
     movq %rsi, %rsi               # Load `b.x` as argument 1
     movq %rdx, %rdx               # Load `b.y` as argument 2
@@ -29,6 +29,7 @@ _test:
     movq %rbp, %rsp
     pop %rbp
     ret
+        
 
 .globl _main
 _main:
@@ -36,7 +37,7 @@ _main:
     # Prologue
     pushq %rbp
     movq %rsp, %rbp
-
+        
     movq $5, %rax                 # Load number '5' into `p.y`
     movq $6, %rbx                 # Load number '6' into `p.x`
     movq $9, %rcx                 # Load number '9' into `temp_1`
@@ -56,3 +57,4 @@ _main:
     movq %rbp, %rsp
     pop %rbp
     ret
+        

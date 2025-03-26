@@ -3,32 +3,34 @@ use errors::GeneratorErrors;
 use crate::{
     assembly_flavour::{AssemblyInstruction, AssemblyInstructionParameter, FullInstruction},
     memory_manager::{Location, MemoryManager},
-    registers::Registers,
+    registers::{Registers, X86Registers},
 };
 
 pub trait CallingConvention {
+    type R: Registers;
+
     fn generate_function_call(
-        mm: &mut MemoryManager,
+        mm: &mut MemoryManager<Self::R>,
         name: &str,
         args: &[Box<str>],
         return_temporary: Box<str>,
-    ) -> Result<Vec<FullInstruction>, GeneratorErrors>;
+    ) -> Result<Vec<FullInstruction<Self::R>>, GeneratorErrors>;
 
-    fn return_location() -> Location;
-    fn nth_argument_location(n: usize) -> Location;
+    fn return_location() -> Location<Self::R>;
+    fn nth_argument_location(n: usize) -> Location<Self::R>;
 }
 
 pub struct SystemVAmd64Abi;
 
 impl SystemVAmd64Abi {
-    fn arguments_locations(arguments: &[Box<str>]) -> Vec<Location> {
+    fn arguments_locations(arguments: &[Box<str>]) -> Vec<Location<X86Registers>> {
         let available_registers = [
-            Registers::Rdi,
-            Registers::Rsi,
-            Registers::Rdx,
-            Registers::Rcx,
-            Registers::R8,
-            Registers::R9,
+            X86Registers::Rdi,
+            X86Registers::Rsi,
+            X86Registers::Rdx,
+            X86Registers::Rcx,
+            X86Registers::R8,
+            X86Registers::R9,
         ];
         if arguments.len() <= available_registers.len() {
             available_registers[..arguments.len()]
@@ -50,9 +52,9 @@ impl SystemVAmd64Abi {
     }
 
     fn relocations(
-        mm: &mut MemoryManager,
-        arguments_locations: &[Location],
-    ) -> Vec<FullInstruction> {
+        mm: &mut MemoryManager<X86Registers>,
+        arguments_locations: &[Location<X86Registers>],
+    ) -> Vec<FullInstruction<X86Registers>> {
         arguments_locations
             .iter()
             .filter_map(|loc| {
@@ -60,7 +62,7 @@ impl SystemVAmd64Abi {
                     return None;
                 }
 
-                let var = mm.get_name(loc).unwrap().clone();
+                let var = mm.get_name(loc).unwrap().to_string();
                 mm.free(&var);
                 let new_loc = mm.reserve(&var);
                 Some((
@@ -74,12 +76,14 @@ impl SystemVAmd64Abi {
 }
 
 impl CallingConvention for SystemVAmd64Abi {
+    type R = X86Registers;
+
     fn generate_function_call(
-        mm: &mut MemoryManager,
+        mm: &mut MemoryManager<Self::R>,
         name: &str,
         args: &[Box<str>],
         return_temporary: Box<str>,
-    ) -> Result<Vec<FullInstruction>, GeneratorErrors> {
+    ) -> Result<Vec<FullInstruction<Self::R>>, GeneratorErrors> {
         let arguments_locations = SystemVAmd64Abi::arguments_locations(args);
 
         let how_many_are_taken = arguments_locations
@@ -136,18 +140,18 @@ impl CallingConvention for SystemVAmd64Abi {
         .concat())
     }
 
-    fn return_location() -> Location {
-        Location::Register(Registers::Rax)
+    fn return_location() -> Location<Self::R> {
+        Location::Register(X86Registers::Rax)
     }
 
-    fn nth_argument_location(n: usize) -> Location {
+    fn nth_argument_location(n: usize) -> Location<Self::R> {
         match n {
-            0 => Location::Register(Registers::Rdi),
-            1 => Location::Register(Registers::Rsi),
-            2 => Location::Register(Registers::Rdx),
-            3 => Location::Register(Registers::Rcx),
-            4 => Location::Register(Registers::R8),
-            5 => Location::Register(Registers::R9),
+            0 => Location::Register(X86Registers::Rdi),
+            1 => Location::Register(X86Registers::Rsi),
+            2 => Location::Register(X86Registers::Rdx),
+            3 => Location::Register(X86Registers::Rcx),
+            4 => Location::Register(X86Registers::R8),
+            5 => Location::Register(X86Registers::R9),
             _ => Location::Stack(n - 6),
         }
     }
@@ -161,7 +165,7 @@ mod tests {
         assembly_flavour::{AssemblyInstruction, AssemblyInstructionParameter},
         calling_convention::SystemVAmd64Abi,
         memory_manager::{Location, MemoryManager},
-        registers::Registers,
+        registers::X86Registers,
     };
 
     #[test]
@@ -170,9 +174,9 @@ mod tests {
         assert_eq!(
             locations,
             [
-                Location::Register(Registers::Rdi),
-                Location::Register(Registers::Rsi),
-                Location::Register(Registers::Rdx)
+                Location::Register(X86Registers::Rdi),
+                Location::Register(X86Registers::Rsi),
+                Location::Register(X86Registers::Rdx)
             ]
         );
 
@@ -188,12 +192,12 @@ mod tests {
         assert_eq!(
             locations,
             [
-                Location::Register(Registers::Rdi),
-                Location::Register(Registers::Rsi),
-                Location::Register(Registers::Rdx),
-                Location::Register(Registers::Rcx),
-                Location::Register(Registers::R8),
-                Location::Register(Registers::R9),
+                Location::Register(X86Registers::Rdi),
+                Location::Register(X86Registers::Rsi),
+                Location::Register(X86Registers::Rdx),
+                Location::Register(X86Registers::Rcx),
+                Location::Register(X86Registers::R8),
+                Location::Register(X86Registers::R9),
                 Location::Stack(0),
             ]
         );
@@ -202,32 +206,32 @@ mod tests {
     #[test]
     fn test_reallocations() {
         let arguments_locations = [
-            Location::Register(Registers::Rdi),
-            Location::Register(Registers::Rsi),
-            Location::Register(Registers::Rdx),
+            Location::Register(X86Registers::Rdi),
+            Location::Register(X86Registers::Rsi),
+            Location::Register(X86Registers::Rdx),
         ];
 
         let mm = &mut MemoryManager {
             stack_position: 3,
             free_registers: vec![
-                Registers::R9,
-                Registers::R8,
-                Registers::Rdi,
-                Registers::Rsi,
-                Registers::Rdx,
-                Registers::Rcx,
-                Registers::Rbx,
-                Registers::Rax,
+                X86Registers::R9,
+                X86Registers::R8,
+                X86Registers::Rdi,
+                X86Registers::Rsi,
+                X86Registers::Rdx,
+                X86Registers::Rcx,
+                X86Registers::Rbx,
+                X86Registers::Rax,
             ],
             next_locations: vec![
-                Location::Register(Registers::Rcx),
-                Location::Register(Registers::Rbx),
-                Location::Register(Registers::Rax),
+                Location::Register(X86Registers::Rcx),
+                Location::Register(X86Registers::Rbx),
+                Location::Register(X86Registers::Rax),
             ],
             reservations: HashMap::from([
-                ("a".into(), Location::Register(Registers::Rdi)),
-                ("b".into(), Location::Register(Registers::Rsi)),
-                ("c".into(), Location::Register(Registers::Rdx)),
+                ("a".into(), Location::Register(X86Registers::Rdi)),
+                ("b".into(), Location::Register(X86Registers::Rsi)),
+                ("c".into(), Location::Register(X86Registers::Rdx)),
             ]),
         };
         let reallocations = SystemVAmd64Abi::relocations(mm, &arguments_locations);
@@ -238,24 +242,24 @@ mod tests {
                 (
                     AssemblyInstruction::Move,
                     vec![
-                        AssemblyInstructionParameter::Register(Registers::Rcx),
-                        AssemblyInstructionParameter::Register(Registers::Rdi),
+                        AssemblyInstructionParameter::Register(X86Registers::Rcx),
+                        AssemblyInstructionParameter::Register(X86Registers::Rdi),
                     ],
                     "Move `c` to a free location".into(),
                 ),
                 (
                     AssemblyInstruction::Move,
                     vec![
-                        AssemblyInstructionParameter::Register(Registers::R8),
-                        AssemblyInstructionParameter::Register(Registers::Rsi),
+                        AssemblyInstructionParameter::Register(X86Registers::R8),
+                        AssemblyInstructionParameter::Register(X86Registers::Rsi),
                     ],
                     "Move `b` to a free location".into(),
                 ),
                 (
                     AssemblyInstruction::Move,
                     vec![
-                        AssemblyInstructionParameter::Register(Registers::R9),
-                        AssemblyInstructionParameter::Register(Registers::Rdx),
+                        AssemblyInstructionParameter::Register(X86Registers::R9),
+                        AssemblyInstructionParameter::Register(X86Registers::Rdx),
                     ],
                     "Move `a` to a free location".into(),
                 ),

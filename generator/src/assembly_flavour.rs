@@ -1,21 +1,21 @@
 use crate::registers::Registers;
 
-pub trait AssemblyFlavour {
-    fn generate_parameter(parameter: &AssemblyInstructionParameter) -> String;
+pub trait AssemblyFlavour<R: Registers> {
+    fn generate_parameter(parameter: &AssemblyInstructionParameter<R>) -> String;
     fn generate_instruction(
         instruction: &AssemblyInstruction,
-        parameters: &[AssemblyInstructionParameter],
+        parameters: &[AssemblyInstructionParameter<R>],
         comment: &str,
     ) -> String;
 
     fn generate_program(functions: &[Box<str>]) -> Box<str>;
-    fn generate_function(name: &str, instructions: &[FullInstruction]) -> Box<str>;
+    fn generate_function(name: &str, instructions: &[FullInstruction<R>]) -> Box<str>;
 }
 
 pub struct AtAndTFlavour;
 
-impl AssemblyFlavour for AtAndTFlavour {
-    fn generate_parameter(parameter: &AssemblyInstructionParameter) -> String {
+impl<R: Registers> AssemblyFlavour<R> for AtAndTFlavour {
+    fn generate_parameter(parameter: &AssemblyInstructionParameter<R>) -> String {
         match parameter {
             AssemblyInstructionParameter::Register(register) => format!("%{}", register.name()),
             AssemblyInstructionParameter::Memory(memory) => format!("-{}(%rax)", memory),
@@ -26,7 +26,7 @@ impl AssemblyFlavour for AtAndTFlavour {
 
     fn generate_instruction(
         instruction: &AssemblyInstruction,
-        parameters: &[AssemblyInstructionParameter],
+        parameters: &[AssemblyInstructionParameter<R>],
         comment: &str,
     ) -> String {
         match instruction {
@@ -64,7 +64,7 @@ _start:
         format!(".text\n{}\n{}", start_fn, functions.join("\n\n")).into()
     }
 
-    fn generate_function(name: &str, instructions: &[FullInstruction]) -> Box<str> {
+    fn generate_function(name: &str, instructions: &[FullInstruction<R>]) -> Box<str> {
         let function_declaration = format!(".globl _{}\n_{}:", name, name);
         let prologue = r#"
     # Prologue
@@ -104,9 +104,9 @@ fn asm_with_comment(asm: &str, comment: &str) -> Box<str> {
     format!("{:<29} # {comment}", asm).into()
 }
 
-pub type FullInstruction = (
+pub type FullInstruction<R> = (
     AssemblyInstruction,
-    Vec<AssemblyInstructionParameter>,
+    Vec<AssemblyInstructionParameter<R>>,
     Box<str>,
 );
 
@@ -117,15 +117,15 @@ pub enum AssemblyInstruction {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum AssemblyInstructionParameter {
-    Register(Registers),
+pub enum AssemblyInstructionParameter<R: Registers> {
+    Register(R),
     Memory(usize),
     Number(f64),
     Function(Box<str>),
 }
 
-impl From<crate::memory_manager::Location> for AssemblyInstructionParameter {
-    fn from(val: crate::memory_manager::Location) -> Self {
+impl<R: Registers> From<crate::memory_manager::Location<R>> for AssemblyInstructionParameter<R> {
+    fn from(val: crate::memory_manager::Location<R>) -> Self {
         match val {
             crate::memory_manager::Location::Register(register) => {
                 AssemblyInstructionParameter::Register(register)
@@ -136,8 +136,8 @@ impl From<crate::memory_manager::Location> for AssemblyInstructionParameter {
         }
     }
 }
-impl From<&crate::memory_manager::Location> for AssemblyInstructionParameter {
-    fn from(val: &crate::memory_manager::Location) -> Self {
+impl<R: Registers> From<&crate::memory_manager::Location<R>> for AssemblyInstructionParameter<R> {
+    fn from(val: &crate::memory_manager::Location<R>) -> Self {
         match val {
             crate::memory_manager::Location::Register(register) => {
                 AssemblyInstructionParameter::Register(register.clone())

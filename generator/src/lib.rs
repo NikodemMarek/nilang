@@ -18,10 +18,15 @@ use calling_convention::CallingConvention;
 use errors::GeneratorErrors;
 use memory_manager::MemoryManager;
 use nilang_types::instructions::Instruction;
+use registers::X86Registers;
 
-pub fn generate<C: CallingConvention, A: AssemblyFlavour>(
+pub fn generate<C, A>(
     functions: HashMap<Box<str>, Vec<Instruction>>,
-) -> Result<Box<str>, GeneratorErrors> {
+) -> Result<Box<str>, GeneratorErrors>
+where
+    C: CallingConvention<R = X86Registers>,
+    A: AssemblyFlavour<C::R>,
+{
     let mut code = Vec::new();
 
     for (name, instructions) in functions.into_iter() {
@@ -34,9 +39,10 @@ pub fn generate<C: CallingConvention, A: AssemblyFlavour>(
     Ok(A::generate_program(&code))
 }
 
-fn generate_function<C: CallingConvention>(
-    code: &[Instruction],
-) -> Result<Vec<FullInstruction>, GeneratorErrors> {
+fn generate_function<C>(code: &[Instruction]) -> Result<Vec<FullInstruction<C::R>>, GeneratorErrors>
+where
+    C: CallingConvention<R = X86Registers>,
+{
     let mm = &mut MemoryManager::default();
     code.iter().try_fold(Vec::new(), |mut acc, instruction| {
         acc.extend(generate_instruction::<C>(mm, instruction.clone())?);
@@ -44,10 +50,13 @@ fn generate_function<C: CallingConvention>(
     })
 }
 
-fn generate_instruction<C: CallingConvention>(
-    mm: &mut MemoryManager,
+fn generate_instruction<C>(
+    mm: &mut MemoryManager<C::R>,
     instruction: Instruction,
-) -> Result<Vec<FullInstruction>, GeneratorErrors> {
+) -> Result<Vec<FullInstruction<C::R>>, GeneratorErrors>
+where
+    C: CallingConvention,
+{
     Ok(match instruction {
         Instruction::FunctionCall(name, arguments, return_temporary) => {
             C::generate_function_call(mm, &name, &arguments, return_temporary)?
