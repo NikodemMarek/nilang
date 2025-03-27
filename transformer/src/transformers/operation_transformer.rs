@@ -36,7 +36,9 @@ pub fn transform_operation(
     temporaries.access(&a_temporary)?;
     temporaries.access(&b_temporary)?;
     Ok([
+        vec![Instruction::Declare(a_temporary.clone())],
         a_instructions,
+        vec![Instruction::Declare(b_temporary.clone())],
         b_instructions,
         match operator {
             Operator::Add => vec![Instruction::AddVariables(result, a_temporary, b_temporary)],

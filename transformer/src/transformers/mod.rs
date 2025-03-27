@@ -87,6 +87,7 @@ pub fn copy_all_fields(
             object_fields_from_to(context.1, source, destination, object_type)?
         {
             temporaries.declare_named(source_temporary.clone(), field_type);
+            instructions.push(Instruction::Declare(source_temporary.clone()));
             temporaries.access(&source_temporary.clone())?;
             instructions.push(Instruction::Copy(destination_temporary, source_temporary));
         }

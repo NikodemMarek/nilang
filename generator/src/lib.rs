@@ -58,6 +58,10 @@ where
     C: CallingConvention,
 {
     Ok(match instruction {
+        Instruction::Declare(variable) => {
+            mm.reserve(&variable);
+            Vec::new()
+        }
         Instruction::FunctionCall(name, arguments, return_temporary) => {
             if let Some(instructions) =
                 builtin_functions::<C>(mm, &name, &arguments, return_temporary.clone())
@@ -68,7 +72,7 @@ where
             C::generate_function_call(mm, &name, &arguments, return_temporary)?
         }
         Instruction::LoadNumber(temporary, number) => {
-            let location = mm.reserve(&temporary);
+            let location = mm.get_location_or_err(&temporary)?;
             vec![(
                 AssemblyInstruction::Move,
                 vec![
@@ -79,7 +83,7 @@ where
             )]
         }
         Instruction::LoadChar(temporary, character) => {
-            let location = mm.reserve(&temporary);
+            let location = mm.get_location_or_err(&temporary)?;
             vec![(
                 AssemblyInstruction::Move,
                 vec![
@@ -89,12 +93,12 @@ where
                 format!("Load character '{character}' into `{temporary}`").into(),
             )]
         }
-        Instruction::ReturnVariable(variable) => {
-            let location = mm.get_location(&variable).unwrap().clone();
+        Instruction::ReturnVariable(temporary) => {
+            let location = mm.get_location_or_err(&temporary)?;
             vec![(
                 AssemblyInstruction::Move,
                 vec![C::return_location().into(), location.into()],
-                format!("Return `{variable}`").into(),
+                format!("Return `{temporary}`").into(),
             )]
         }
         Instruction::LoadArgument(argument, temporary) => {
@@ -107,8 +111,8 @@ where
             )]
         }
         Instruction::Copy(to, from) => {
-            let from_loc = mm.get_location(&from).unwrap().clone();
-            let to_loc = mm.reserve(&to);
+            let from_loc = mm.get_location_or_err(&from)?;
+            let to_loc = mm.get_location_or_err(&to)?;
             vec![(
                 AssemblyInstruction::Move,
                 vec![to_loc.into(), from_loc.into()],
@@ -116,13 +120,13 @@ where
             )]
         }
         Instruction::AddVariables(result, a, b) => {
-            let a_loc = mm.get_location(&a).unwrap().clone();
-            let b_loc = mm.get_location(&b).unwrap().clone();
-            let result_loc = mm.reserve(&result);
+            let a_loc = mm.get_location_or_err(&a)?;
+            let b_loc = mm.get_location_or_err(&b)?;
+            let result_loc = mm.get_location_or_err(&result)?;
             vec![
                 (
                     AssemblyInstruction::Move,
-                    vec![result_loc.clone().into(), a_loc.clone().into()],
+                    vec![result_loc.into(), a_loc.into()],
                     format!("Prepare `{result}` for addition").into(),
                 ),
                 (
@@ -133,13 +137,13 @@ where
             ]
         }
         Instruction::SubtractVariables(result, a, b) => {
-            let a_loc = mm.get_location(&a).unwrap().clone();
-            let b_loc = mm.get_location(&b).unwrap().clone();
-            let result_loc = mm.reserve(&result);
+            let a_loc = mm.get_location_or_err(&a)?;
+            let b_loc = mm.get_location_or_err(&b)?;
+            let result_loc = mm.get_location_or_err(&result)?;
             vec![
                 (
                     AssemblyInstruction::Move,
-                    vec![result_loc.clone().into(), a_loc.clone().into()],
+                    vec![result_loc.into(), a_loc.into()],
                     format!("Prepare `{result}` for subtraction").into(),
                 ),
                 (
@@ -150,13 +154,13 @@ where
             ]
         }
         Instruction::MultiplyVariables(result, a, b) => {
-            let a_loc = mm.get_location(&a).unwrap().clone();
-            let b_loc = mm.get_location(&b).unwrap().clone();
-            let result_loc = mm.reserve(&result);
+            let a_loc = mm.get_location_or_err(&a)?;
+            let b_loc = mm.get_location_or_err(&b)?;
+            let result_loc = mm.get_location_or_err(&result)?;
             vec![
                 (
                     AssemblyInstruction::Move,
-                    vec![result_loc.clone().into(), a_loc.clone().into()],
+                    vec![result_loc.into(), a_loc.into()],
                     format!("Prepare `{result}` for multiplication").into(),
                 ),
                 (

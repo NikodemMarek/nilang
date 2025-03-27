@@ -24,6 +24,7 @@ pub fn transform_function_call(
     for node in arguments {
         if let Some((_, argument_type)) = function_parameters.next() {
             let argument_temporary = temporaries.declare(argument_type.clone());
+            instructions.push(Instruction::Declare(argument_temporary.clone()));
             instructions.append(&mut transform_expression(
                 context,
                 temporaries,

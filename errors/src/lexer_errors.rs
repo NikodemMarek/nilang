@@ -2,6 +2,7 @@
 pub enum LexerErrors {
     UnexpectedCharacter { char: char, loc: (usize, usize) },
     ExpectedCharacter { char: char, loc: (usize, usize) },
+    UnexpectedEndOfFile { loc: (usize, usize) },
 }
 
 impl std::fmt::Display for LexerErrors {
@@ -20,6 +21,9 @@ impl From<&LexerErrors> for ((usize, usize), (usize, usize), String) {
             }
             LexerErrors::ExpectedCharacter { char, loc } => {
                 (*loc, *loc, format!("Expected character '{}'", char))
+            }
+            LexerErrors::UnexpectedEndOfFile { loc } => {
+                (*loc, *loc, "Unexpected end of file".into())
             }
         }
     }

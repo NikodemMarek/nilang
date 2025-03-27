@@ -100,7 +100,7 @@ impl CallingConvention for SystemVAmd64Abi {
             .zip(args.iter())
             .enumerate()
             .map(|(i, (loc, arg))| {
-                let arg_loc = mm.get_location(arg).unwrap();
+                let arg_loc = mm.get_location_or_err(arg).unwrap();
                 (
                     AssemblyInstruction::Move,
                     vec![loc.into(), arg_loc.into()],

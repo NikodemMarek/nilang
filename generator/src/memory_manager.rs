@@ -1,5 +1,7 @@
 use std::{collections::HashMap, ops::Deref};
 
+use errors::GeneratorErrors;
+
 use crate::registers::{Registers, X86Registers};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -20,21 +22,19 @@ pub struct MemoryManager<R: Registers> {
 }
 
 impl<R: Registers> MemoryManager<R> {
-    pub fn reserve(&mut self, name: &str) -> Location<R> {
+    pub fn reserve(&mut self, name: &str) -> Result<Location<R>, GeneratorErrors> {
         let location = self.next_locations.pop().unwrap();
-        self.reserve_location(name, location.clone()).unwrap();
-        location
+        self.reserve_location(name, location.clone())?;
+        Ok(location)
     }
 
-    pub fn reserve_from_back(&mut self, name: &str) -> Location<R> {
-        let location = self.next_locations.remove(0);
-        self.reserve_location(name, location.clone()).unwrap();
-        location
-    }
-
-    pub fn reserve_location(&mut self, name: &str, location: Location<R>) -> Result<(), ()> {
+    pub fn reserve_location(
+        &mut self,
+        name: &str,
+        location: Location<R>,
+    ) -> Result<(), GeneratorErrors> {
         if self.is_taken(&location) {
-            return Err(());
+            return Err(GeneratorErrors::VariableAlreadyExists { name: name.into() });
         }
 
         if let Location::Register(ref register) = location {
@@ -53,7 +53,10 @@ impl<R: Registers> MemoryManager<R> {
     }
 
     pub fn free(&mut self, name: &str) {
-        let location = self.reservations.remove(name).unwrap();
+        let Some(location) = self.reservations.remove(name) else {
+            return;
+        };
+
         if let Location::Register(ref register) = location {
             self.free_registers.push(register.clone());
         }
@@ -95,8 +98,13 @@ impl<R: Registers> MemoryManager<R> {
         }
     }
 
-    pub fn get_location(&self, name: &str) -> Option<&Location<R>> {
+    fn get_location(&self, name: &str) -> Option<&Location<R>> {
         self.reservations.get(name)
+    }
+
+    pub fn get_location_or_err(&self, name: &str) -> Result<&Location<R>, GeneratorErrors> {
+        self.get_location(name)
+            .ok_or_else(|| GeneratorErrors::VariableNotDefined { name: name.into() })
     }
 
     pub fn get_name(&self, location: &Location<R>) -> Option<&str> {

@@ -21,9 +21,14 @@ pub fn transform_object(
         let field_temp = <Box<str>>::from(format!("{}.{}", result, field));
         temporaries.declare_named(field_temp.clone(), r#type.clone());
 
-        let mut field_instructions =
-            transform_expression(context, temporaries, value.clone(), field_temp, r#type)?;
-        instructions.append(&mut field_instructions);
+        instructions.push(Instruction::Declare(field_temp.clone()));
+        instructions.append(&mut transform_expression(
+            context,
+            temporaries,
+            value.clone(),
+            field_temp,
+            r#type,
+        )?);
     }
     Ok(instructions)
 }

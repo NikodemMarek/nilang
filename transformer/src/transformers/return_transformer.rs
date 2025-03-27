@@ -24,6 +24,7 @@ pub fn transform_return(
 
     temporaries.access(&variable_name)?;
     Ok([
+        vec![Instruction::Declare(variable_name.clone())],
         instructions,
         vec![Instruction::ReturnVariable(variable_name)],
     ]

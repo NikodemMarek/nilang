@@ -9,6 +9,12 @@ pub fn parse_literal<I: PeekableAssumingIterator>(
     let (start, end, value) = tokens.assume_literal()?;
 
     if value.starts_with('\'') && value.ends_with('\'') {
+        if value.len() != 3 {
+            return Err(ParserErrors::InvalidLiteral {
+                from: start,
+                to: end,
+            });
+        }
         return Ok(ExpressionNode::Char(value.chars().nth(1).unwrap()));
     }
 

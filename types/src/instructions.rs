@@ -4,6 +4,8 @@ type FunctionName = Box<str>;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Instruction {
+    Declare(Temporary),
+
     FunctionCall(FunctionName, Box<[Temporary]>, Option<Temporary>),
     LoadArgument(usize, Temporary),
 

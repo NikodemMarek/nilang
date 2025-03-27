@@ -18,29 +18,28 @@ impl<'a> Iterator for Tokenizer<'a> {
                 '\n' => {
                     self.loc.0 += 1;
                     self.loc.1 = 0;
-
                     self.iter.next();
                 }
                 ' ' => {
                     self.loc.1 += 1;
-
                     self.iter.next();
                 }
                 '\t' => {
                     self.loc.1 += 4; // TOFIX: This is not accurate
-
                     self.iter.next();
                 }
                 '.' => {
                     let start = self.loc;
 
-                    let mut aggregation = String::from(self.iter.next().unwrap());
+                    let mut aggregation = String::from('.');
+                    self.iter.next();
 
                     if let Some('0'..='9') = self.iter.peek() {
-                        while let Some('0'..='9') = self.iter.peek() {
+                        while let Some(c @ '0'..='9') = self.iter.peek() {
                             self.loc.1 += 1;
 
-                            aggregation.push(self.iter.next().unwrap());
+                            aggregation.push(*c);
+                            self.iter.next();
                         }
 
                         let end = self.loc;
@@ -62,20 +61,21 @@ impl<'a> Iterator for Tokenizer<'a> {
                         end,
                     }));
                 }
-                '0'..='9' => {
+                c @ '0'..='9' => {
                     let start = self.loc;
 
-                    let mut aggregation = String::from(self.iter.next().unwrap());
-                    let mut dot = false;
+                    let mut aggregation = String::from(*c);
+                    self.iter.next();
 
+                    let mut dot = false;
                     loop {
                         match self.iter.peek() {
-                            Some('0'..='9') => {
+                            Some(c @ '0'..='9') => {
                                 self.loc.1 += 1;
-
-                                aggregation.push(self.iter.next().unwrap());
+                                aggregation.push(*c);
+                                self.iter.next();
                             }
-                            Some('.') => {
+                            Some(c @ '.') => {
                                 if dot {
                                     return Some(Ok(Token {
                                         token: TokenType::Literal(aggregation.into()),
@@ -84,14 +84,14 @@ impl<'a> Iterator for Tokenizer<'a> {
                                     }));
                                 } else {
                                     self.loc.1 += 1;
+                                    aggregation.push(*c);
+                                    self.iter.next();
 
-                                    aggregation.push(self.iter.next().unwrap());
                                     dot = true;
                                 }
                             }
                             _ => {
                                 let end = self.loc;
-
                                 self.loc.1 += 1;
 
                                 return Some(Ok(Token {
@@ -103,19 +103,21 @@ impl<'a> Iterator for Tokenizer<'a> {
                         }
                     }
                 }
-                '_' | 'a'..='z' | 'A'..='Z' => {
+                c @ '_' | c @ 'a'..='z' | c @ 'A'..='Z' => {
                     let start = self.loc;
 
-                    let mut aggregation = String::from(self.iter.next().unwrap());
+                    let mut aggregation = String::from(*c);
+                    self.iter.next();
 
-                    while let Some('_' | 'a'..='z' | 'A'..='Z' | '0'..='9') = self.iter.peek() {
+                    while let Some(c @ '_' | c @ 'a'..='z' | c @ 'A'..='Z' | c @ '0'..='9') =
+                        self.iter.peek()
+                    {
                         self.loc.1 += 1;
-
-                        aggregation.push(self.iter.next().unwrap());
+                        aggregation.push(*c);
+                        self.iter.next();
                     }
 
                     let end = self.loc;
-
                     self.loc.1 += 1;
 
                     return Some(Ok(Token {
@@ -133,7 +135,9 @@ impl<'a> Iterator for Tokenizer<'a> {
                 '"' => {
                     let start = self.loc;
 
-                    let mut aggregation = String::from(self.iter.next().unwrap());
+                    let mut aggregation = String::from('"');
+                    self.iter.next();
+
                     loop {
                         match self.iter.next() {
                             Some('"') => {
@@ -155,7 +159,6 @@ impl<'a> Iterator for Tokenizer<'a> {
                     }
 
                     let end = self.loc;
-
                     self.loc.1 += 1;
 
                     return Some(Ok(Token {
@@ -166,22 +169,36 @@ impl<'a> Iterator for Tokenizer<'a> {
                 }
                 '\'' => {
                     let start = self.loc;
-                    let mut aggregation = String::from(self.iter.next().unwrap());
 
-                    aggregation.push(self.iter.next().unwrap());
-                    self.loc.1 += 1;
+                    let mut aggregation = String::from('\'');
+                    self.iter.next();
 
-                    if self.iter.peek() == Some(&'\'') {
-                        aggregation.push(self.iter.next().unwrap());
+                    if let Some(c) = self.iter.next() {
+                        if c == '\'' {
+                            return Some(Err(LexerErrors::UnexpectedCharacter {
+                                char: '\'',
+                                loc: self.loc,
+                            }));
+                        } else {
+                            self.loc.1 += 1;
+                            aggregation.push(c);
+                        }
                     } else {
-                        return Some(Err(LexerErrors::UnexpectedCharacter {
+                        return Some(Err(LexerErrors::UnexpectedEndOfFile { loc: self.loc }));
+                    }
+
+                    if let Some('\'') = self.iter.next() {
+                        self.loc.1 += 1;
+                        aggregation.push('\'');
+                    } else {
+                        return Some(Err(LexerErrors::ExpectedCharacter {
                             char: '\'',
                             loc: self.loc,
                         }));
                     }
 
-                    self.loc.1 += 1;
                     let end = self.loc;
+                    self.loc.1 += 1;
 
                     return Some(Ok(Token {
                         token: TokenType::Literal(aggregation.into()),
@@ -189,30 +206,59 @@ impl<'a> Iterator for Tokenizer<'a> {
                         end,
                     }));
                 }
-                '+' | '-' | '*' | '/' | '%' => {
+                '+' => {
                     let start = self.loc;
-
                     self.loc.1 += 1;
-
-                    let value = self.iter.next().unwrap();
+                    self.iter.next();
                     return Some(Ok(Token {
-                        token: TokenType::Operator(match value {
-                            '+' => nilang_types::nodes::Operator::Add,
-                            '-' => nilang_types::nodes::Operator::Subtract,
-                            '*' => nilang_types::nodes::Operator::Multiply,
-                            '/' => nilang_types::nodes::Operator::Divide,
-                            '%' => nilang_types::nodes::Operator::Modulo,
-                            _ => unreachable!(),
-                        }),
+                        token: TokenType::Operator(nilang_types::nodes::Operator::Add),
+                        start,
+                        end: start,
+                    }));
+                }
+                '-' => {
+                    let start = self.loc;
+                    self.loc.1 += 1;
+                    self.iter.next();
+                    return Some(Ok(Token {
+                        token: TokenType::Operator(nilang_types::nodes::Operator::Subtract),
+                        start,
+                        end: start,
+                    }));
+                }
+                '*' => {
+                    let start = self.loc;
+                    self.loc.1 += 1;
+                    self.iter.next();
+                    return Some(Ok(Token {
+                        token: TokenType::Operator(nilang_types::nodes::Operator::Multiply),
+                        start,
+                        end: start,
+                    }));
+                }
+                '/' => {
+                    let start = self.loc;
+                    self.loc.1 += 1;
+                    self.iter.next();
+                    return Some(Ok(Token {
+                        token: TokenType::Operator(nilang_types::nodes::Operator::Divide),
+                        start,
+                        end: start,
+                    }));
+                }
+                '%' => {
+                    let start = self.loc;
+                    self.loc.1 += 1;
+                    self.iter.next();
+                    return Some(Ok(Token {
+                        token: TokenType::Operator(nilang_types::nodes::Operator::Modulo),
                         start,
                         end: start,
                     }));
                 }
                 '(' => {
                     let start = self.loc;
-
                     self.loc.1 += 1;
-
                     self.iter.next();
                     return Some(Ok(Token {
                         token: TokenType::OpeningParenthesis,
@@ -222,9 +268,7 @@ impl<'a> Iterator for Tokenizer<'a> {
                 }
                 ')' => {
                     let start = self.loc;
-
                     self.loc.1 += 1;
-
                     self.iter.next();
                     return Some(Ok(Token {
                         token: TokenType::ClosingParenthesis,
@@ -234,9 +278,7 @@ impl<'a> Iterator for Tokenizer<'a> {
                 }
                 '{' => {
                     let start = self.loc;
-
                     self.loc.1 += 1;
-
                     self.iter.next();
                     return Some(Ok(Token {
                         token: TokenType::OpeningBrace,
@@ -246,9 +288,7 @@ impl<'a> Iterator for Tokenizer<'a> {
                 }
                 '}' => {
                     let start = self.loc;
-
                     self.loc.1 += 1;
-
                     self.iter.next();
                     return Some(Ok(Token {
                         token: TokenType::ClosingBrace,
@@ -258,9 +298,7 @@ impl<'a> Iterator for Tokenizer<'a> {
                 }
                 '=' => {
                     let start = self.loc;
-
                     self.loc.1 += 1;
-
                     self.iter.next();
                     return Some(Ok(Token {
                         token: TokenType::Equals,
@@ -270,9 +308,7 @@ impl<'a> Iterator for Tokenizer<'a> {
                 }
                 ';' => {
                     let start = self.loc;
-
                     self.loc.1 += 1;
-
                     self.iter.next();
                     return Some(Ok(Token {
                         token: TokenType::Semicolon,
@@ -282,9 +318,7 @@ impl<'a> Iterator for Tokenizer<'a> {
                 }
                 ':' => {
                     let start = self.loc;
-
                     self.loc.1 += 1;
-
                     self.iter.next();
                     return Some(Ok(Token {
                         token: TokenType::Colon,
@@ -294,9 +328,7 @@ impl<'a> Iterator for Tokenizer<'a> {
                 }
                 ',' => {
                     let start = self.loc;
-
                     self.loc.1 += 1;
-
                     self.iter.next();
                     return Some(Ok(Token {
                         token: TokenType::Comma,
