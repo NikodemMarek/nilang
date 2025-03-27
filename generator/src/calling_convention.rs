@@ -64,7 +64,7 @@ impl SystemVAmd64Abi {
 
                 let var = mm.get_name(loc).unwrap().to_string();
                 mm.free(&var);
-                let new_loc = mm.reserve(&var);
+                let new_loc = mm.reserve(&var).unwrap();
                 Some((
                     AssemblyInstruction::Move,
                     vec![new_loc.into(), loc.into()],
@@ -120,7 +120,7 @@ impl CallingConvention for SystemVAmd64Abi {
         let stack_cleanup = [];
 
         let move_result = if let Some(return_temporary) = return_temporary {
-            let return_register = mm.reserve(&return_temporary);
+            let return_register = mm.reserve(&return_temporary).unwrap();
             [(
                 AssemblyInstruction::Move,
                 vec![

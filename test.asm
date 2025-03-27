@@ -10,22 +10,6 @@ _start:
     xorq %rdi, %rdi
     syscall
         
-.globl test
-test:
-
-    # Prologue
-    pushq %rbp
-    movq %rsp, %rbp
-        
-    movq %rdi, %rdi               # Load `p` as argument 0
-
-    # Epilogue
-    # leave
-    movq %rbp, %rsp
-    pop %rbp
-    ret
-        
-
 .globl main
 main:
 
@@ -91,6 +75,22 @@ main:
     call printf                   # Call function `printf`
     movq $0, %rsi                 # Load number '0' into `temp_12`
     movq %rsi, %rax               # Return `temp_12`
+
+    # Epilogue
+    # leave
+    movq %rbp, %rsp
+    pop %rbp
+    ret
+        
+
+.globl test
+test:
+
+    # Prologue
+    pushq %rbp
+    movq %rsp, %rbp
+        
+    movq %rdi, %rdi               # Load `p` as argument 0
 
     # Epilogue
     # leave

@@ -43,7 +43,13 @@ mod tests {
             ExpressionNode::Number(10.),
         )
         .unwrap();
-        assert_eq!(result, [Instruction::LoadNumber("a".into(), 10.)]);
+        assert_eq!(
+            result,
+            [
+                Instruction::Declare("a".into()),
+                Instruction::LoadNumber("a".into(), 10.)
+            ]
+        );
 
         let result = transform_variable_declaration(
             (&FunctionsRef::default(), &TypesRef::default()),
@@ -53,6 +59,12 @@ mod tests {
             ExpressionNode::VariableReference("a".into()),
         )
         .unwrap();
-        assert_eq!(result, &[Instruction::Copy("b".into(), "a".into())]);
+        assert_eq!(
+            result,
+            [
+                Instruction::Declare("b".into()),
+                Instruction::Copy("b".into(), "a".into())
+            ]
+        );
     }
 }

@@ -87,7 +87,7 @@ pub fn copy_all_fields(
             object_fields_from_to(context.1, source, destination, object_type)?
         {
             temporaries.declare_named(source_temporary.clone(), field_type);
-            instructions.push(Instruction::Declare(source_temporary.clone()));
+            instructions.push(Instruction::Declare(destination_temporary.clone()));
             temporaries.access(&source_temporary.clone())?;
             instructions.push(Instruction::Copy(destination_temporary, source_temporary));
         }
@@ -181,7 +181,7 @@ mod tests {
                 Structure {
                     name: "Label".into(),
                     fields: HashMap::from([
-                        ("text".into(), "str".into()),
+                        ("text".into(), "char".into()),
                         ("anchor".into(), "Point".into()),
                     ]),
                 },
@@ -206,7 +206,7 @@ mod tests {
             [
                 ("anchor.x".to_string(), "int".into()),
                 ("anchor.y".to_string(), "int".into()),
-                ("text".to_string(), "str".into()),
+                ("text".to_string(), "char".into()),
             ],
         );
     }

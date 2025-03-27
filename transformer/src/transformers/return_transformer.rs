@@ -47,7 +47,14 @@ mod tests {
             &Type::Int,
         )
         .unwrap();
-        assert_eq!(result, [Instruction::ReturnVariable("x".into())]);
+        assert_eq!(
+            result,
+            [
+                Instruction::Declare("temp_0".into()),
+                Instruction::Copy("temp_0".into(), "x".into()),
+                Instruction::ReturnVariable("temp_0".into())
+            ]
+        );
     }
 
     #[test]
@@ -66,6 +73,13 @@ mod tests {
             &Type::Int,
         )
         .unwrap();
-        assert_eq!(result, [Instruction::ReturnVariable("x.y".into())]);
+        assert_eq!(
+            result,
+            [
+                Instruction::Declare("temp_0".into()),
+                Instruction::Copy("temp_0".into(), "x.y".into()),
+                Instruction::ReturnVariable("temp_0".into())
+            ]
+        );
     }
 }

@@ -78,15 +78,19 @@ mod tests {
             &mut temporaries,
             "original".into(),
             "copy".into(),
-            &Type::Int,
+            &Type::Object("Rect".into()),
         )
         .unwrap();
         assert_eq!(
             instructions,
             vec![
+                Instruction::Declare("copy.end.x".into()),
                 Instruction::Copy("copy.end.x".into(), "original.end.x".into()),
+                Instruction::Declare("copy.end.y".into()),
                 Instruction::Copy("copy.end.y".into(), "original.end.y".into()),
+                Instruction::Declare("copy.start.x".into()),
                 Instruction::Copy("copy.start.x".into(), "original.start.x".into()),
+                Instruction::Declare("copy.start.y".into()),
                 Instruction::Copy("copy.start.y".into(), "original.start.y".into()),
             ],
         );
