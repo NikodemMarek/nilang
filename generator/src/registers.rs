@@ -1,4 +1,4 @@
-pub trait Registers: Clone + PartialEq {
+pub trait Registers: Clone + PartialEq + std::fmt::Debug {
     fn nth(n: usize) -> Option<Self>;
     fn name(&self) -> &'static str;
 }

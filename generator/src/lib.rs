@@ -59,7 +59,7 @@ where
 {
     Ok(match instruction {
         Instruction::Declare(variable) => {
-            mm.reserve(&variable);
+            mm.reserve(&variable)?;
             Vec::new()
         }
         Instruction::FunctionCall(name, arguments, return_temporary) => {

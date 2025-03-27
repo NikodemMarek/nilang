@@ -23,7 +23,18 @@ pub struct MemoryManager<R: Registers> {
 
 impl<R: Registers> MemoryManager<R> {
     pub fn reserve(&mut self, name: &str) -> Result<Location<R>, GeneratorErrors> {
-        let location = self.next_locations.pop().unwrap();
+        let location = self.next_locations.remove(0);
+        self.reserve_location(name, location.clone())?;
+        Ok(location)
+    }
+
+    pub fn reserve_nth_free(
+        &mut self,
+        name: &str,
+        n: usize,
+    ) -> Result<Location<R>, GeneratorErrors> {
+        self.add_n_next_locations(n.saturating_sub(self.next_locations.len() - 1));
+        let location = self.next_locations.remove(n);
         self.reserve_location(name, location.clone())?;
         Ok(location)
     }
@@ -43,7 +54,7 @@ impl<R: Registers> MemoryManager<R> {
         self.reservations.insert(name.into(), location.clone());
 
         if self.next_locations.contains(&location) {
-            self.next_locations.remove(0);
+            self.next_locations.retain(|l| l != &location);
         }
         if self.next_locations.is_empty() {
             self.add_next_location();
@@ -65,7 +76,7 @@ impl<R: Registers> MemoryManager<R> {
 
     fn add_next_location(&mut self) {
         self.next_locations
-            .push(if let Some(register) = self.free_registers.last() {
+            .push(if let Some(register) = self.free_registers.pop() {
                 Location::Register(register.clone())
             } else {
                 self.stack_position += 1;
@@ -74,27 +85,8 @@ impl<R: Registers> MemoryManager<R> {
     }
 
     pub fn add_n_next_locations(&mut self, n: usize) {
-        let mut i = 0;
-        let mut n = n;
-        while i < n {
-            self.next_locations.push(
-                if let Some(register) = self.free_registers.get(self.free_registers.len() - i - 1) {
-                    if self
-                        .next_locations
-                        .contains(&Location::Register(register.clone()))
-                    {
-                        i += 1;
-                        n += 1;
-                        continue;
-                    } else {
-                        Location::Register(register.clone())
-                    }
-                } else {
-                    self.stack_position += 1;
-                    Location::Stack(self.stack_position - 1)
-                },
-            );
-            i += 1;
+        for _ in 0..n {
+            self.add_next_location();
         }
     }
 
@@ -140,7 +132,6 @@ impl Default for MemoryManager<X86Registers> {
                 X86Registers::Rdx,
                 X86Registers::Rcx,
                 X86Registers::Rbx,
-                X86Registers::Rax,
             ],
             next_locations: Vec::from([Location::Register(X86Registers::Rax)]),
             reservations: HashMap::from([
@@ -170,11 +161,7 @@ mod tests {
         fn default() -> Self {
             Self {
                 stack_position: 0,
-                free_registers: vec![
-                    TestRegisters::R(2),
-                    TestRegisters::R(1),
-                    TestRegisters::R(0),
-                ],
+                free_registers: vec![TestRegisters::R(2), TestRegisters::R(1)],
                 next_locations: Vec::from([Location::Register(TestRegisters::R(0))]),
                 reservations: HashMap::new(),
             }
@@ -184,9 +171,9 @@ mod tests {
     #[test]
     fn test_reserve() {
         let mut mm = MemoryManager::default();
-        mm.reserve("a");
-        mm.reserve("b");
-        mm.reserve("c");
+        mm.reserve("a").unwrap();
+        mm.reserve("b").unwrap();
+        mm.reserve("c").unwrap();
 
         assert_eq!(
             mm.reservations,
@@ -197,14 +184,83 @@ mod tests {
             ])
         );
         assert_eq!(mm.next_locations, Vec::from([Location::Stack(0)]));
+
+        let mut mm = MemoryManager::default();
+        mm.reserve("a").unwrap();
+        mm.add_n_next_locations(4);
+        mm.reserve("b").unwrap();
+
+        assert_eq!(
+            mm.reservations,
+            HashMap::from([
+                ("a".into(), Location::Register(TestRegisters::R(0))),
+                ("b".into(), Location::Register(TestRegisters::R(1)))
+            ])
+        );
+        assert_eq!(
+            mm.next_locations,
+            Vec::from([
+                Location::Register(TestRegisters::R(2)),
+                Location::Stack(0),
+                Location::Stack(1),
+                Location::Stack(2),
+            ])
+        );
+    }
+
+    #[test]
+    fn test_reserve_nth_free() {
+        let mut mm = MemoryManager::default();
+        mm.reserve("a").unwrap();
+        mm.reserve_nth_free("b", 3).unwrap();
+
+        assert_eq!(
+            mm.reservations,
+            HashMap::from([
+                ("a".into(), Location::Register(TestRegisters::R(0))),
+                ("b".into(), Location::Stack(1)),
+            ])
+        );
+        assert_eq!(
+            mm.next_locations,
+            Vec::from([
+                Location::Register(TestRegisters::R(1)),
+                Location::Register(TestRegisters::R(2)),
+                Location::Stack(0)
+            ])
+        );
+
+        let mut mm = MemoryManager::default();
+        mm.reserve("a").unwrap();
+        mm.reserve_nth_free("b", 2).unwrap();
+        mm.reserve_nth_free("c", 1).unwrap();
+        mm.reserve_nth_free("d", 3).unwrap();
+
+        assert_eq!(
+            mm.reservations,
+            HashMap::from([
+                ("a".into(), Location::Register(TestRegisters::R(0))),
+                ("b".into(), Location::Stack(0)),
+                ("c".into(), Location::Register(TestRegisters::R(2))),
+                ("d".into(), Location::Stack(3)),
+            ])
+        );
+        assert_eq!(
+            mm.next_locations,
+            Vec::from([
+                Location::Register(TestRegisters::R(1)),
+                Location::Stack(1),
+                Location::Stack(2),
+            ])
+        );
     }
 
     #[test]
     fn test_free() {
         let mut mm = MemoryManager::default();
-        mm.reserve("a");
-        mm.reserve("b");
-        mm.reserve("c");
+        mm.reserve("a").unwrap();
+        mm.reserve("b").unwrap();
+        mm.reserve("c").unwrap();
 
         mm.free("b");
 
@@ -220,6 +276,37 @@ mod tests {
         assert_eq!(
             mm.next_locations,
             Vec::from([Location::Register(TestRegisters::R(1)), Location::Stack(0)])
+        );
+    }
+
+    #[test]
+    fn test_add_next_location() {
+        let mut mm = super::MemoryManager::default();
+        mm.add_next_location();
+        mm.add_next_location();
+
+        assert_eq!(
+            mm.next_locations,
+            Vec::from([
+                Location::Register(TestRegisters::R(0)),
+                Location::Register(TestRegisters::R(1)),
+                Location::Register(TestRegisters::R(2))
+            ])
+        );
+    }
+
+    #[test]
+    fn test_add_n_next_locations() {
+        let mut mm = super::MemoryManager::default();
+        mm.add_n_next_locations(3);
+        assert_eq!(
+            mm.next_locations,
+            Vec::from([
+                Location::Register(TestRegisters::R(0)),
+                Location::Register(TestRegisters::R(1)),
+                Location::Register(TestRegisters::R(2)),
+                Location::Stack(0)
+            ])
         );
     }
 
@@ -242,7 +329,7 @@ mod tests {
     #[test]
     fn test_get_location() {
         let mut mm = super::MemoryManager::default();
-        mm.reserve("a");
+        mm.reserve("a").unwrap();
 
         assert_eq!(
             mm.get_location("a"),
@@ -254,7 +341,7 @@ mod tests {
     #[test]
     fn test_get_name() {
         let mut mm = super::MemoryManager::default();
-        mm.reserve("a");
+        mm.reserve("a").unwrap();
 
         assert_eq!(
             mm.get_name(&Location::Register(TestRegisters::R(0))),
@@ -266,7 +353,7 @@ mod tests {
     #[test]
     fn test_is_taken() {
         let mut mm = super::MemoryManager::default();
-        mm.reserve("a");
+        mm.reserve("a").unwrap();
 
         assert!(mm.is_taken(&Location::Register(TestRegisters::R(0))));
         assert!(!mm.is_taken(&Location::Register(TestRegisters::R(1))));
