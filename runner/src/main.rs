@@ -32,7 +32,7 @@ fn compile(code: &str) -> Box<str> {
         }
     };
 
-    let transformed = match nilang_transformer::transform(parsed) {
+    let transformed = match nilang_transformer::transform(&parsed.0, &parsed.1) {
         Ok(transformed) => transformed,
         Err(err) => {
             panic!("{}", err);

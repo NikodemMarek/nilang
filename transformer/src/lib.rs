@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use errors::TransformerErrors;
 use nilang_types::{
     instructions::Instruction,
-    nodes::{FunctionDeclaration, Program, Structure},
+    nodes::{FunctionDeclaration, StructureDeclaration},
 };
 use temporaries::Temporaries;
 use transformers::object_fields_recursive;
@@ -20,14 +20,14 @@ impl TypesRef {
     }
 }
 
-impl From<HashMap<Box<str>, Structure>> for TypesRef {
-    fn from(structures: HashMap<Box<str>, Structure>) -> Self {
+impl From<&[StructureDeclaration]> for TypesRef {
+    fn from(structures: &[StructureDeclaration]) -> Self {
         TypesRef(
             structures
-                .into_iter()
-                .map(|(_, Structure { name, fields })| {
+                .iter()
+                .map(|StructureDeclaration { name, fields }| {
                     (
-                        name,
+                        name.clone(),
                         fields.iter().map(|(k, v)| (k.clone(), v.into())).collect(),
                     )
                 })
@@ -89,22 +89,20 @@ impl FunctionsRef {
     }
 }
 
-impl From<HashMap<Box<str>, FunctionDeclaration>> for FunctionsRef {
-    fn from(functions: HashMap<Box<str>, FunctionDeclaration>) -> Self {
+impl From<&[FunctionDeclaration]> for FunctionsRef {
+    fn from(functions: &[FunctionDeclaration]) -> Self {
         let mut functions = FunctionsRef(
             functions
-                .into_iter()
+                .iter()
                 .map(
-                    |(
-                        name,
-                        FunctionDeclaration {
-                            return_type,
-                            parameters,
-                            ..
-                        },
-                    )| {
+                    |FunctionDeclaration {
+                         return_type,
+                         parameters,
+                         name,
+                         ..
+                     }| {
                         (
-                            name,
+                            name.clone(),
                             (
                                 return_type.into(),
                                 parameters
@@ -132,51 +130,41 @@ impl From<HashMap<Box<str>, FunctionDeclaration>> for FunctionsRef {
 }
 
 pub fn transform(
-    Program {
-        structures,
-        functions,
-    }: Program,
+    functions: &[FunctionDeclaration],
+    structures: &[StructureDeclaration],
 ) -> Result<HashMap<Box<str>, Vec<Instruction>>, TransformerErrors> {
     let types_ref = structures.into();
-    let functions_ref = functions.clone().into();
-
-    let mut functions_raw_body = HashMap::new();
-    for (function_name, function_declaration) in functions {
-        let nilang_types::nodes::FunctionDeclaration {
-            body,
-            return_type,
-            parameters,
-            ..
-        } = function_declaration;
-
-        functions_raw_body.insert(function_name, (return_type, parameters, body));
-    }
+    let functions_ref = functions.into();
 
     let mut funcs = HashMap::new();
-    for (function_name, (return_type, parameters, function_body)) in
-        functions_raw_body.clone().iter()
+    for FunctionDeclaration {
+        body,
+        return_type,
+        parameters,
+        name,
+    } in functions
     {
-        let mut body = Vec::new();
+        let mut b = Vec::new();
         let mut temporaries = Temporaries::default();
         let mut i = 0;
         for (parameter_name, parameter_type) in parameters.iter() {
-            let parameter_type: Type = parameter_type.into();
+            let parameter_type = parameter_type.into();
             if let Type::Object(object_type) = &parameter_type {
                 for (field, field_type) in object_fields_recursive(&types_ref, object_type)? {
                     let field = Into::<Box<str>>::into(format!("{}.{}", parameter_name, field));
                     temporaries.declare_named(field.clone(), field_type);
-                    body.push(Instruction::LoadArgument(i, field));
+                    b.push(Instruction::LoadArgument(i, field));
                     i += 1;
                 }
             } else {
                 temporaries.declare_named(parameter_name.clone(), parameter_type);
-                body.push(Instruction::LoadArgument(i, parameter_name.clone()));
+                b.push(Instruction::LoadArgument(i, parameter_name.clone()));
                 i += 1;
             }
         }
 
-        for node in function_body.iter() {
-            body.append(&mut transformers::transform_statement(
+        for node in body.iter() {
+            b.append(&mut transformers::transform_statement(
                 (&functions_ref, &types_ref),
                 node.clone(),
                 &return_type.into(),
@@ -184,7 +172,7 @@ pub fn transform(
             )?)
         }
 
-        funcs.insert(function_name.clone(), body);
+        funcs.insert(name.clone(), b);
     }
 
     Ok(funcs)

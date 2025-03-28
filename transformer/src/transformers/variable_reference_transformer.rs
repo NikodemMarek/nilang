@@ -29,7 +29,7 @@ pub fn transform_variable_reference(
 mod tests {
     use std::collections::HashMap;
 
-    use nilang_types::{instructions::Instruction, nodes::Structure};
+    use nilang_types::{instructions::Instruction, nodes::StructureDeclaration};
 
     use crate::{
         temporaries::Temporaries,
@@ -39,35 +39,29 @@ mod tests {
 
     #[test]
     fn test_transform_variable_reference() {
-        let types_ref = TypesRef::from(HashMap::from([
-            (
-                "Point".into(),
-                Structure {
+        let types_ref = TypesRef::from(
+            [
+                StructureDeclaration {
                     name: "Point".into(),
                     fields: HashMap::from([("x".into(), "int".into()), ("y".into(), "int".into())]),
                 },
-            ),
-            (
-                "Rect".into(),
-                Structure {
+                StructureDeclaration {
                     name: "Rect".into(),
                     fields: HashMap::from([
                         ("start".into(), "Point".into()),
                         ("end".into(), "Point".into()),
                     ]),
                 },
-            ),
-            (
-                "Label".into(),
-                Structure {
+                StructureDeclaration {
                     name: "Label".into(),
                     fields: HashMap::from([
                         ("text".into(), "str".into()),
                         ("anchor".into(), "Point".into()),
                     ]),
                 },
-            ),
-        ]));
+            ]
+            .as_ref(),
+        );
 
         let mut temporaries = Temporaries::default();
         temporaries.declare_named("original".into(), "Rect".into());

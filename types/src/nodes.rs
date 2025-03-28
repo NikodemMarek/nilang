@@ -1,12 +1,6 @@
 use std::{collections::HashMap, fmt::Debug};
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Program {
-    pub functions: HashMap<Box<str>, FunctionDeclaration>,
-    pub structures: HashMap<Box<str>, Structure>,
-}
-
-#[derive(Debug, Clone, PartialEq)]
 pub struct FunctionDeclaration {
     pub name: Box<str>,
     pub parameters: Box<[Parameter]>,
@@ -15,7 +9,7 @@ pub struct FunctionDeclaration {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Structure {
+pub struct StructureDeclaration {
     pub name: Box<str>,
     pub fields: HashMap<Box<str>, Box<str>>, // name, type
 }

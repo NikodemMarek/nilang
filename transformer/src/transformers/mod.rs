@@ -152,41 +152,35 @@ pub fn object_fields_recursive(
 mod tests {
     use std::collections::HashMap;
 
-    use nilang_types::nodes::Structure;
+    use nilang_types::nodes::StructureDeclaration;
 
     use crate::{transformers::object_fields_recursive, TypesRef};
 
     #[test]
     fn test_object_fields_recursive() {
-        let types_ref = TypesRef::from(HashMap::from([
-            (
-                "Point".into(),
-                Structure {
+        let types_ref = TypesRef::from(
+            [
+                StructureDeclaration {
                     name: "Point".into(),
                     fields: HashMap::from([("x".into(), "int".into()), ("y".into(), "int".into())]),
                 },
-            ),
-            (
-                "Rect".into(),
-                Structure {
+                StructureDeclaration {
                     name: "Rect".into(),
                     fields: HashMap::from([
                         ("start".into(), "Point".into()),
                         ("end".into(), "Point".into()),
                     ]),
                 },
-            ),
-            (
-                "Label".into(),
-                Structure {
+                StructureDeclaration {
                     name: "Label".into(),
                     fields: HashMap::from([
                         ("text".into(), "char".into()),
                         ("anchor".into(), "Point".into()),
                     ]),
                 },
-            ),
-        ]));
+            ]
+            .as_ref(),
+        );
 
         let mut result = object_fields_recursive(&types_ref, "Rect").unwrap();
         result.sort();

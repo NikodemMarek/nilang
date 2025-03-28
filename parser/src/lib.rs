@@ -1,9 +1,9 @@
-use std::{collections::HashMap, usize};
+use std::usize;
 
 use assuming_iterator::PeekableAssumingIterator;
 use errors::{LexerErrors, ParserErrors};
 use nilang_types::{
-    nodes::Program,
+    nodes::{FunctionDeclaration, StructureDeclaration},
     tokens::{Keyword, Token, TokenType},
 };
 
@@ -12,11 +12,11 @@ mod parsers;
 
 pub fn parse(
     tokens: impl Iterator<Item = Result<Token, LexerErrors>>,
-) -> Result<Program, ParserErrors> {
+) -> Result<(Vec<FunctionDeclaration>, Vec<StructureDeclaration>), ParserErrors> {
     let mut tokens = tokens.peekable();
 
-    let mut structures = HashMap::new();
-    let mut functions = HashMap::new();
+    let mut structures = Vec::new();
+    let mut functions = Vec::new();
     while tokens.peek().is_some() {
         if let TokenType::Keyword(value) = &tokens.peek_valid()?.token {
             match value {
@@ -24,11 +24,11 @@ pub fn parse(
                     let function = parsers::function_definition_parser::parse_function_definition(
                         &mut tokens,
                     )?;
-                    functions.insert(function.name.clone(), function);
+                    functions.push(function);
                 }
                 Keyword::Structure => {
                     let structure = parsers::structure_parser::parse_structure(&mut tokens)?;
-                    structures.insert(structure.name.clone(), structure);
+                    structures.push(structure);
                 }
                 Keyword::Return | Keyword::Variable => {
                     return Err(ParserErrors::ExpectedTokens {
@@ -53,8 +53,5 @@ pub fn parse(
         }
     }
 
-    Ok(Program {
-        structures,
-        functions,
-    })
+    Ok((functions, structures))
 }

@@ -4,7 +4,7 @@ use errors::GeneratorErrors;
 
 use crate::{
     assembly_flavour::{AssemblyInstruction, AssemblyInstructionParameter, FullInstruction},
-    memory_manager::{free_locations, swap, Location, MemoryManager},
+    memory_manager::{free_locations, Location, MemoryManager},
     registers::{Registers, X86Registers},
 };
 
