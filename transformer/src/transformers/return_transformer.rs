@@ -1,3 +1,5 @@
+use std::iter::once;
+
 use errors::TransformerErrors;
 use nilang_types::nodes::ExpressionNode;
 
@@ -12,7 +14,7 @@ pub fn transform_return(
     node: ExpressionNode,
 
     return_type: &Type,
-) -> Result<Vec<Instruction>, TransformerErrors> {
+) -> Result<Box<dyn Iterator<Item = Instruction>>, TransformerErrors> {
     let variable_name = temporaries.declare(return_type.clone());
     let instructions = transform_expression(
         context,
@@ -23,12 +25,11 @@ pub fn transform_return(
     )?;
 
     temporaries.access(&variable_name)?;
-    Ok([
-        vec![Instruction::Declare(variable_name.clone())],
-        instructions,
-        vec![Instruction::ReturnVariable(variable_name)],
-    ]
-    .concat())
+    Ok(Box::new(
+        once(Instruction::Declare(variable_name.clone()))
+            .chain(instructions)
+            .chain(once(Instruction::ReturnVariable(variable_name))),
+    ))
 }
 
 #[cfg(test)]

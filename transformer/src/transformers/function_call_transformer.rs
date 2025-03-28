@@ -1,3 +1,5 @@
+use std::iter::once;
+
 use errors::TransformerErrors;
 use nilang_types::nodes::ExpressionNode;
 
@@ -14,7 +16,7 @@ pub fn transform_function_call(
 
     result: Box<str>,
     r#type: &Type,
-) -> Result<Vec<Instruction>, TransformerErrors> {
+) -> Result<Box<dyn Iterator<Item = Instruction>>, TransformerErrors> {
     let function_parameters = context.0.get_parameters(&name)?;
     let mut function_parameters = function_parameters.iter();
 
@@ -25,18 +27,20 @@ pub fn transform_function_call(
         if let Some((_, argument_type)) = function_parameters.next() {
             let argument_temporary = temporaries.declare(argument_type.clone());
             instructions.push(Instruction::Declare(argument_temporary.clone()));
-            instructions.append(&mut transform_expression(
-                context,
-                temporaries,
-                node.clone(),
-                argument_temporary.clone(),
-                &argument_type.clone(),
-            )?);
+            instructions.append(
+                &mut transform_expression(
+                    context,
+                    temporaries,
+                    node.clone(),
+                    argument_temporary.clone(),
+                    &argument_type.clone(),
+                )?
+                .collect(),
+            );
 
             if let Type::Object(object_type) = argument_type {
                 arguments_names.append(
                     &mut object_fields_recursive(context.1, object_type)?
-                        .iter()
                         .map(|(field, _)| format!("{}.{}", argument_temporary, field).into())
                         .collect(),
                 );
@@ -52,14 +56,15 @@ pub fn transform_function_call(
         }
     }
 
-    instructions.push(Instruction::FunctionCall(
-        name,
-        arguments_names.into(),
-        if let Type::Void = r#type {
-            None
-        } else {
-            Some(result.clone())
-        },
-    ));
-    Ok(instructions.to_vec())
+    Ok(Box::new(instructions.into_iter().chain(once(
+        Instruction::FunctionCall(
+            name,
+            arguments_names.into(),
+            if let Type::Void = r#type {
+                None
+            } else {
+                Some(result.clone())
+            },
+        ),
+    ))))
 }

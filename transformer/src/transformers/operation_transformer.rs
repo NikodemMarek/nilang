@@ -1,3 +1,5 @@
+use std::iter::once;
+
 use errors::TransformerErrors;
 use nilang_types::{
     instructions::Instruction,
@@ -18,7 +20,7 @@ pub fn transform_operation(
 
     result: Box<str>,
     r#type: &Type,
-) -> Result<Vec<Instruction>, TransformerErrors> {
+) -> Result<Box<dyn Iterator<Item = Instruction>>, TransformerErrors> {
     if *r#type != Type::Int {
         return Err(TransformerErrors::TypeMismatch {
             expected: "int".into(),
@@ -35,34 +37,21 @@ pub fn transform_operation(
 
     temporaries.access(&a_temporary)?;
     temporaries.access(&b_temporary)?;
-    Ok([
-        vec![Instruction::Declare(a_temporary.clone())],
-        a_instructions,
-        vec![Instruction::Declare(b_temporary.clone())],
-        b_instructions,
-        match operator {
-            Operator::Add => vec![Instruction::AddVariables(result, a_temporary, b_temporary)],
-            Operator::Subtract => vec![Instruction::SubtractVariables(
-                result,
-                a_temporary,
-                b_temporary,
-            )],
-            Operator::Multiply => vec![Instruction::MultiplyVariables(
-                result,
-                a_temporary,
-                b_temporary,
-            )],
-            Operator::Divide => vec![Instruction::DivideVariables(
-                result,
-                a_temporary,
-                b_temporary,
-            )],
-            Operator::Modulo => vec![Instruction::ModuloVariables(
-                result,
-                a_temporary,
-                b_temporary,
-            )],
-        },
-    ]
-    .concat())
+    Ok(Box::new(
+        once(Instruction::Declare(a_temporary.clone()))
+            .chain(a_instructions)
+            .chain(once(Instruction::Declare(b_temporary.clone())))
+            .chain(b_instructions)
+            .chain(once(match operator {
+                Operator::Add => Instruction::AddVariables(result, a_temporary, b_temporary),
+                Operator::Subtract => {
+                    Instruction::SubtractVariables(result, a_temporary, b_temporary)
+                }
+                Operator::Multiply => {
+                    Instruction::MultiplyVariables(result, a_temporary, b_temporary)
+                }
+                Operator::Divide => Instruction::DivideVariables(result, a_temporary, b_temporary),
+                Operator::Modulo => Instruction::ModuloVariables(result, a_temporary, b_temporary),
+            })),
+    ))
 }

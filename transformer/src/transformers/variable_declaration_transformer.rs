@@ -1,3 +1,5 @@
+use std::iter::once;
+
 use errors::TransformerErrors;
 use nilang_types::nodes::ExpressionNode;
 
@@ -12,20 +14,13 @@ pub fn transform_variable_declaration(
     name: Box<str>,
     r#type: &Type,
     node: ExpressionNode,
-) -> Result<Vec<Instruction>, TransformerErrors> {
+) -> Result<Box<dyn Iterator<Item = Instruction>>, TransformerErrors> {
     temporaries.declare_named(name.clone(), r#type.clone());
-
-    let mut instructions = vec![Instruction::Declare(name.clone())];
-    instructions.append(&mut transform_expression(
-        context,
-        temporaries,
-        node,
-        name.clone(),
-        r#type,
-    )?);
-
     temporaries.access(&name)?;
-    Ok(instructions)
+
+    Ok(Box::new(once(Instruction::Declare(name.clone())).chain(
+        transform_expression(context, temporaries, node, name, r#type)?,
+    )))
 }
 
 #[cfg(test)]

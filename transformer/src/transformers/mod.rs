@@ -6,6 +6,8 @@ mod return_transformer;
 mod variable_declaration_transformer;
 mod variable_reference_transformer;
 
+use std::iter::once;
+
 use errors::TransformerErrors;
 
 use field_access_transformator::transform_field_access;
@@ -24,7 +26,7 @@ pub fn transform_statement(
     node: StatementNode,
     return_type: &Type,
     temporaries: &mut Temporaries,
-) -> Result<Vec<Instruction>, TransformerErrors> {
+) -> Result<Box<dyn Iterator<Item = Instruction>>, TransformerErrors> {
     match node {
         StatementNode::Return(node) => transform_return(context, temporaries, *node, return_type),
         StatementNode::VariableDeclaration {
@@ -51,10 +53,12 @@ pub fn transform_expression(
 
     result: Box<str>,
     r#type: &Type,
-) -> Result<Vec<Instruction>, TransformerErrors> {
+) -> Result<Box<dyn Iterator<Item = Instruction>>, TransformerErrors> {
     match node {
-        ExpressionNode::Number(number) => Ok(vec![Instruction::LoadNumber(result, number)]),
-        ExpressionNode::Char(char) => Ok(vec![Instruction::LoadChar(result, char)]),
+        ExpressionNode::Number(number) => {
+            Ok(Box::new(once(Instruction::LoadNumber(result, number))))
+        }
+        ExpressionNode::Char(char) => Ok(Box::new(once(Instruction::LoadChar(result, char)))),
         ExpressionNode::String(_) => todo!(),
         ExpressionNode::Object { r#type, fields } => {
             transform_object(context, temporaries, fields, result, &r#type.into())
@@ -80,7 +84,7 @@ pub fn copy_all_fields(
     source: Box<str>,
     destination: Box<str>,
     object_type: &Type,
-) -> Result<Vec<Instruction>, TransformerErrors> {
+) -> Result<Box<dyn Iterator<Item = Instruction>>, TransformerErrors> {
     if let Type::Object(object_type) = object_type {
         let mut instructions = Vec::new();
         for (destination_temporary, source_temporary, field_type) in
@@ -91,10 +95,10 @@ pub fn copy_all_fields(
             temporaries.access(&source_temporary.clone())?;
             instructions.push(Instruction::Copy(destination_temporary, source_temporary));
         }
-        return Ok(instructions);
+        return Ok(Box::new(instructions.into_iter()));
     }
 
-    Ok(vec![Instruction::Copy(destination, source)])
+    Ok(Box::new(once(Instruction::Copy(destination, source))))
 }
 
 pub fn object_fields_from_to(
@@ -106,7 +110,6 @@ pub fn object_fields_from_to(
     object_type: &str,
 ) -> Result<Vec<(Box<str>, Box<str>, Type)>, TransformerErrors> {
     Ok(object_fields_recursive(context, object_type)?
-        .iter()
         .map(|(field, field_type)| {
             let destination_temporary = <Box<str>>::from(format!("{}.{}", destination, field));
             let source_temporary = <Box<str>>::from(format!("{}.{}", source, field));
@@ -119,7 +122,7 @@ pub fn object_fields_recursive(
     context: &TypesRef,
 
     object_type: &str,
-) -> Result<Vec<(String, Type)>, TransformerErrors> {
+) -> Result<Box<dyn Iterator<Item = (String, Type)>>, TransformerErrors> {
     let fields_map = if let Some(fields) = context.get_fields(object_type) {
         fields
     } else {
@@ -131,11 +134,8 @@ pub fn object_fields_recursive(
     let mut fields = Vec::new();
     for (field, field_type) in fields_map {
         if let Type::Object(field_type) = field_type {
-            let v = object_fields_recursive(context, field_type)?;
-
             fields.append(
-                &mut v
-                    .iter()
+                &mut object_fields_recursive(context, field_type)?
                     .map(|(subfield, r#type)| (format!("{}.{}", field, subfield), r#type.clone()))
                     .collect(),
             );
@@ -145,7 +145,7 @@ pub fn object_fields_recursive(
     }
 
     fields.sort();
-    Ok(fields)
+    Ok(Box::new(fields.into_iter()))
 }
 
 #[cfg(test)]

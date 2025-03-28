@@ -15,20 +15,18 @@ pub fn transform_object(
 
     result: Box<str>,
     r#type: &Type,
-) -> Result<Vec<Instruction>, TransformerErrors> {
+) -> Result<Box<dyn Iterator<Item = Instruction>>, TransformerErrors> {
     let mut instructions = Vec::new();
     for (field, value) in fields.iter() {
         let field_temp = <Box<str>>::from(format!("{}.{}", result, field));
         temporaries.declare_named(field_temp.clone(), r#type.clone());
 
         instructions.push(Instruction::Declare(field_temp.clone()));
-        instructions.append(&mut transform_expression(
-            context,
-            temporaries,
-            value.clone(),
-            field_temp,
-            r#type,
-        )?);
+        instructions.append(
+            &mut transform_expression(context, temporaries, value.clone(), field_temp, r#type)?
+                .collect(),
+        );
     }
-    Ok(instructions)
+
+    Ok(Box::new(instructions.into_iter()))
 }

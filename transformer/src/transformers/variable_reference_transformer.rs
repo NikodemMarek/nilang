@@ -12,7 +12,7 @@ pub fn transform_variable_reference(
     variable: Box<str>,
     result: Box<str>,
     r#type: &Type,
-) -> Result<Vec<Instruction>, TransformerErrors> {
+) -> Result<Box<dyn Iterator<Item = Instruction>>, TransformerErrors> {
     let source_type = temporaries.type_of(&variable)?.to_owned();
 
     if r#type != &source_type {
