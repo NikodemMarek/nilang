@@ -31,43 +31,32 @@ impl<R: Registers> AssemblyFlavour<R> for AtAndTFlavour {
         parameters: &[AssemblyInstructionParameter<R>],
         comment: &str,
     ) -> String {
-        asm_with_comment(
-            &match instruction {
-                AssemblyInstruction::Move => format!(
-                    "movq {}, {}",
-                    Self::generate_parameter(&parameters[1]),
-                    Self::generate_parameter(&parameters[0])
-                ),
-                AssemblyInstruction::Swap => format!(
-                    "xchgq {}, {}",
-                    Self::generate_parameter(&parameters[0]),
-                    Self::generate_parameter(&parameters[1])
-                ),
-                AssemblyInstruction::Call => {
-                    format!("call {}", Self::generate_parameter(&parameters[0]))
-                }
-                AssemblyInstruction::Add => format!(
-                    "addq {}, {}",
-                    Self::generate_parameter(&parameters[1]),
-                    Self::generate_parameter(&parameters[0])
-                ),
-                AssemblyInstruction::Sub => format!(
-                    "subq {}, {}",
-                    Self::generate_parameter(&parameters[1]),
-                    Self::generate_parameter(&parameters[0])
-                ),
-                AssemblyInstruction::Mul => format!(
-                    "imulq {}, {}",
-                    Self::generate_parameter(&parameters[1]),
-                    Self::generate_parameter(&parameters[0])
-                ),
-                AssemblyInstruction::Div => {
-                    format!("idivq {}", Self::generate_parameter(&parameters[0]))
-                }
-            },
-            comment,
-        )
-        .into()
+        let parameters = parameters
+            .iter()
+            .map(Self::generate_parameter)
+            .collect::<Vec<_>>();
+
+        let instruction = match instruction {
+            AssemblyInstruction::Move => {
+                instruction_with_arguments("movq", &[&parameters[1], &parameters[0]])
+            }
+            AssemblyInstruction::Swap => {
+                instruction_with_arguments("xchgq", &[&parameters[0], &parameters[1]])
+            }
+            AssemblyInstruction::Call => instruction_with_arguments("call", &[&parameters[0]]),
+            AssemblyInstruction::Add => {
+                instruction_with_arguments("addq", &[&parameters[1], &parameters[0]])
+            }
+            AssemblyInstruction::Sub => {
+                instruction_with_arguments("subq", &[&parameters[1], &parameters[0]])
+            }
+            AssemblyInstruction::Mul => {
+                instruction_with_arguments("imulq", &[&parameters[1], &parameters[0]])
+            }
+            AssemblyInstruction::Div => instruction_with_arguments("idivq", &[&parameters[0]]),
+        };
+
+        asm_with_comment(&instruction, comment).into()
     }
 
     fn generate_program(functions: &[Box<str>]) -> Box<str> {
@@ -127,6 +116,10 @@ _start:
         )
         .into()
     }
+}
+
+fn instruction_with_arguments(instruction: &str, arguments: &[&str]) -> Box<str> {
+    format!("{} {}", instruction, arguments.join(", ")).into()
 }
 
 fn asm_with_comment(asm: &str, comment: &str) -> Box<str> {

@@ -37,23 +37,28 @@ fn compile(code: &str) -> Box<str> {
 
     let assembly = functions
         .iter()
-        .map(
-            |function| match nilang_transformer::transform_function(&context, function) {
-                Ok(instructions) => (function.name.clone(), instructions),
-                Err(err) => {
-                    panic!("{}", err);
-                }
-            },
-        )
+        .map(|function| {
+            (
+                function.name.clone(),
+                nilang_transformer::transform_function(&context, function),
+            )
+        })
+        .map(|(name, result)| match result {
+            Ok(asm) => (name, asm),
+            Err(err) => {
+                panic!("{}", err);
+            }
+        })
         .map(|(name, instructions)| {
-            match nilang_generator::generate_function::<SystemVAmd64Abi, AtAndTFlavour>(
+            nilang_generator::generate_function::<SystemVAmd64Abi, AtAndTFlavour>(
                 name,
                 instructions,
-            ) {
-                Ok(generated) => generated,
-                Err(err) => {
-                    panic!("{}", err);
-                }
+            )
+        })
+        .map(|result| match result {
+            Ok(asm) => asm,
+            Err(err) => {
+                panic!("{}", err);
             }
         });
 
