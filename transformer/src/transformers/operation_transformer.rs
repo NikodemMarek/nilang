@@ -23,15 +23,15 @@ pub fn transform_operation(
 ) -> Result<Box<dyn Iterator<Item = Instruction>>, TransformerErrors> {
     if *r#type != Type::Int {
         return Err(TransformerErrors::TypeMismatch {
-            expected: "int".into(),
-            found: r#type.into(),
+            expected: Type::Int,
+            found: r#type.clone(),
         });
     }
 
-    let a_temporary = temporaries.declare("int".into());
+    let a_temporary = temporaries.declare(r#type.clone());
     let a_instructions =
         transform_expression(context, temporaries, a, a_temporary.clone(), r#type)?;
-    let b_temporary = temporaries.declare("int".into());
+    let b_temporary = temporaries.declare(r#type.clone());
     let b_instructions =
         transform_expression(context, temporaries, b, b_temporary.clone(), r#type)?;
 

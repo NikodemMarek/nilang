@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use errors::TransformerErrors;
 use nilang_types::{
     instructions::Instruction,
-    nodes::{FunctionDeclaration, StatementNode, StructureDeclaration},
+    nodes::{FunctionDeclaration, StatementNode, StructureDeclaration, Type},
 };
 use temporaries::Temporaries;
 use transformers::object_fields_recursive;
@@ -25,55 +25,9 @@ impl From<&[StructureDeclaration]> for TypesRef {
         TypesRef(
             structures
                 .iter()
-                .map(|StructureDeclaration { name, fields }| {
-                    (
-                        name.clone(),
-                        fields.iter().map(|(k, v)| (k.clone(), v.into())).collect(),
-                    )
-                })
+                .map(|StructureDeclaration { name, fields }| (name.clone(), fields.clone()))
                 .collect(),
         )
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-enum Type {
-    Void,
-    Int,
-    Char,
-    Object(Box<str>),
-}
-
-impl<T: ToString> From<T> for Type {
-    fn from(r#type: T) -> Self {
-        match r#type.to_string().as_str() {
-            "void" => Type::Void,
-            "int" => Type::Int,
-            "char" => Type::Char,
-            r#type => Type::Object(r#type.into()),
-        }
-    }
-}
-
-impl From<Type> for Box<str> {
-    fn from(val: Type) -> Self {
-        match val {
-            Type::Void => "void".into(),
-            Type::Int => "int".into(),
-            Type::Char => "char".into(),
-            Type::Object(object) => object,
-        }
-    }
-}
-
-impl From<&Type> for Box<str> {
-    fn from(val: &Type) -> Self {
-        match val {
-            Type::Void => "void".into(),
-            Type::Int => "int".into(),
-            Type::Char => "char".into(),
-            Type::Object(object) => object.clone(),
-        }
     }
 }
 
@@ -104,10 +58,10 @@ impl From<&[FunctionDeclaration]> for FunctionsRef {
                         (
                             name.clone(),
                             (
-                                return_type.into(),
+                                return_type.clone(),
                                 parameters
                                     .iter()
-                                    .map(|(name, r#type)| (name.clone(), r#type.into()))
+                                    .map(|(name, r#type)| (name.clone(), r#type.clone()))
                                     .collect(),
                             ),
                         )
@@ -152,11 +106,11 @@ pub fn transform(
             &mut temporaries,
             parameters
                 .iter()
-                .map(|(name, r#type)| (name.clone(), r#type.into()))
+                .map(|(name, r#type)| (name.clone(), r#type.clone()))
                 .collect::<Vec<_>>()
                 .as_slice(),
         )?;
-        let body = transform_body(context, &mut temporaries, body, &return_type.into())?;
+        let body = transform_body(context, &mut temporaries, body, &return_type)?;
 
         funcs.insert(name.clone(), parameters.chain(body).collect());
     }

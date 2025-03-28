@@ -1,4 +1,5 @@
 use colored::Colorize;
+use nilang_types::nodes::Type;
 
 #[derive(Debug, Clone)]
 pub enum TransformerErrors {
@@ -6,8 +7,8 @@ pub enum TransformerErrors {
         name: Box<str>,
     },
     TypeMismatch {
-        expected: Box<str>,
-        found: Box<str>,
+        expected: Type,
+        found: Type,
     },
     FunctionNotFound {
         name: Box<str>,
@@ -33,8 +34,19 @@ impl std::fmt::Display for TransformerErrors {
                 }
                 TransformerErrors::TypeMismatch { expected, found } => {
                     format!(
-                        "Type mismatch: expected `{}`, received `{}`",
-                        expected, found
+                        "Type mismatch: expected `{}`, found `{}`",
+                        match expected {
+                            Type::Int => "int",
+                            Type::Void => "void",
+                            Type::Char => "char",
+                            Type::Object(name) => name,
+                        },
+                        match found {
+                            Type::Int => "int",
+                            Type::Void => "void",
+                            Type::Char => "char",
+                            Type::Object(name) => name,
+                        }
                     )
                     .as_str()
                     .red()

@@ -17,7 +17,7 @@ pub fn transform_variable_reference(
 
     if r#type != &source_type {
         return Err(TransformerErrors::TypeMismatch {
-            expected: r#type.into(),
+            expected: r#type.clone(),
             found: source_type.into(),
         });
     }

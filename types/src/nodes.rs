@@ -3,15 +3,15 @@ use std::{collections::HashMap, fmt::Debug};
 #[derive(Debug, Clone, PartialEq)]
 pub struct FunctionDeclaration {
     pub name: Box<str>,
-    pub parameters: Box<[Parameter]>,
-    pub return_type: Box<str>,
+    pub parameters: Box<[(Box<str>, Type)]>,
+    pub return_type: Type,
     pub body: Box<[StatementNode]>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct StructureDeclaration {
     pub name: Box<str>,
-    pub fields: HashMap<Box<str>, Box<str>>, // name, type
+    pub fields: HashMap<Box<str>, Type>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -20,7 +20,7 @@ pub enum ExpressionNode {
     Char(char),
     String(Box<str>),
     Object {
-        r#type: Box<str>,
+        r#type: Type,
         fields: HashMap<Box<str>, ExpressionNode>,
     },
     Operation {
@@ -36,13 +36,11 @@ pub enum ExpressionNode {
     FunctionCall(FunctionCall),
 }
 
-pub type Parameter = (Box<str>, Box<str>);
-
 #[derive(Debug, Clone, PartialEq)]
 pub enum StatementNode {
     VariableDeclaration {
         name: Box<str>,
-        r#type: Box<str>,
+        r#type: Type,
         value: Box<ExpressionNode>,
     },
     Return(Box<ExpressionNode>),
@@ -62,4 +60,12 @@ pub enum Operator {
     Multiply,
     Divide,
     Modulo,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Type {
+    Void,
+    Int,
+    Char,
+    Object(Box<str>),
 }

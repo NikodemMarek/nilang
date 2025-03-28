@@ -8,7 +8,7 @@ use nilang_types::{
 
 use crate::assuming_iterator::PeekableAssumingIterator;
 
-use super::parse_expression;
+use super::{parse_expression, type_annotation_parser::parse_type};
 
 pub fn parse_object<I: PeekableAssumingIterator>(
     tokens: &mut I,
@@ -57,7 +57,7 @@ pub fn parse_object<I: PeekableAssumingIterator>(
     }
 
     Ok(ExpressionNode::Object {
-        r#type: name,
+        r#type: parse_type(&name),
         fields,
     })
 }

@@ -1,16 +1,25 @@
 use errors::ParserErrors;
-use nilang_types::tokens::TokenType;
+use nilang_types::{nodes::Type, tokens::TokenType};
 
 use crate::assuming_iterator::PeekableAssumingIterator;
 
 pub fn parse_type_annotation<I: PeekableAssumingIterator>(
     tokens: &mut I,
-) -> Result<Box<str>, ParserErrors> {
+) -> Result<Type, ParserErrors> {
     tokens.assume(TokenType::Colon)?;
 
     let (_, _, r#type) = tokens.assume_identifier()?;
 
-    Ok(r#type)
+    Ok(parse_type(&r#type))
+}
+
+pub fn parse_type(r#type: &str) -> Type {
+    match r#type.to_string().as_str() {
+        "void" => Type::Void,
+        "int" => Type::Int,
+        "char" => Type::Char,
+        r#type => Type::Object(r#type.into()),
+    }
 }
 
 #[cfg(test)]
