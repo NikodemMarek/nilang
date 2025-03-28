@@ -1,3 +1,4 @@
+
 .data
 printi_format: .asciz "%d\n"
 printc_format: .asciz "%c\n"
@@ -9,14 +10,14 @@ _start:
     movq $60, %rax
     xorq %rdi, %rdi
     syscall
-        
+
 .globl main
 main:
 
     # Prologue
     pushq %rbp
     movq %rsp, %rbp
-        
+
     movq $5, %rbx                 # Load number '5' into `temp_1`
     movq $8, %rcx                 # Load number '8' into `temp_2`
     movq %rbx, %rax               # Prepare `temp_0` for addition
@@ -32,4 +33,3 @@ main:
     movq %rbp, %rsp
     pop %rbp
     ret
-        

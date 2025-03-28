@@ -18,38 +18,39 @@ use memory_manager::MemoryManager;
 use nilang_types::instructions::Instruction;
 use registers::X86Registers;
 
-pub fn generate_program<A>(functions: impl Iterator<Item = Box<str>>) -> Box<str>
+pub fn generate_program<A>() -> impl Iterator<Item = String> + 'static
 where
     A: AssemblyFlavour<X86Registers>,
 {
-    A::generate_program(&functions.collect::<Vec<_>>())
+    A::generate_program_scaffold()
 }
 
-pub fn generate_function<C, A>(
+pub fn generate_function<'a, C, A>(
     name: Box<str>,
-    instructions: impl Iterator<Item = Instruction>,
-) -> Result<Box<str>, GeneratorErrors>
+    instructions: impl Iterator<Item = Instruction> + 'a,
+) -> Result<impl Iterator<Item = String> + 'a, GeneratorErrors>
 where
     C: CallingConvention<R = X86Registers>,
     A: AssemblyFlavour<C::R>,
 {
     Ok(A::generate_function(
-        &name,
-        &generate_instructions::<C>(instructions)?,
+        name,
+        generate_instructions::<C>(instructions)?,
     ))
 }
 
-fn generate_instructions<C>(
-    mut instructions: impl Iterator<Item = Instruction>,
-) -> Result<Vec<FullInstruction<C::R>>, GeneratorErrors>
+fn generate_instructions<'a, C>(
+    instructions: impl Iterator<Item = Instruction> + 'a,
+) -> Result<impl Iterator<Item = FullInstruction<C::R>> + 'a, GeneratorErrors>
 where
     C: CallingConvention<R = X86Registers>,
 {
-    let mm = &mut MemoryManager::default();
-    instructions.try_fold(Vec::new(), |mut acc, instruction| {
-        acc.extend(generate_instruction::<C>(mm, instruction.clone())?);
-        Ok(acc)
-    })
+    let mut mm = MemoryManager::default();
+    Ok(Box::new(
+        instructions
+            .flat_map(move |instruction| generate_instruction::<C>(&mut mm, instruction))
+            .flatten(),
+    ))
 }
 
 fn generate_instruction<C>(
@@ -103,7 +104,7 @@ where
                 format!("Return `{temporary}`").into(),
             )]
         }
-        Instruction::LoadArgument(argument, temporary) => {
+        Instruction::TakeArgument(argument, temporary) => {
             let location = C::nth_argument_location(argument);
             mm.reserve_location(&temporary, location.clone());
             vec![(

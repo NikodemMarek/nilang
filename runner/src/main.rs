@@ -62,7 +62,11 @@ fn compile(code: &str) -> Box<str> {
             }
         });
 
-    nilang_generator::generate_program::<AtAndTFlavour>(assembly)
+    nilang_generator::generate_program::<AtAndTFlavour>()
+        .chain(assembly.flatten())
+        .collect::<Vec<_>>()
+        .join("\n")
+        .into()
 }
 
 fn create_transformer_context(

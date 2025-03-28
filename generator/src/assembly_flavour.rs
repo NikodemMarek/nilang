@@ -1,3 +1,5 @@
+use std::iter::once;
+
 use crate::registers::Registers;
 
 pub trait AssemblyFlavour<R: Registers> {
@@ -8,8 +10,11 @@ pub trait AssemblyFlavour<R: Registers> {
         comment: &str,
     ) -> String;
 
-    fn generate_program(functions: &[Box<str>]) -> Box<str>;
-    fn generate_function(name: &str, instructions: &[FullInstruction<R>]) -> Box<str>;
+    fn generate_program_scaffold() -> impl Iterator<Item = String> + 'static;
+    fn generate_function<'a>(
+        name: Box<str>,
+        instructions: impl Iterator<Item = FullInstruction<R>> + 'a,
+    ) -> impl Iterator<Item = String> + 'a;
 }
 
 pub struct AtAndTFlavour;
@@ -59,12 +64,14 @@ impl<R: Registers> AssemblyFlavour<R> for AtAndTFlavour {
         asm_with_comment(&instruction, comment).into()
     }
 
-    fn generate_program(functions: &[Box<str>]) -> Box<str> {
+    fn generate_program_scaffold() -> impl Iterator<Item = String> + 'static {
         let data_section = r#"
+.data
 printi_format: .asciz "%d\n"
 printc_format: .asciz "%c\n"
 "#;
         let start_fn = r#"
+.text
 .globl _start
 _start:
     call main
@@ -73,22 +80,35 @@ _start:
     syscall
         "#;
 
-        format!(
-            ".data{}\n.text{}\n{}",
-            data_section,
-            start_fn,
-            functions.join("\n\n")
-        )
-        .into()
+        data_section
+            .lines()
+            .chain(start_fn.lines())
+            .map(ToOwned::to_owned)
+            .map(|line| {
+                if line.trim().is_empty() {
+                    "".to_owned()
+                } else {
+                    line
+                }
+            })
     }
 
-    fn generate_function(name: &str, instructions: &[FullInstruction<R>]) -> Box<str> {
-        let function_declaration = format!(".globl {}\n{}:", name, name);
+    fn generate_function<'a>(
+        name: Box<str>,
+        instructions: impl Iterator<Item = FullInstruction<R>> + 'a,
+    ) -> impl Iterator<Item = String> + 'a {
+        let header = format!(".globl {}\n{}:", name, name);
         let prologue = r#"
     # Prologue
     pushq %rbp
     movq %rsp, %rbp
         "#;
+        let body = instructions.map(|(instruction, parameters, comment)| {
+            format!(
+                "    {}",
+                Self::generate_instruction(&instruction, &parameters, &comment)
+            )
+        });
         let epilogue = r#"
     # Epilogue
     # leave
@@ -97,24 +117,17 @@ _start:
     ret
         "#;
 
-        let code = std::convert::Into::<Box<str>>::into(
-            instructions
-                .iter()
-                .map(|(instruction, parameters, comment)| {
-                    format!(
-                        "    {}",
-                        Self::generate_instruction(instruction, parameters, comment)
-                    )
-                })
-                .collect::<Vec<_>>()
-                .join("\n"),
-        );
-
-        format!(
-            "{}\n{}\n{}\n{}",
-            function_declaration, prologue, code, epilogue
-        )
-        .into()
+        once(header)
+            .chain(prologue.lines().map(ToOwned::to_owned))
+            .chain(body)
+            .chain(epilogue.lines().map(ToOwned::to_owned))
+            .map(|line| {
+                if line.trim().is_empty() {
+                    "".to_owned()
+                } else {
+                    line
+                }
+            })
     }
 }
 
