@@ -1,8 +1,10 @@
+use std::iter::zip;
+
 use errors::GeneratorErrors;
 
 use crate::{
     assembly_flavour::{AssemblyInstruction, AssemblyInstructionParameter, FullInstruction},
-    memory_manager::{Location, MemoryManager},
+    memory_manager::{free_locations, swap, Location, MemoryManager},
     registers::{Registers, X86Registers},
 };
 
@@ -18,62 +20,44 @@ pub trait CallingConvention {
 
     fn return_location() -> Location<Self::R>;
     fn nth_argument_location(n: usize) -> Location<Self::R>;
+
+    fn arguments_locations(arguments: &[Box<str>]) -> Vec<Location<Self::R>> {
+        arguments
+            .iter()
+            .enumerate()
+            .map(|(i, _)| Self::nth_argument_location(i))
+            .collect()
+    }
+
+    fn arguments_allocations(
+        mm: &mut MemoryManager<Self::R>,
+        arguments: &[Box<str>],
+    ) -> Result<Vec<FullInstruction<Self::R>>, GeneratorErrors> {
+        let arguments_locations = Self::arguments_locations(arguments);
+
+        let free = free_locations(mm, &arguments_locations)?;
+        let allocations = zip(arguments.iter(), arguments_locations.iter())
+            .enumerate()
+            .map(|(i, (arg_temp, desired_arg_location))| {
+                let current_arg_loc = mm.get_location_or_err(arg_temp)?.to_owned();
+                mm.reserve_location(&format!("@arg_{i}"), desired_arg_location.clone())?;
+                Ok((
+                    AssemblyInstruction::Move,
+                    vec![desired_arg_location.into(), current_arg_loc.clone().into()],
+                    format!("Load `{arg_temp}` as argument {i}").into(),
+                ))
+            })
+            .collect::<Result<Vec<_>, GeneratorErrors>>()?;
+
+        for i in 0..arguments.len() {
+            mm.free(&format!("@arg_{i}"));
+        }
+
+        Ok([free, allocations].concat())
+    }
 }
 
 pub struct SystemVAmd64Abi;
-
-impl SystemVAmd64Abi {
-    fn arguments_locations(arguments: &[Box<str>]) -> Vec<Location<X86Registers>> {
-        let available_registers = [
-            X86Registers::Rdi,
-            X86Registers::Rsi,
-            X86Registers::Rdx,
-            X86Registers::Rcx,
-            X86Registers::R8,
-            X86Registers::R9,
-        ];
-        if arguments.len() <= available_registers.len() {
-            available_registers[..arguments.len()]
-                .iter()
-                .map(|r| Location::Register(r.clone()))
-                .collect()
-        } else {
-            [
-                available_registers
-                    .iter()
-                    .map(|r| Location::Register(r.clone()))
-                    .collect::<Vec<_>>(),
-                (0..arguments.len() - available_registers.len())
-                    .map(|i| Location::Stack(i * 8))
-                    .collect::<Vec<_>>(),
-            ]
-            .concat()
-        }
-    }
-
-    fn relocations(
-        mm: &mut MemoryManager<X86Registers>,
-        arguments_locations: &[Location<X86Registers>],
-    ) -> Vec<FullInstruction<X86Registers>> {
-        arguments_locations
-            .iter()
-            .filter_map(|loc| {
-                if !mm.is_taken(loc) {
-                    return None;
-                }
-
-                let var = mm.get_name(loc).unwrap().to_string();
-                mm.free(&var);
-                let new_loc = mm.reserve(&var).unwrap();
-                Some((
-                    AssemblyInstruction::Move,
-                    vec![new_loc.into(), loc.into()],
-                    format!("Move `{var}` to a free location").into(),
-                ))
-            })
-            .collect()
-    }
-}
 
 impl CallingConvention for SystemVAmd64Abi {
     type R = X86Registers;
@@ -84,30 +68,7 @@ impl CallingConvention for SystemVAmd64Abi {
         args: &[Box<str>],
         return_temporary: Option<Box<str>>,
     ) -> Result<Vec<FullInstruction<Self::R>>, GeneratorErrors> {
-        let arguments_locations = SystemVAmd64Abi::arguments_locations(args);
-
-        let how_many_are_taken = arguments_locations
-            .iter()
-            .map(|arg| mm.is_taken(arg))
-            .filter(|is_taken| *is_taken)
-            .count();
-        mm.add_n_next_locations(how_many_are_taken);
-
-        let relocations = Self::relocations(mm, arguments_locations.as_slice());
-
-        let arguments_allocations = arguments_locations
-            .iter()
-            .zip(args.iter())
-            .enumerate()
-            .map(|(i, (loc, arg))| {
-                let arg_loc = mm.get_location_or_err(arg).unwrap();
-                (
-                    AssemblyInstruction::Move,
-                    vec![loc.into(), arg_loc.into()],
-                    format!("Load `{arg}` as argument {i}").into(),
-                )
-            })
-            .collect();
+        let arguments_allocations = Self::arguments_allocations(mm, args)?;
 
         let stack_alignment = [];
 
@@ -134,8 +95,11 @@ impl CallingConvention for SystemVAmd64Abi {
             [].into()
         };
 
+        for i in 0..args.len() {
+            mm.free(&format!("arg_{i}"));
+        }
+
         Ok([
-            relocations,
             arguments_allocations,
             stack_alignment.into(),
             function_call.into(),
@@ -164,110 +128,114 @@ impl CallingConvention for SystemVAmd64Abi {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
     use crate::{
-        assembly_flavour::{AssemblyInstruction, AssemblyInstructionParameter},
-        calling_convention::SystemVAmd64Abi,
+        assembly_flavour::AssemblyInstruction,
         memory_manager::{Location, MemoryManager},
-        registers::X86Registers,
+        registers::tests::TestRegisters,
     };
+
+    use super::CallingConvention;
+
+    struct TestCallingConvention;
+    impl CallingConvention for TestCallingConvention {
+        type R = TestRegisters;
+
+        fn generate_function_call(
+            _mm: &mut MemoryManager<Self::R>,
+            _name: &str,
+            _args: &[Box<str>],
+            _return_temporary: Option<Box<str>>,
+        ) -> Result<Vec<crate::assembly_flavour::FullInstruction<Self::R>>, errors::GeneratorErrors>
+        {
+            unreachable!()
+        }
+
+        fn return_location() -> Location<Self::R> {
+            Location::Register(TestRegisters::R(0))
+        }
+
+        fn nth_argument_location(n: usize) -> Location<Self::R> {
+            if n == 0 {
+                Location::Register(TestRegisters::R(1))
+            } else if n == 1 {
+                Location::Register(TestRegisters::R(2))
+            } else {
+                Location::Stack(n - 2)
+            }
+        }
+    }
 
     #[test]
     fn test_arguments_locations() {
-        let locations = SystemVAmd64Abi::arguments_locations(&["a".into(), "b".into(), "c".into()]);
-        assert_eq!(
-            locations,
-            [
-                Location::Register(X86Registers::Rdi),
-                Location::Register(X86Registers::Rsi),
-                Location::Register(X86Registers::Rdx)
-            ]
-        );
+        let arguments = ["a".into(), "b".into(), "c".into()];
+        let arguments_locations = TestCallingConvention::arguments_locations(&arguments);
 
-        let locations = SystemVAmd64Abi::arguments_locations(&[
-            "a".into(),
-            "b".into(),
-            "c".into(),
-            "d".into(),
-            "e".into(),
-            "f".into(),
-            "g".into(),
-        ]);
         assert_eq!(
-            locations,
+            arguments_locations,
             [
-                Location::Register(X86Registers::Rdi),
-                Location::Register(X86Registers::Rsi),
-                Location::Register(X86Registers::Rdx),
-                Location::Register(X86Registers::Rcx),
-                Location::Register(X86Registers::R8),
-                Location::Register(X86Registers::R9),
+                Location::Register(TestRegisters::R(1)),
+                Location::Register(TestRegisters::R(2)),
                 Location::Stack(0),
             ]
         );
     }
 
     #[test]
-    fn test_reallocations() {
-        let arguments_locations = [
-            Location::Register(X86Registers::Rdi),
-            Location::Register(X86Registers::Rsi),
-            Location::Register(X86Registers::Rdx),
-        ];
+    fn arguments_allocations() {
+        let mut mm = MemoryManager::<TestRegisters>::default();
+        mm.reserve("a").unwrap();
+        mm.reserve("b").unwrap();
+        mm.reserve("c").unwrap();
 
-        let mm = &mut MemoryManager {
-            stack_position: 3,
-            free_registers: vec![
-                X86Registers::R9,
-                X86Registers::R8,
-                X86Registers::Rdi,
-                X86Registers::Rsi,
-                X86Registers::Rdx,
-                X86Registers::Rcx,
-                X86Registers::Rbx,
-                X86Registers::Rax,
-            ],
-            next_locations: vec![
-                Location::Register(X86Registers::Rcx),
-                Location::Register(X86Registers::Rbx),
-                Location::Register(X86Registers::Rax),
-            ],
-            reservations: HashMap::from([
-                ("a".into(), Location::Register(X86Registers::Rdi)),
-                ("b".into(), Location::Register(X86Registers::Rsi)),
-                ("c".into(), Location::Register(X86Registers::Rdx)),
-            ]),
-        };
-        let reallocations = SystemVAmd64Abi::relocations(mm, &arguments_locations);
+        let arguments = ["a".into(), "b".into(), "c".into()];
+        let instructions =
+            TestCallingConvention::arguments_allocations(&mut mm, &arguments).unwrap();
 
         assert_eq!(
-            reallocations,
+            instructions,
             [
                 (
-                    AssemblyInstruction::Move,
+                    AssemblyInstruction::Swap,
                     vec![
-                        AssemblyInstructionParameter::Register(X86Registers::Rcx),
-                        AssemblyInstructionParameter::Register(X86Registers::Rdi),
+                        Location::Register(TestRegisters::R(1)).into(),
+                        Location::Stack(0).into()
                     ],
-                    "Move `c` to a free location".into(),
+                    "Swap b and @swap_temp_0".into()
+                ),
+                (
+                    AssemblyInstruction::Swap,
+                    vec![
+                        Location::Register(TestRegisters::R(2)).into(),
+                        Location::Stack(1).into()
+                    ],
+                    "Swap c and @swap_temp_1".into()
+                ),
+                (
+                    AssemblyInstruction::Swap,
+                    vec![Location::Stack(0).into(), Location::Stack(2).into()],
+                    "Swap b and @swap_temp_2".into()
                 ),
                 (
                     AssemblyInstruction::Move,
                     vec![
-                        AssemblyInstructionParameter::Register(X86Registers::R8),
-                        AssemblyInstructionParameter::Register(X86Registers::Rsi),
+                        Location::Register(TestRegisters::R(1)).into(),
+                        Location::Register(TestRegisters::R(0)).into()
                     ],
-                    "Move `b` to a free location".into(),
+                    "Load `a` as argument 0".into()
                 ),
                 (
                     AssemblyInstruction::Move,
                     vec![
-                        AssemblyInstructionParameter::Register(X86Registers::R9),
-                        AssemblyInstructionParameter::Register(X86Registers::Rdx),
+                        Location::Register(TestRegisters::R(2)).into(),
+                        Location::Stack(2).into()
                     ],
-                    "Move `a` to a free location".into(),
+                    "Load `b` as argument 1".into()
                 ),
+                (
+                    AssemblyInstruction::Move,
+                    vec![Location::Stack(0).into(), Location::Stack(1).into()],
+                    "Load `c` as argument 2".into()
+                )
             ]
         );
     }

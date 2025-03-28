@@ -61,24 +61,11 @@ pub struct FunctionCall {
     pub arguments: Box<[ExpressionNode]>,
 }
 
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Operator {
     Add,
     Subtract,
     Multiply,
     Divide,
     Modulo,
-}
-
-impl Debug for Operator {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Operator::")?;
-        match self {
-            Operator::Add => write!(f, "Add"),
-            Operator::Subtract => write!(f, "Subtract"),
-            Operator::Multiply => write!(f, "Multiply"),
-            Operator::Divide => write!(f, "Divide"),
-            Operator::Modulo => write!(f, "Modulo"),
-        }
-    }
 }

@@ -38,6 +38,11 @@ impl<R: Registers> AssemblyFlavour<R> for AtAndTFlavour {
                     Self::generate_parameter(&parameters[1]),
                     Self::generate_parameter(&parameters[0])
                 ),
+                AssemblyInstruction::Swap => format!(
+                    "xchgq {}, {}",
+                    Self::generate_parameter(&parameters[0]),
+                    Self::generate_parameter(&parameters[1])
+                ),
                 AssemblyInstruction::Call => {
                     format!("call {}", Self::generate_parameter(&parameters[0]))
                 }
@@ -137,6 +142,7 @@ pub type FullInstruction<R> = (
 #[derive(Debug, Clone, PartialEq)]
 pub enum AssemblyInstruction {
     Move, // destination, source
+    Swap, // a, b
     Call, // function
     Add,  // destination & a, b
     Sub,  // destination & a, b
