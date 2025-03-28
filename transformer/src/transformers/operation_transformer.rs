@@ -11,7 +11,7 @@ use crate::{temporaries::Temporaries, FunctionsRef, Type, TypesRef};
 use super::transform_expression;
 
 pub fn transform_operation(
-    context: (&FunctionsRef, &TypesRef),
+    context: &(FunctionsRef, TypesRef),
     temporaries: &mut Temporaries,
 
     operator: Operator,

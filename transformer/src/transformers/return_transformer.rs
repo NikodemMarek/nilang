@@ -8,7 +8,7 @@ use crate::{temporaries::Temporaries, FunctionsRef, Instruction, Type, TypesRef}
 use super::transform_expression;
 
 pub fn transform_return(
-    context: (&FunctionsRef, &TypesRef),
+    context: &(FunctionsRef, TypesRef),
     temporaries: &mut Temporaries,
 
     node: ExpressionNode,

@@ -9,8 +9,6 @@ pub mod options {
     pub use crate::calling_convention::SystemVAmd64Abi;
 }
 
-use std::collections::HashMap;
-
 use assembly_flavour::{
     AssemblyFlavour, AssemblyInstruction, AssemblyInstructionParameter, FullInstruction,
 };
@@ -20,31 +18,35 @@ use memory_manager::MemoryManager;
 use nilang_types::instructions::Instruction;
 use registers::X86Registers;
 
-pub fn generate<C, A>(
-    functions: HashMap<Box<str>, Vec<Instruction>>,
+pub fn generate_program<A>(functions: impl Iterator<Item = Box<str>>) -> Box<str>
+where
+    A: AssemblyFlavour<X86Registers>,
+{
+    A::generate_program(&functions.collect::<Vec<_>>())
+}
+
+pub fn generate_function<C, A>(
+    name: Box<str>,
+    instructions: impl Iterator<Item = Instruction>,
 ) -> Result<Box<str>, GeneratorErrors>
 where
     C: CallingConvention<R = X86Registers>,
     A: AssemblyFlavour<C::R>,
 {
-    let mut code = Vec::new();
-
-    for (name, instructions) in functions.into_iter() {
-        code.push(A::generate_function(
-            &name,
-            &generate_function::<C>(&instructions)?,
-        ));
-    }
-
-    Ok(A::generate_program(&code))
+    Ok(A::generate_function(
+        &name,
+        &generate_instructions::<C>(instructions)?,
+    ))
 }
 
-fn generate_function<C>(code: &[Instruction]) -> Result<Vec<FullInstruction<C::R>>, GeneratorErrors>
+fn generate_instructions<C>(
+    mut instructions: impl Iterator<Item = Instruction>,
+) -> Result<Vec<FullInstruction<C::R>>, GeneratorErrors>
 where
     C: CallingConvention<R = X86Registers>,
 {
     let mm = &mut MemoryManager::default();
-    code.iter().try_fold(Vec::new(), |mut acc, instruction| {
+    instructions.try_fold(Vec::new(), |mut acc, instruction| {
         acc.extend(generate_instruction::<C>(mm, instruction.clone())?);
         Ok(acc)
     })

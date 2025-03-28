@@ -6,7 +6,7 @@ use crate::{temporaries::Temporaries, FunctionsRef, Type, TypesRef};
 use super::copy_all_fields;
 
 pub fn transform_field_access(
-    context: (&FunctionsRef, &TypesRef),
+    context: &(FunctionsRef, TypesRef),
     temporaries: &mut Temporaries,
 
     structure: ExpressionNode,

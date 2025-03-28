@@ -22,7 +22,7 @@ use variable_reference_transformer::transform_variable_reference;
 use crate::{temporaries::Temporaries, FunctionsRef, Instruction, Type, TypesRef};
 
 pub fn transform_statement(
-    context: (&FunctionsRef, &TypesRef),
+    context: &(FunctionsRef, TypesRef),
     node: StatementNode,
     return_type: &Type,
     temporaries: &mut Temporaries,
@@ -33,7 +33,7 @@ pub fn transform_statement(
             name,
             r#type,
             value,
-        } => transform_variable_declaration(context, temporaries, name, &r#type.into(), *value),
+        } => transform_variable_declaration(context, temporaries, name, &r#type, *value),
         StatementNode::FunctionCall(FunctionCall { name, arguments }) => transform_function_call(
             context,
             temporaries,
@@ -46,7 +46,7 @@ pub fn transform_statement(
 }
 
 pub fn transform_expression(
-    context: (&FunctionsRef, &TypesRef),
+    context: &(FunctionsRef, TypesRef),
     temporaries: &mut Temporaries,
 
     node: ExpressionNode,
@@ -79,7 +79,7 @@ pub fn transform_expression(
 }
 
 pub fn copy_all_fields(
-    context: (&FunctionsRef, &TypesRef),
+    context: &(FunctionsRef, TypesRef),
     temporaries: &mut Temporaries,
     source: Box<str>,
     destination: Box<str>,
@@ -88,7 +88,7 @@ pub fn copy_all_fields(
     if let Type::Object(object_type) = object_type {
         let mut instructions = Vec::new();
         for (destination_temporary, source_temporary, field_type) in
-            object_fields_from_to(context.1, source, destination, object_type)?
+            object_fields_from_to(&context.1, source, destination, object_type)?
         {
             temporaries.declare_named(source_temporary.clone(), field_type);
             instructions.push(Instruction::Declare(destination_temporary.clone()));

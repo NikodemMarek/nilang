@@ -8,7 +8,7 @@ use crate::{temporaries::Temporaries, FunctionsRef, Instruction, Type, TypesRef}
 use super::transform_expression;
 
 pub fn transform_variable_declaration(
-    context: (&FunctionsRef, &TypesRef),
+    context: &(FunctionsRef, TypesRef),
     temporaries: &mut Temporaries,
 
     name: Box<str>,

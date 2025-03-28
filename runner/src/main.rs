@@ -4,6 +4,7 @@ use std::fs::{read_to_string, write};
 
 use errors::NilangError;
 use nilang_generator::options::{AtAndTFlavour, SystemVAmd64Abi};
+use nilang_transformer::{FunctionsRef, TypesRef};
 
 fn main() {
     let code = read_to_string("test.ni").unwrap();
@@ -15,7 +16,7 @@ fn main() {
 fn compile(code: &str) -> Box<str> {
     let lexed = nilang_lexer::lex(code);
 
-    let parsed = match nilang_parser::parse(lexed) {
+    let (functions, structures) = match nilang_parser::parse(lexed) {
         Ok(parsed) => parsed,
         Err(err) => {
             let (start, end, message): ((usize, usize), (usize, usize), String) = (&err).into();
@@ -32,17 +33,36 @@ fn compile(code: &str) -> Box<str> {
         }
     };
 
-    let transformed = match nilang_transformer::transform(&parsed.0, &parsed.1) {
-        Ok(transformed) => transformed,
-        Err(err) => {
-            panic!("{}", err);
-        }
-    };
+    let context = create_transformer_context(&functions, &structures);
 
-    match nilang_generator::generate::<SystemVAmd64Abi, AtAndTFlavour>(transformed) {
-        Ok(generated) => generated,
-        Err(err) => {
-            panic!("{}", err);
-        }
-    }
+    let assembly = functions
+        .iter()
+        .map(
+            |function| match nilang_transformer::transform_function(&context, function) {
+                Ok(instructions) => (function.name.clone(), instructions),
+                Err(err) => {
+                    panic!("{}", err);
+                }
+            },
+        )
+        .map(|(name, instructions)| {
+            match nilang_generator::generate_function::<SystemVAmd64Abi, AtAndTFlavour>(
+                name,
+                instructions,
+            ) {
+                Ok(generated) => generated,
+                Err(err) => {
+                    panic!("{}", err);
+                }
+            }
+        });
+
+    nilang_generator::generate_program::<AtAndTFlavour>(assembly)
+}
+
+fn create_transformer_context(
+    functions: &[nilang_types::nodes::FunctionDeclaration],
+    structures: &[nilang_types::nodes::StructureDeclaration],
+) -> (FunctionsRef, TypesRef) {
+    (functions.into(), structures.into())
 }

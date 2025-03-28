@@ -12,7 +12,7 @@ use temporaries::Temporaries;
 use transformers::object_fields_recursive;
 
 #[derive(Debug, Default)]
-struct TypesRef(HashMap<Box<str>, HashMap<Box<str>, Type>>);
+pub struct TypesRef(HashMap<Box<str>, HashMap<Box<str>, Type>>);
 
 impl TypesRef {
     pub fn get_fields(&self, structure_name: &str) -> Option<&HashMap<Box<str>, Type>> {
@@ -32,7 +32,7 @@ impl From<&[StructureDeclaration]> for TypesRef {
 }
 
 #[derive(Debug, Default)]
-struct FunctionsRef(HashMap<Box<str>, (Type, Box<[(Box<str>, Type)]>)>);
+pub struct FunctionsRef(HashMap<Box<str>, (Type, Box<[(Box<str>, Type)]>)>);
 
 impl FunctionsRef {
     pub fn get_parameters(&self, name: &str) -> Result<&[(Box<str>, Type)], TransformerErrors> {
@@ -83,43 +83,33 @@ impl From<&[FunctionDeclaration]> for FunctionsRef {
     }
 }
 
-pub fn transform(
-    functions: &[FunctionDeclaration],
-    structures: &[StructureDeclaration],
-) -> Result<HashMap<Box<str>, Vec<Instruction>>, TransformerErrors> {
-    let types_ref = structures.into();
-    let functions_ref = functions.into();
-    let context = (&functions_ref, &types_ref);
-
-    let mut funcs = HashMap::new();
-    for FunctionDeclaration {
+pub fn transform_function(
+    context: &(FunctionsRef, TypesRef),
+    FunctionDeclaration {
         body,
         return_type,
         parameters,
-        name,
-    } in functions
-    {
-        let mut temporaries = Temporaries::default();
+        ..
+    }: &FunctionDeclaration,
+) -> Result<Box<dyn Iterator<Item = Instruction>>, TransformerErrors> {
+    let mut temporaries = Temporaries::default();
 
-        let parameters = transform_parameters(
-            context,
-            &mut temporaries,
-            parameters
-                .iter()
-                .map(|(name, r#type)| (name.clone(), r#type.clone()))
-                .collect::<Vec<_>>()
-                .as_slice(),
-        )?;
-        let body = transform_body(context, &mut temporaries, body, &return_type)?;
+    let parameters = transform_parameters(
+        context,
+        &mut temporaries,
+        parameters
+            .iter()
+            .map(|(name, r#type)| (name.clone(), r#type.clone()))
+            .collect::<Vec<_>>()
+            .as_slice(),
+    )?;
+    let body = transform_body(context, &mut temporaries, body, return_type)?;
 
-        funcs.insert(name.clone(), parameters.chain(body).collect());
-    }
-
-    Ok(funcs)
+    Ok(Box::new(parameters.chain(body)))
 }
 
 fn transform_body(
-    context: (&FunctionsRef, &TypesRef),
+    context: &(FunctionsRef, TypesRef),
     temporaries: &mut Temporaries,
     body: &[StatementNode],
     return_type: &Type,
@@ -136,7 +126,7 @@ fn transform_body(
 }
 
 fn transform_parameters(
-    context: (&FunctionsRef, &TypesRef),
+    context: &(FunctionsRef, TypesRef),
     temporaries: &mut Temporaries,
     parameters: &[(Box<str>, Type)],
 ) -> Result<Box<dyn Iterator<Item = Instruction>>, TransformerErrors> {
@@ -144,7 +134,7 @@ fn transform_parameters(
     for (parameter_name, parameter_type) in parameters.iter() {
         let parameter_type = parameter_type.clone();
         if let Type::Object(object_type) = &parameter_type {
-            for (field, field_type) in object_fields_recursive(context.1, object_type)? {
+            for (field, field_type) in object_fields_recursive(&context.1, object_type)? {
                 let field = Into::<Box<str>>::into(format!("{}.{}", parameter_name, field));
                 temporaries.declare_named(field.clone(), field_type);
                 instructions.push(Instruction::Declare(field.clone()));

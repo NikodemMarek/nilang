@@ -8,7 +8,7 @@ use crate::{temporaries::Temporaries, FunctionsRef, Type, TypesRef};
 use super::transform_expression;
 
 pub fn transform_object(
-    context: (&FunctionsRef, &TypesRef),
+    context: &(FunctionsRef, TypesRef),
     temporaries: &mut Temporaries,
 
     fields: HashMap<Box<str>, ExpressionNode>,

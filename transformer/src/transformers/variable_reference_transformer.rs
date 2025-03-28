@@ -6,7 +6,7 @@ use crate::{temporaries::Temporaries, FunctionsRef, Type, TypesRef};
 use super::copy_all_fields;
 
 pub fn transform_variable_reference(
-    context: (&FunctionsRef, &TypesRef),
+    context: &(FunctionsRef, TypesRef),
     temporaries: &mut Temporaries,
 
     variable: Box<str>,
