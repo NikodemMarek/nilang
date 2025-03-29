@@ -7,14 +7,14 @@ use crate::{temporaries::Temporaries, FunctionsRef, Instruction, StructuresRef, 
 
 use super::transform_expression;
 
-pub fn transform_return(
-    context: &(FunctionsRef, StructuresRef),
-    temporaries: &mut Temporaries,
+pub fn transform_return<'a>(
+    context: &'a (FunctionsRef, StructuresRef),
+    temporaries: &'a Temporaries,
 
     node: ExpressionNode,
 
     return_type: &Type,
-) -> Box<dyn Iterator<Item = Result<Instruction, TransformerErrors>>> {
+) -> Box<dyn Iterator<Item = Result<Instruction, TransformerErrors>> + 'a> {
     let variable_name = temporaries.declare(return_type.clone());
     let instructions = transform_expression(
         context,
@@ -29,6 +29,7 @@ pub fn transform_return(
             name: variable_name,
         })));
     };
+
     Box::new(
         once(Ok(Instruction::Declare(variable_name.clone())))
             .chain(instructions)

@@ -7,15 +7,16 @@ use crate::{temporaries::Temporaries, FunctionsRef, Instruction, StructuresRef, 
 
 use super::transform_expression;
 
-pub fn transform_variable_declaration(
-    context: &(FunctionsRef, StructuresRef),
-    temporaries: &mut Temporaries,
+pub fn transform_variable_declaration<'a>(
+    context: &'a (FunctionsRef, StructuresRef),
+    temporaries: &'a Temporaries,
 
     name: Box<str>,
     r#type: &Type,
     node: ExpressionNode,
-) -> Box<dyn Iterator<Item = Result<Instruction, TransformerErrors>>> {
+) -> Box<dyn Iterator<Item = Result<Instruction, TransformerErrors>> + 'a> {
     temporaries.declare_named(name.clone(), r#type.clone());
+
     let Ok(_) = temporaries.access(&name) else {
         println!("Temporary not found: {}", name);
         return Box::new(once(Err(TransformerErrors::TemporaryNotFound {

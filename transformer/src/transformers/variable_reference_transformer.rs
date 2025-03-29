@@ -7,28 +7,27 @@ use crate::{temporaries::Temporaries, FunctionsRef, StructuresRef, Type};
 
 use super::copy_all_fields;
 
-pub fn transform_variable_reference(
+pub fn transform_variable_reference<'a>(
     context: &(FunctionsRef, StructuresRef),
-    temporaries: &mut Temporaries,
+    temporaries: &'a Temporaries,
 
     variable: Box<str>,
     result: Box<str>,
     r#type: &Type,
-) -> Box<dyn Iterator<Item = Result<Instruction, TransformerErrors>>> {
+) -> Box<dyn Iterator<Item = Result<Instruction, TransformerErrors>> + 'a> {
     let Ok(source_type) = temporaries.type_of(&variable) else {
         return Box::new(once(Err(TransformerErrors::TemporaryNotFound {
             name: variable.clone(),
         })));
     };
 
-    if r#type != source_type {
+    if *r#type != source_type {
         return Box::new(once(Err(TransformerErrors::TypeMismatch {
             expected: r#type.clone(),
             found: source_type.clone(),
         })));
     }
 
-    let source_type = source_type.to_owned();
     copy_all_fields(context, temporaries, variable, result, &source_type)
 }
 

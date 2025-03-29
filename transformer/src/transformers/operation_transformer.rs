@@ -10,9 +10,9 @@ use crate::{temporaries::Temporaries, FunctionsRef, StructuresRef, Type};
 
 use super::transform_expression;
 
-pub fn transform_operation(
-    context: &(FunctionsRef, StructuresRef),
-    temporaries: &mut Temporaries,
+pub fn transform_operation<'a>(
+    context: &'a (FunctionsRef, StructuresRef),
+    temporaries: &'a Temporaries,
 
     operator: Operator,
     a: ExpressionNode,
@@ -20,7 +20,7 @@ pub fn transform_operation(
 
     result: Box<str>,
     r#type: &Type,
-) -> Box<dyn Iterator<Item = Result<Instruction, TransformerErrors>>> {
+) -> Box<dyn Iterator<Item = Result<Instruction, TransformerErrors>> + 'a> {
     if *r#type != Type::Int {
         return Box::new(once(Err(TransformerErrors::TypeMismatch {
             expected: Type::Int,
@@ -43,6 +43,7 @@ pub fn transform_operation(
             name: b_temporary,
         })));
     };
+
     Box::new(
         once(Ok(Instruction::Declare(a_temporary.clone())))
             .chain(a_instructions)

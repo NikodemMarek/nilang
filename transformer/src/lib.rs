@@ -145,21 +145,21 @@ pub fn transform_function<'a>(
 
     let parameters = transform_parameters(
         &context.1,
-        &mut temporaries,
+        &temporaries,
         parameters
             .iter()
             .map(|(name, r#type)| (name.clone(), r#type.clone()))
             .collect::<Vec<_>>()
             .as_slice(),
     );
-    let body = transform_body(context, &mut temporaries, body, return_type);
+    let body = transform_body(context, &temporaries, body, return_type);
 
     Box::new(parameters.chain(body).collect::<Vec<_>>().into_iter())
 }
 
 fn transform_body<'a>(
     context: &'a (FunctionsRef, StructuresRef),
-    temporaries: &'a mut Temporaries,
+    temporaries: &'a Temporaries,
     body: &'a [StatementNode],
     return_type: &'a Type,
 ) -> Box<dyn Iterator<Item = Result<Instruction, TransformerErrors>> + 'a> {
@@ -170,7 +170,7 @@ fn transform_body<'a>(
 
 fn transform_parameters(
     context: &StructuresRef,
-    temporaries: &mut Temporaries,
+    temporaries: &Temporaries,
     parameters: &[(Box<str>, Type)],
 ) -> Box<dyn Iterator<Item = Result<Instruction, TransformerErrors>>> {
     let mut instructions = Vec::new();

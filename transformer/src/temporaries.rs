@@ -1,37 +1,38 @@
-use std::collections::HashMap;
+use std::{cell::RefCell, collections::HashMap};
 
 use errors::TransformerErrors;
 
 use crate::Type;
 
 #[derive(Debug, Default)]
-pub struct Temporaries(HashMap<Box<str>, (Type, u8)>, usize);
+pub struct Temporaries(RefCell<(HashMap<Box<str>, (Type, u8)>, usize)>);
 
 impl Temporaries {
-    pub fn declare_named(&mut self, name: Box<str>, r#type: Type) {
-        self.0.insert(name, (r#type, 0));
+    pub fn declare_named(&self, name: Box<str>, r#type: Type) {
+        self.0.borrow_mut().0.insert(name, (r#type, 0));
     }
 
-    pub fn declare(&mut self, r#type: Type) -> Box<str> {
-        let name = <Box<str>>::from(format!("temp_{}", self.1));
-        self.1 += 1;
-        self.declare_named(name.clone(), r#type);
+    pub fn declare(&self, r#type: Type) -> Box<str> {
+        let mut b = self.0.borrow_mut();
+        let name = <Box<str>>::from(format!("temp_{}", b.1));
+        b.1 += 1;
+        b.0.insert(name.clone(), (r#type, 0));
         name
     }
 
-    pub fn access(&mut self, name: &str) -> Result<&Type, TransformerErrors> {
-        match self.0.get_mut(name) {
+    pub fn access(&self, name: &str) -> Result<Type, TransformerErrors> {
+        match self.0.borrow_mut().0.get_mut(name) {
             Some(r#type) => {
                 r#type.1 += 1;
-                Ok(&r#type.0)
+                Ok(r#type.0.clone())
             }
             None => Err(TransformerErrors::TemporaryNotFound { name: name.into() }),
         }
     }
 
-    pub fn type_of(&mut self, name: &str) -> Result<&Type, TransformerErrors> {
-        match self.0.get_mut(name) {
-            Some(r#type) => Ok(&r#type.0),
+    pub fn type_of(&self, name: &str) -> Result<Type, TransformerErrors> {
+        match self.0.borrow_mut().0.get_mut(name) {
+            Some(r#type) => Ok(r#type.0.clone()),
             None => Err(TransformerErrors::TemporaryNotFound { name: name.into() }),
         }
     }

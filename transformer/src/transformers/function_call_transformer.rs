@@ -9,7 +9,7 @@ use super::transform_expression;
 
 pub fn transform_function_call(
     context: &(FunctionsRef, StructuresRef),
-    temporaries: &mut Temporaries,
+    temporaries: &Temporaries,
 
     name: Box<str>,
     arguments: &[ExpressionNode],

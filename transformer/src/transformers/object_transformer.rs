@@ -10,15 +10,15 @@ use crate::{temporaries::Temporaries, FunctionsRef, StructuresRef, Type};
 
 use super::transform_expression;
 
-pub fn transform_object(
-    context: &(FunctionsRef, StructuresRef),
-    temporaries: &mut Temporaries,
+pub fn transform_object<'a>(
+    context: &'a (FunctionsRef, StructuresRef),
+    temporaries: &'a Temporaries,
 
     fields: HashMap<Box<str>, ExpressionNode>,
 
     result: Box<str>,
     r#type: &Type,
-) -> Box<dyn Iterator<Item = Result<Instruction, TransformerErrors>>> {
+) -> Box<dyn Iterator<Item = Result<Instruction, TransformerErrors>> + 'a> {
     let Type::Object(r#type) = r#type else {
         return Box::new(once(Err(TransformerErrors::TypeMismatch {
             expected: r#type.clone(),
@@ -40,23 +40,24 @@ pub fn transform_object(
 
     let mut object_fields = object_fields.iter().collect::<Vec<_>>();
     object_fields.sort_by(|(a, _), (b, _)| a.cmp(b));
-    let mut provided_fields = fields.iter().collect::<Vec<_>>();
+    let mut provided_fields = fields.into_iter().collect::<Vec<_>>();
     provided_fields.sort_by(|(a, _), (b, _)| a.cmp(b));
 
-    let mut instructions = Vec::new();
-    for (field, r#type, value) in zip(object_fields, provided_fields)
+    let instructions = zip(object_fields, provided_fields)
         .map(|((field, r#type), (_, value))| (field, r#type, value))
-    {
-        let field_temp = <Box<str>>::from(format!("{}.{}", result, field));
+        .flat_map(move |(field, r#type, value)| {
+            let field_temp = <Box<str>>::from(format!("{}.{}", result, field));
+            temporaries.declare_named(field_temp.clone(), r#type.clone());
 
-        temporaries.declare_named(field_temp.clone(), r#type.clone());
+            let expression = transform_expression(
+                context,
+                temporaries,
+                value.clone(),
+                field_temp.clone(),
+                r#type,
+            );
+            once(Ok(Instruction::Declare(field_temp))).chain(expression)
+        });
 
-        instructions.push(Ok(Instruction::Declare(field_temp.clone())));
-        instructions.append(
-            &mut transform_expression(context, temporaries, value.clone(), field_temp, r#type)
-                .collect(),
-        );
-    }
-
-    Box::new(instructions.into_iter())
+    Box::new(instructions)
 }
