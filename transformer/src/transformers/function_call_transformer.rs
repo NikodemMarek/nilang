@@ -3,12 +3,12 @@ use std::iter::once;
 use errors::TransformerErrors;
 use nilang_types::nodes::ExpressionNode;
 
-use crate::{temporaries::Temporaries, FunctionsRef, Instruction, Type, TypesRef};
+use crate::{temporaries::Temporaries, FunctionsRef, Instruction, StructuresRef, Type};
 
-use super::{object_fields_recursive, transform_expression};
+use super::transform_expression;
 
 pub fn transform_function_call(
-    context: &(FunctionsRef, TypesRef),
+    context: &(FunctionsRef, StructuresRef),
     temporaries: &mut Temporaries,
 
     name: Box<str>,
@@ -16,8 +16,10 @@ pub fn transform_function_call(
 
     result: Box<str>,
     r#type: &Type,
-) -> Result<Box<dyn Iterator<Item = Instruction>>, TransformerErrors> {
-    let function_parameters = context.0.get_parameters(&name)?;
+) -> Box<dyn Iterator<Item = Result<Instruction, TransformerErrors>>> {
+    let Ok(function_parameters) = context.0.get_parameters(&name) else {
+        return Box::new(once(Err(TransformerErrors::FunctionNotFound { name })));
+    };
     let mut function_parameters = function_parameters.iter();
 
     let mut instructions = vec![];
@@ -26,7 +28,7 @@ pub fn transform_function_call(
     for node in arguments {
         if let Some((_, argument_type)) = function_parameters.next() {
             let argument_temporary = temporaries.declare(argument_type.clone());
-            instructions.push(Instruction::Declare(argument_temporary.clone()));
+            instructions.push(Ok(Instruction::Declare(argument_temporary.clone())));
             instructions.append(
                 &mut transform_expression(
                     context,
@@ -34,13 +36,19 @@ pub fn transform_function_call(
                     node.clone(),
                     argument_temporary.clone(),
                     &argument_type.clone(),
-                )?
+                )
                 .collect(),
             );
 
             if let Type::Object(object_type) = argument_type {
+                let fields = match context.1.get_fields_flattened(object_type) {
+                    Ok(fields) => fields,
+                    Err(e) => return Box::new(once(Err(e))),
+                };
+
                 arguments_names.append(
-                    &mut object_fields_recursive(&context.1, object_type)?
+                    &mut fields
+                        .iter()
                         .map(|(field, _)| format!("{}.{}", argument_temporary, field).into())
                         .collect(),
                 );
@@ -48,23 +56,27 @@ pub fn transform_function_call(
                 arguments_names.push(argument_temporary);
             }
         } else {
-            return Err(TransformerErrors::FunctionCallArgumentsMismatch {
-                name,
-                expected: function_parameters.len() + 1,
-                got: arguments.len(),
-            });
+            return Box::new(once(Err(
+                TransformerErrors::FunctionCallArgumentsMismatch {
+                    name,
+                    expected: function_parameters.len() + 1,
+                    got: arguments.len(),
+                },
+            )));
         }
     }
 
-    Ok(Box::new(instructions.into_iter().chain(once(
-        Instruction::FunctionCall(
-            name,
-            arguments_names.into(),
-            if let Type::Void = r#type {
-                None
-            } else {
-                Some(result.clone())
-            },
-        ),
-    ))))
+    Box::new(
+        instructions
+            .into_iter()
+            .chain(once(Ok(Instruction::FunctionCall(
+                name,
+                arguments_names.into(),
+                if let Type::Void = r#type {
+                    None
+                } else {
+                    Some(result.clone())
+                },
+            )))),
+    )
 }

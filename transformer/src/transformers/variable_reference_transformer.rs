@@ -1,27 +1,34 @@
+use std::iter::once;
+
 use errors::TransformerErrors;
 use nilang_types::instructions::Instruction;
 
-use crate::{temporaries::Temporaries, FunctionsRef, Type, TypesRef};
+use crate::{temporaries::Temporaries, FunctionsRef, StructuresRef, Type};
 
 use super::copy_all_fields;
 
 pub fn transform_variable_reference(
-    context: &(FunctionsRef, TypesRef),
+    context: &(FunctionsRef, StructuresRef),
     temporaries: &mut Temporaries,
 
     variable: Box<str>,
     result: Box<str>,
     r#type: &Type,
-) -> Result<Box<dyn Iterator<Item = Instruction>>, TransformerErrors> {
-    let source_type = temporaries.type_of(&variable)?.to_owned();
+) -> Box<dyn Iterator<Item = Result<Instruction, TransformerErrors>>> {
+    let Ok(source_type) = temporaries.type_of(&variable) else {
+        return Box::new(once(Err(TransformerErrors::TemporaryNotFound {
+            name: variable.clone(),
+        })));
+    };
 
-    if r#type != &source_type {
-        return Err(TransformerErrors::TypeMismatch {
+    if r#type != source_type {
+        return Box::new(once(Err(TransformerErrors::TypeMismatch {
             expected: r#type.clone(),
-            found: source_type.into(),
-        });
+            found: source_type.clone(),
+        })));
     }
 
+    let source_type = source_type.to_owned();
     copy_all_fields(context, temporaries, variable, result, &source_type)
 }
 
@@ -34,12 +41,12 @@ mod tests {
     use crate::{
         temporaries::Temporaries,
         transformers::variable_reference_transformer::transform_variable_reference, FunctionsRef,
-        Type, TypesRef,
+        StructuresRef, Type,
     };
 
     #[test]
     fn test_transform_variable_reference() {
-        let types_ref = TypesRef::from(
+        let types_ref = StructuresRef::from(
             [
                 StructureDeclaration {
                     name: "Point".into(),

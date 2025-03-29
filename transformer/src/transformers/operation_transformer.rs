@@ -6,12 +6,12 @@ use nilang_types::{
     nodes::{ExpressionNode, Operator},
 };
 
-use crate::{temporaries::Temporaries, FunctionsRef, Type, TypesRef};
+use crate::{temporaries::Temporaries, FunctionsRef, StructuresRef, Type};
 
 use super::transform_expression;
 
 pub fn transform_operation(
-    context: &(FunctionsRef, TypesRef),
+    context: &(FunctionsRef, StructuresRef),
     temporaries: &mut Temporaries,
 
     operator: Operator,
@@ -20,29 +20,35 @@ pub fn transform_operation(
 
     result: Box<str>,
     r#type: &Type,
-) -> Result<Box<dyn Iterator<Item = Instruction>>, TransformerErrors> {
+) -> Box<dyn Iterator<Item = Result<Instruction, TransformerErrors>>> {
     if *r#type != Type::Int {
-        return Err(TransformerErrors::TypeMismatch {
+        return Box::new(once(Err(TransformerErrors::TypeMismatch {
             expected: Type::Int,
             found: r#type.clone(),
-        });
+        })));
     }
 
     let a_temporary = temporaries.declare(r#type.clone());
-    let a_instructions =
-        transform_expression(context, temporaries, a, a_temporary.clone(), r#type)?;
+    let a_instructions = transform_expression(context, temporaries, a, a_temporary.clone(), r#type);
     let b_temporary = temporaries.declare(r#type.clone());
-    let b_instructions =
-        transform_expression(context, temporaries, b, b_temporary.clone(), r#type)?;
+    let b_instructions = transform_expression(context, temporaries, b, b_temporary.clone(), r#type);
 
-    temporaries.access(&a_temporary)?;
-    temporaries.access(&b_temporary)?;
-    Ok(Box::new(
-        once(Instruction::Declare(a_temporary.clone()))
+    let Ok(_) = temporaries.access(&a_temporary) else {
+        return Box::new(once(Err(TransformerErrors::TemporaryNotFound {
+            name: a_temporary,
+        })));
+    };
+    let Ok(_) = temporaries.access(&b_temporary) else {
+        return Box::new(once(Err(TransformerErrors::TemporaryNotFound {
+            name: b_temporary,
+        })));
+    };
+    Box::new(
+        once(Ok(Instruction::Declare(a_temporary.clone())))
             .chain(a_instructions)
-            .chain(once(Instruction::Declare(b_temporary.clone())))
+            .chain(once(Ok(Instruction::Declare(b_temporary.clone()))))
             .chain(b_instructions)
-            .chain(once(match operator {
+            .chain(once(Ok(match operator {
                 Operator::Add => Instruction::AddVariables(result, a_temporary, b_temporary),
                 Operator::Subtract => {
                     Instruction::SubtractVariables(result, a_temporary, b_temporary)
@@ -52,6 +58,6 @@ pub fn transform_operation(
                 }
                 Operator::Divide => Instruction::DivideVariables(result, a_temporary, b_temporary),
                 Operator::Modulo => Instruction::ModuloVariables(result, a_temporary, b_temporary),
-            })),
-    ))
+            }))),
+    )
 }

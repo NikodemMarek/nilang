@@ -3,24 +3,35 @@ use std::iter::once;
 use errors::TransformerErrors;
 use nilang_types::nodes::ExpressionNode;
 
-use crate::{temporaries::Temporaries, FunctionsRef, Instruction, Type, TypesRef};
+use crate::{temporaries::Temporaries, FunctionsRef, Instruction, StructuresRef, Type};
 
 use super::transform_expression;
 
 pub fn transform_variable_declaration(
-    context: &(FunctionsRef, TypesRef),
+    context: &(FunctionsRef, StructuresRef),
     temporaries: &mut Temporaries,
 
     name: Box<str>,
     r#type: &Type,
     node: ExpressionNode,
-) -> Result<Box<dyn Iterator<Item = Instruction>>, TransformerErrors> {
+) -> Box<dyn Iterator<Item = Result<Instruction, TransformerErrors>>> {
     temporaries.declare_named(name.clone(), r#type.clone());
-    temporaries.access(&name)?;
+    let Ok(_) = temporaries.access(&name) else {
+        println!("Temporary not found: {}", name);
+        return Box::new(once(Err(TransformerErrors::TemporaryNotFound {
+            name: name.clone(),
+        })));
+    };
 
-    Ok(Box::new(once(Instruction::Declare(name.clone())).chain(
-        transform_expression(context, temporaries, node, name, r#type)?,
-    )))
+    Box::new(
+        once(Ok(Instruction::Declare(name.clone()))).chain(transform_expression(
+            context,
+            temporaries,
+            node,
+            name,
+            r#type,
+        )),
+    )
 }
 
 #[cfg(test)]
@@ -31,7 +42,7 @@ mod tests {
     fn test_variable_declaration() {
         let mut temporaries = Temporaries::default();
         let result = transform_variable_declaration(
-            (&FunctionsRef::default(), &TypesRef::default()),
+            (&FunctionsRef::default(), &StructuresRef::default()),
             &mut temporaries,
             "a".into(),
             &Type::Int,
@@ -47,7 +58,7 @@ mod tests {
         );
 
         let result = transform_variable_declaration(
-            (&FunctionsRef::default(), &TypesRef::default()),
+            (&FunctionsRef::default(), &StructuresRef::default()),
             &mut temporaries,
             "b".into(),
             &Type::Int,

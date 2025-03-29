@@ -1,4 +1,4 @@
-use std::iter::once;
+use errors::GeneratorErrors;
 
 use crate::registers::Registers;
 
@@ -11,10 +11,11 @@ pub trait AssemblyFlavour<R: Registers> {
     ) -> String;
 
     fn generate_program_scaffold() -> impl Iterator<Item = String> + 'static;
-    fn generate_function<'a>(
-        name: Box<str>,
-        instructions: impl Iterator<Item = FullInstruction<R>> + 'a,
-    ) -> impl Iterator<Item = String> + 'a;
+
+    fn generate_function_header(name: &str) -> String;
+    fn generate_function_body<'a>(
+        instructions: impl Iterator<Item = Result<FullInstruction<R>, GeneratorErrors>> + 'a,
+    ) -> impl Iterator<Item = Result<String, GeneratorErrors>> + 'a;
 }
 
 pub struct AtAndTFlavour;
@@ -84,30 +85,25 @@ _start:
             .lines()
             .chain(start_fn.lines())
             .map(ToOwned::to_owned)
-            .map(|line| {
-                if line.trim().is_empty() {
-                    "".to_owned()
-                } else {
-                    line
-                }
-            })
     }
 
-    fn generate_function<'a>(
-        name: Box<str>,
-        instructions: impl Iterator<Item = FullInstruction<R>> + 'a,
-    ) -> impl Iterator<Item = String> + 'a {
-        let header = format!(".globl {}\n{}:", name, name);
+    fn generate_function_header(name: &str) -> String {
+        format!(".globl {name}\n{name}:\n")
+    }
+
+    fn generate_function_body<'a>(
+        instructions: impl Iterator<Item = Result<FullInstruction<R>, GeneratorErrors>> + 'a,
+    ) -> impl Iterator<Item = Result<String, GeneratorErrors>> + 'a {
         let prologue = r#"
     # Prologue
     pushq %rbp
     movq %rsp, %rbp
         "#;
-        let body = instructions.map(|(instruction, parameters, comment)| {
-            format!(
-                "    {}",
+        let body = instructions.map(|v| {
+            v.map(|(instruction, parameters, comment)| {
                 Self::generate_instruction(&instruction, &parameters, &comment)
-            )
+            })
+            .map(|v| format!("    {}", v))
         });
         let epilogue = r#"
     # Epilogue
@@ -117,17 +113,12 @@ _start:
     ret
         "#;
 
-        once(header)
-            .chain(prologue.lines().map(ToOwned::to_owned))
+        prologue
+            .lines()
+            .map(ToOwned::to_owned)
+            .map(Ok)
             .chain(body)
-            .chain(epilogue.lines().map(ToOwned::to_owned))
-            .map(|line| {
-                if line.trim().is_empty() {
-                    "".to_owned()
-                } else {
-                    line
-                }
-            })
+            .chain(epilogue.lines().map(ToOwned::to_owned).map(Ok))
     }
 }
 

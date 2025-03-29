@@ -9,7 +9,8 @@ st Rect {
 }
 
 fn test(a: int): int {
-    rt a + 1;
+    vr p: Point = Point { x: 44, y: a };
+    rt p.x;
 }
 
 fn main(): int {

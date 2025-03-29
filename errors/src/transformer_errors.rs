@@ -21,6 +21,10 @@ pub enum TransformerErrors {
         expected: usize,
         got: usize,
     },
+    FieldsMismatch {
+        expected: Box<[Box<str>]>,
+        found: Box<[Box<str>]>,
+    },
 }
 
 impl std::fmt::Display for TransformerErrors {
@@ -65,6 +69,15 @@ impl std::fmt::Display for TransformerErrors {
                     format!(
                         "Function call arguments mismatch: `{}` expected `{}`, got `{}`",
                         name, expected, got
+                    )
+                    .as_str()
+                    .red()
+                }
+                TransformerErrors::FieldsMismatch { expected, found } => {
+                    format!(
+                        "Fields mismatch: expected `{}`, found `{}`",
+                        expected.join(", "),
+                        found.join(", ")
                     )
                     .as_str()
                     .red()

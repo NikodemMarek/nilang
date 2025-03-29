@@ -22,11 +22,22 @@ pub fn parse_object<I: PeekableAssumingIterator>(
         match tokens.assume_next()? {
             Token {
                 token: TokenType::Identifier(name),
+                start,
+                end,
                 ..
             } => {
                 tokens.assume(TokenType::Colon)?;
 
-                fields.insert(name, parse_expression(tokens)?);
+                if fields
+                    .insert(name.clone(), parse_expression(tokens)?)
+                    .is_some()
+                {
+                    return Err(ParserErrors::DuplicateField {
+                        from: start,
+                        to: end,
+                        name,
+                    });
+                };
 
                 match tokens.assume_next()? {
                     Token {

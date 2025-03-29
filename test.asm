@@ -10,21 +10,17 @@ _start:
     movq $60, %rax
     xorq %rdi, %rdi
     syscall
-
+        
 .globl test
 test:
-
     # Prologue
     pushq %rbp
     movq %rsp, %rbp
-
     movq %rdi, %rdi               # Load `a` as argument 0
-    movq %rdi, %rbx               # Copy `a` into `temp_1`
-    movq $1, %rcx                 # Load number '1' into `temp_2`
-    movq %rbx, %rax               # Prepare `temp_0` for addition
-    addq %rcx, %rax               # Add `temp_1` and `temp_2` into `temp_0`
-    movq %rax, %rax               # Return `temp_0`
-
+    movq $44, %rbx                # Load number '44' into `p.x`
+    movq %rdi, %rcx               # Copy `a` into `p.y`
+    movq %rbx, %rdx               # Copy `p.x` into `temp_0`
+    movq %rdx, %rax               # Return `temp_0`
     # Epilogue
     # leave
     movq %rbp, %rsp
@@ -33,11 +29,9 @@ test:
 
 .globl main
 main:
-
     # Prologue
     pushq %rbp
     movq %rsp, %rbp
-
     movq $5, %rbx                 # Load number '5' into `temp_0`
     movq %rbx, %rdi               # Load `temp_0` as argument 0
     call test                     # Call function `test`
@@ -53,7 +47,6 @@ main:
     call printf                   # Call function `printf`
     movq $0, %rsi                 # Load number '0' into `temp_4`
     movq %rsi, %rax               # Return `temp_4`
-
     # Epilogue
     # leave
     movq %rbp, %rsp

@@ -2,12 +2,13 @@ mod assembly_flavour;
 mod calling_convention;
 mod memory_manager;
 mod registers;
-mod utils;
 
 pub mod options {
     pub use crate::assembly_flavour::AtAndTFlavour;
     pub use crate::calling_convention::SystemVAmd64Abi;
 }
+
+use std::iter::once;
 
 use assembly_flavour::{
     AssemblyFlavour, AssemblyInstruction, AssemblyInstructionParameter, FullInstruction,
@@ -28,29 +29,51 @@ where
 pub fn generate_function<'a, C, A>(
     name: Box<str>,
     instructions: impl Iterator<Item = Instruction> + 'a,
-) -> Result<impl Iterator<Item = String> + 'a, GeneratorErrors>
+) -> impl Iterator<Item = Result<String, GeneratorErrors>> + 'a
 where
     C: CallingConvention<R = X86Registers>,
     A: AssemblyFlavour<C::R>,
 {
-    Ok(A::generate_function(
-        name,
-        generate_instructions::<C>(instructions)?,
-    ))
+    let header = A::generate_function_header(&name);
+    let body = A::generate_function_body(generate_instructions::<C>(instructions)).map(|line| {
+        line.map(|line| {
+            let line = line.trim();
+            if line.is_empty() {
+                "".to_owned()
+            } else {
+                format!("    {}\n", line)
+            }
+        })
+    });
+
+    once(Ok(header)).chain(body)
 }
 
 fn generate_instructions<'a, C>(
     instructions: impl Iterator<Item = Instruction> + 'a,
-) -> Result<impl Iterator<Item = FullInstruction<C::R>> + 'a, GeneratorErrors>
+) -> impl Iterator<Item = Result<FullInstruction<C::R>, GeneratorErrors>> + 'a
 where
     C: CallingConvention<R = X86Registers>,
 {
     let mut mm = MemoryManager::default();
-    Ok(Box::new(
-        instructions
-            .flat_map(move |instruction| generate_instruction::<C>(&mut mm, instruction))
-            .flatten(),
-    ))
+    Box::new(instructions.flat_map(move |instruction| {
+        match generate_instruction::<C>(&mut mm, instruction) {
+            Ok(v) => v
+                .into_iter()
+                .map(
+                    Ok::<
+                        (
+                            AssemblyInstruction,
+                            Vec<AssemblyInstructionParameter<X86Registers>>,
+                            Box<str>,
+                        ),
+                        GeneratorErrors,
+                    >,
+                )
+                .collect(),
+            Err(e) => vec![Err(e)],
+        }
+    }))
 }
 
 fn generate_instruction<C>(
@@ -106,7 +129,7 @@ where
         }
         Instruction::TakeArgument(argument, temporary) => {
             let location = C::nth_argument_location(argument);
-            mm.reserve_location(&temporary, location.clone());
+            mm.reserve_location(&temporary, location.clone())?;
             vec![(
                 AssemblyInstruction::Move,
                 vec![location.clone().into(), location.into()],

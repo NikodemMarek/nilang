@@ -6,7 +6,7 @@ mod return_transformer;
 mod variable_declaration_transformer;
 mod variable_reference_transformer;
 
-use std::iter::once;
+use std::iter::{empty, once};
 
 use errors::TransformerErrors;
 
@@ -19,14 +19,14 @@ use return_transformer::transform_return;
 use variable_declaration_transformer::transform_variable_declaration;
 use variable_reference_transformer::transform_variable_reference;
 
-use crate::{temporaries::Temporaries, FunctionsRef, Instruction, Type, TypesRef};
+use crate::{temporaries::Temporaries, FunctionsRef, Instruction, StructuresRef, Type};
 
 pub fn transform_statement(
-    context: &(FunctionsRef, TypesRef),
+    context: &(FunctionsRef, StructuresRef),
     node: StatementNode,
     return_type: &Type,
     temporaries: &mut Temporaries,
-) -> Result<Box<dyn Iterator<Item = Instruction>>, TransformerErrors> {
+) -> Box<dyn Iterator<Item = Result<Instruction, TransformerErrors>>> {
     match node {
         StatementNode::Return(node) => transform_return(context, temporaries, *node, return_type),
         StatementNode::VariableDeclaration {
@@ -46,22 +46,22 @@ pub fn transform_statement(
 }
 
 pub fn transform_expression(
-    context: &(FunctionsRef, TypesRef),
+    context: &(FunctionsRef, StructuresRef),
     temporaries: &mut Temporaries,
 
     node: ExpressionNode,
 
     result: Box<str>,
     r#type: &Type,
-) -> Result<Box<dyn Iterator<Item = Instruction>>, TransformerErrors> {
+) -> Box<dyn Iterator<Item = Result<Instruction, TransformerErrors>>> {
     match node {
         ExpressionNode::Number(number) => {
-            Ok(Box::new(once(Instruction::LoadNumber(result, number))))
+            Box::new(once(Ok(Instruction::LoadNumber(result, number))))
         }
-        ExpressionNode::Char(char) => Ok(Box::new(once(Instruction::LoadChar(result, char)))),
+        ExpressionNode::Char(char) => Box::new(once(Ok(Instruction::LoadChar(result, char)))),
         ExpressionNode::String(_) => todo!(),
         ExpressionNode::Object { r#type, fields } => {
-            transform_object(context, temporaries, fields, result, &r#type.into())
+            transform_object(context, temporaries, fields, result, &r#type)
         }
         ExpressionNode::VariableReference(variable) => {
             transform_variable_reference(context, temporaries, variable, result, r#type)
@@ -79,37 +79,53 @@ pub fn transform_expression(
 }
 
 pub fn copy_all_fields(
-    context: &(FunctionsRef, TypesRef),
+    context: &(FunctionsRef, StructuresRef),
     temporaries: &mut Temporaries,
     source: Box<str>,
     destination: Box<str>,
     object_type: &Type,
-) -> Result<Box<dyn Iterator<Item = Instruction>>, TransformerErrors> {
-    if let Type::Object(object_type) = object_type {
-        let mut instructions = Vec::new();
-        for (destination_temporary, source_temporary, field_type) in
-            object_fields_from_to(&context.1, source, destination, object_type)?
-        {
-            temporaries.declare_named(source_temporary.clone(), field_type);
-            instructions.push(Instruction::Declare(destination_temporary.clone()));
-            temporaries.access(&source_temporary.clone())?;
-            instructions.push(Instruction::Copy(destination_temporary, source_temporary));
+) -> Box<dyn Iterator<Item = Result<Instruction, TransformerErrors>>> {
+    let object_type = match object_type {
+        Type::Object(object_type) => object_type,
+        Type::Void => return Box::new(empty()),
+        Type::Int | Type::Char => {
+            return Box::new(once(Ok(Instruction::Copy(destination, source))));
         }
-        return Ok(Box::new(instructions.into_iter()));
+    };
+
+    let Ok(object_fields_from_to) =
+        object_fields_from_to(&context.1, source, destination, object_type)
+    else {
+        return Box::new(once(Err(TransformerErrors::TypeNotFound {
+            name: object_type.clone(),
+        })));
+    };
+
+    let mut instructions = Vec::new();
+    for (destination_temporary, source_temporary, field_type) in object_fields_from_to {
+        temporaries.declare_named(source_temporary.clone(), field_type);
+        instructions.push(Ok(Instruction::Declare(destination_temporary.clone())));
+        instructions.push(
+            temporaries
+                .access(&source_temporary.clone())
+                .map(|_| Instruction::Copy(destination_temporary, source_temporary)),
+        );
     }
 
-    Ok(Box::new(once(Instruction::Copy(destination, source))))
+    Box::new(instructions.into_iter())
 }
 
 pub fn object_fields_from_to(
-    context: &TypesRef,
+    context: &StructuresRef,
 
     source: Box<str>,
     destination: Box<str>,
 
     object_type: &str,
 ) -> Result<Vec<(Box<str>, Box<str>, Type)>, TransformerErrors> {
-    Ok(object_fields_recursive(context, object_type)?
+    Ok(context
+        .get_fields_flattened(&object_type)?
+        .into_iter()
         .map(|(field, field_type)| {
             let destination_temporary = <Box<str>>::from(format!("{}.{}", destination, field));
             let source_temporary = <Box<str>>::from(format!("{}.{}", source, field));
@@ -118,35 +134,39 @@ pub fn object_fields_from_to(
         .collect())
 }
 
-pub fn object_fields_recursive(
-    context: &TypesRef,
-
-    object_type: &str,
-) -> Result<Box<dyn Iterator<Item = (String, Type)>>, TransformerErrors> {
-    let fields_map = if let Some(fields) = context.get_fields(object_type) {
-        fields
-    } else {
-        return Err(TransformerErrors::TypeNotFound {
-            name: object_type.into(),
-        });
-    };
-
-    let mut fields = Vec::new();
-    for (field, field_type) in fields_map {
-        if let Type::Object(field_type) = field_type {
-            fields.append(
-                &mut object_fields_recursive(context, field_type)?
-                    .map(|(subfield, r#type)| (format!("{}.{}", field, subfield), r#type.clone()))
-                    .collect(),
-            );
-        } else {
-            fields.push((field.to_string(), field_type.clone()));
-        }
-    }
-
-    fields.sort();
-    Ok(Box::new(fields.into_iter()))
-}
+// pub fn object_fields_recursive(
+//     context: &TypesRef,
+//
+//     object_type: &str,
+// ) -> Box<dyn Iterator<Item = Result<(String, Type), TransformerErrors>>> {
+//     let fields_map = if let Some(fields) = context.get_fields(object_type) {
+//         fields
+//     } else {
+//         panic!("Type not found: {}", object_type);
+//         // return Err(TransformerErrors::TypeNotFound {
+//         //     name: object_type.into(),
+//         // });
+//     };
+//
+//     let mut fields = Vec::new();
+//     for (field, field_type) in fields_map {
+//         if let Type::Object(field_type) = field_type {
+//             fields.append(
+//                 &mut object_fields_recursive(context, field_type)
+//                     .filter_map(|field| field.ok())
+//                     .map(|(subfield, r#type)| {
+//                         Ok((format!("{}.{}", field, subfield), r#type.clone()))
+//                     })
+//                     .collect(),
+//             );
+//         } else {
+//             fields.push(Ok((field.to_string(), field_type.clone())));
+//         }
+//     }
+//
+//     // fields.sort();
+//     Box::new(fields.into_iter())
+// }
 
 #[cfg(test)]
 mod tests {
@@ -154,11 +174,11 @@ mod tests {
 
     use nilang_types::nodes::StructureDeclaration;
 
-    use crate::{transformers::object_fields_recursive, TypesRef};
+    use crate::{transformers::object_fields_recursive, StructuresRef};
 
     #[test]
     fn test_object_fields_recursive() {
-        let types_ref = TypesRef::from(
+        let types_ref = StructuresRef::from(
             [
                 StructureDeclaration {
                     name: "Point".into(),

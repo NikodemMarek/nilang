@@ -36,6 +36,11 @@ pub enum ParserErrors {
         from: (usize, usize),
         to: (usize, usize),
     },
+    DuplicateField {
+        from: (usize, usize),
+        to: (usize, usize),
+        name: Box<str>,
+    },
 }
 
 impl std::fmt::Display for ParserErrors {
@@ -87,6 +92,9 @@ impl From<&ParserErrors> for ((usize, usize), (usize, usize), String) {
             }
             ParserErrors::InvalidLiteral { from, to } => {
                 (*from, *to, String::from("Invalid literal"))
+            }
+            ParserErrors::DuplicateField { from, to, name } => {
+                (*from, *to, format!("Duplicate field `{}`", name))
             }
         }
     }

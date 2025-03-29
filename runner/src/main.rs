@@ -2,9 +2,9 @@
 
 use std::fs::{read_to_string, write};
 
-use errors::NilangError;
+use errors::{NilangError, TransformerErrors};
 use nilang_generator::options::{AtAndTFlavour, SystemVAmd64Abi};
-use nilang_transformer::{FunctionsRef, TypesRef};
+use nilang_transformer::{FunctionsRef, StructuresRef};
 
 fn main() {
     let code = read_to_string("test.ni").unwrap();
@@ -33,37 +33,33 @@ fn compile(code: &str) -> Box<str> {
         }
     };
 
-    let context = create_transformer_context(&functions, &structures);
+    let context = create_transformer_context(&functions, &structures).unwrap();
 
-    let assembly = functions
-        .iter()
-        .map(|function| {
-            (
-                function.name.clone(),
-                nilang_transformer::transform_function(&context, function),
-            )
-        })
-        .map(|(name, result)| match result {
-            Ok(instructions) => (name, instructions),
-            Err(err) => {
-                panic!("{}", err);
-            }
-        })
-        .map(|(name, instructions)| {
-            nilang_generator::generate_function::<SystemVAmd64Abi, AtAndTFlavour>(
-                name,
-                instructions,
-            )
-        })
-        .map(|result| match result {
-            Ok(asm) => asm,
-            Err(err) => {
-                panic!("{}", err);
-            }
-        });
+    let transformed = functions.iter().map(|function| {
+        (
+            function.name.clone(),
+            nilang_transformer::transform_function(&context, function).map(|result| match result {
+                Ok(instruction) => instruction,
+                Err(err) => {
+                    panic!("{}", err);
+                }
+            }),
+        )
+    });
+
+    let generated = transformed.map(|(name, instructions)| {
+        nilang_generator::generate_function::<SystemVAmd64Abi, AtAndTFlavour>(name, instructions)
+            .map(|result| match result {
+                Ok(instruction) => instruction,
+                Err(err) => {
+                    panic!("{}", err);
+                }
+            })
+            .collect::<String>()
+    });
 
     nilang_generator::generate_program::<AtAndTFlavour>()
-        .chain(assembly.flatten())
+        .chain(generated)
         .collect::<Vec<_>>()
         .join("\n")
         .into()
@@ -72,6 +68,6 @@ fn compile(code: &str) -> Box<str> {
 fn create_transformer_context(
     functions: &[nilang_types::nodes::FunctionDeclaration],
     structures: &[nilang_types::nodes::StructureDeclaration],
-) -> (FunctionsRef, TypesRef) {
-    (functions.into(), structures.into())
+) -> Result<(FunctionsRef, StructuresRef), TransformerErrors> {
+    structures.try_into().map(|s| (functions.into(), s))
 }

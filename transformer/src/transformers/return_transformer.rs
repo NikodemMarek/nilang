@@ -3,18 +3,18 @@ use std::iter::once;
 use errors::TransformerErrors;
 use nilang_types::nodes::ExpressionNode;
 
-use crate::{temporaries::Temporaries, FunctionsRef, Instruction, Type, TypesRef};
+use crate::{temporaries::Temporaries, FunctionsRef, Instruction, StructuresRef, Type};
 
 use super::transform_expression;
 
 pub fn transform_return(
-    context: &(FunctionsRef, TypesRef),
+    context: &(FunctionsRef, StructuresRef),
     temporaries: &mut Temporaries,
 
     node: ExpressionNode,
 
     return_type: &Type,
-) -> Result<Box<dyn Iterator<Item = Instruction>>, TransformerErrors> {
+) -> Box<dyn Iterator<Item = Result<Instruction, TransformerErrors>>> {
     let variable_name = temporaries.declare(return_type.clone());
     let instructions = transform_expression(
         context,
@@ -22,14 +22,18 @@ pub fn transform_return(
         node,
         variable_name.clone(),
         return_type,
-    )?;
+    );
 
-    temporaries.access(&variable_name)?;
-    Ok(Box::new(
-        once(Instruction::Declare(variable_name.clone()))
+    let Ok(_) = temporaries.access(&variable_name) else {
+        return Box::new(once(Err(TransformerErrors::TemporaryNotFound {
+            name: variable_name,
+        })));
+    };
+    Box::new(
+        once(Ok(Instruction::Declare(variable_name.clone())))
             .chain(instructions)
-            .chain(once(Instruction::ReturnVariable(variable_name))),
-    ))
+            .chain(once(Ok(Instruction::ReturnVariable(variable_name)))),
+    )
 }
 
 #[cfg(test)]
@@ -42,7 +46,7 @@ mod tests {
         temporaries.declare_named("x".into(), Type::Int);
         let node = ExpressionNode::VariableReference("x".into());
         let result = transform_return(
-            (&FunctionsRef::default(), &TypesRef::default()),
+            (&FunctionsRef::default(), &StructuresRef::default()),
             &mut temporaries,
             node,
             &Type::Int,
@@ -68,7 +72,7 @@ mod tests {
             field: "y".into(),
         };
         let result = transform_return(
-            (&FunctionsRef::default(), &TypesRef::default()),
+            (&FunctionsRef::default(), &StructuresRef::default()),
             &mut temporaries,
             node,
             &Type::Int,
