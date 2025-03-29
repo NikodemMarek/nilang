@@ -44,7 +44,7 @@ fn compile(code: &str) -> Box<str> {
             )
         })
         .map(|(name, result)| match result {
-            Ok(asm) => (name, asm),
+            Ok(instructions) => (name, instructions),
             Err(err) => {
                 panic!("{}", err);
             }

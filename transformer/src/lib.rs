@@ -131,17 +131,20 @@ fn transform_parameters(
     parameters: &[(Box<str>, Type)],
 ) -> Result<Box<dyn Iterator<Item = Instruction>>, TransformerErrors> {
     let mut instructions = Vec::new();
+    let mut i = 0;
     for (parameter_name, parameter_type) in parameters.iter() {
         let parameter_type = parameter_type.clone();
         if let Type::Object(object_type) = &parameter_type {
             for (field, field_type) in object_fields_recursive(&context.1, object_type)? {
                 let field = Into::<Box<str>>::into(format!("{}.{}", parameter_name, field));
                 temporaries.declare_named(field.clone(), field_type);
-                instructions.push(Instruction::Declare(field.clone()));
+                instructions.push(Instruction::TakeArgument(i, field.clone()));
+                i += 1;
             }
         } else {
             temporaries.declare_named(parameter_name.clone(), parameter_type);
-            instructions.push(Instruction::Declare(parameter_name.clone()));
+            instructions.push(Instruction::TakeArgument(i, parameter_name.clone()));
+            i += 1;
         }
     }
     Ok(Box::new(instructions.into_iter()))

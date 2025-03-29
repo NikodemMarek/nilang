@@ -8,8 +8,13 @@ st Rect {
     end: Point
 }
 
+fn test(a: int): int {
+    rt a + 1;
+}
+
 fn main(): int {
-    printi(5 + 8);
+    vr test: int = test(5);
+    printi(test + 8);
 
     rt 0;
 }

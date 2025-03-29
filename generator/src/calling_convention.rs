@@ -81,7 +81,7 @@ impl CallingConvention for SystemVAmd64Abi {
         let stack_cleanup = [];
 
         let move_result = if let Some(return_temporary) = return_temporary {
-            let return_register = mm.reserve(&return_temporary).unwrap();
+            let return_register = mm.get_location_or_err(&return_temporary)?;
             [(
                 AssemblyInstruction::Move,
                 vec![
