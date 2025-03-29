@@ -1,9 +1,11 @@
 use std::{collections::HashMap, fmt::Debug};
 
+pub type Parameter = (Box<str>, Type);
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct FunctionDeclaration {
     pub name: Box<str>,
-    pub parameters: Box<[(Box<str>, Type)]>,
+    pub parameters: Box<[Parameter]>,
     pub return_type: Type,
     pub body: Box<[StatementNode]>,
 }

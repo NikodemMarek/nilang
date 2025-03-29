@@ -3,9 +3,9 @@ use std::iter::once;
 use errors::TransformerErrors;
 use nilang_types::instructions::Instruction;
 
-use crate::{temporaries::Temporaries, FunctionsRef, StructuresRef, Type};
-
-use super::copy_all_fields;
+use crate::{
+    structures_ref::copy_all_fields, temporaries::Temporaries, FunctionsRef, StructuresRef, Type,
+};
 
 pub fn transform_variable_reference<'a>(
     context: &(FunctionsRef, StructuresRef),
@@ -28,61 +28,37 @@ pub fn transform_variable_reference<'a>(
         })));
     }
 
-    copy_all_fields(context, temporaries, variable, result, &source_type)
+    copy_all_fields(&context.1, temporaries, variable, result, &source_type)
 }
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
-    use nilang_types::{instructions::Instruction, nodes::StructureDeclaration};
+    use nilang_types::instructions::Instruction;
 
     use crate::{
-        temporaries::Temporaries,
+        structures_ref::tests::test_structures_ref, temporaries::Temporaries,
         transformers::variable_reference_transformer::transform_variable_reference, FunctionsRef,
-        StructuresRef, Type,
+        Type,
     };
 
     #[test]
     fn test_transform_variable_reference() {
-        let types_ref = StructuresRef::from(
-            [
-                StructureDeclaration {
-                    name: "Point".into(),
-                    fields: HashMap::from([("x".into(), "int".into()), ("y".into(), "int".into())]),
-                },
-                StructureDeclaration {
-                    name: "Rect".into(),
-                    fields: HashMap::from([
-                        ("start".into(), "Point".into()),
-                        ("end".into(), "Point".into()),
-                    ]),
-                },
-                StructureDeclaration {
-                    name: "Label".into(),
-                    fields: HashMap::from([
-                        ("text".into(), "str".into()),
-                        ("anchor".into(), "Point".into()),
-                    ]),
-                },
-            ]
-            .as_ref(),
-        );
+        let types_ref = test_structures_ref();
 
-        let mut temporaries = Temporaries::default();
-        temporaries.declare_named("original".into(), "Rect".into());
-        temporaries.declare_named("copy".into(), "Rect".into());
+        let temporaries = Temporaries::default();
+        temporaries.declare_named("original".into(), Type::Object("Rect".into()));
+        temporaries.declare_named("copy".into(), Type::Object("Rect".into()));
 
-        let instructions = transform_variable_reference(
-            (&FunctionsRef::default(), &types_ref),
-            &mut temporaries,
-            "original".into(),
-            "copy".into(),
-            &Type::Object("Rect".into()),
-        )
-        .unwrap();
         assert_eq!(
-            instructions,
+            transform_variable_reference(
+                &(FunctionsRef::default(), types_ref),
+                &temporaries,
+                "original".into(),
+                "copy".into(),
+                &Type::Object("Rect".into()),
+            )
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap(),
             vec![
                 Instruction::Declare("copy.end.x".into()),
                 Instruction::Copy("copy.end.x".into(), "original.end.x".into()),

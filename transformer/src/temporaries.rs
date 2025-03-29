@@ -4,8 +4,10 @@ use errors::TransformerErrors;
 
 use crate::Type;
 
+type Declared = HashMap<Box<str>, (Type, u8)>;
+
 #[derive(Debug, Default)]
-pub struct Temporaries(RefCell<(HashMap<Box<str>, (Type, u8)>, usize)>);
+pub struct Temporaries(RefCell<(Declared, usize)>);
 
 impl Temporaries {
     pub fn declare_named(&self, name: Box<str>, r#type: Type) {

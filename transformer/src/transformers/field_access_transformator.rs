@@ -1,9 +1,9 @@
 use errors::TransformerErrors;
 use nilang_types::{instructions::Instruction, nodes::ExpressionNode};
 
-use crate::{temporaries::Temporaries, FunctionsRef, StructuresRef, Type};
-
-use super::copy_all_fields;
+use crate::{
+    structures_ref::copy_all_fields, temporaries::Temporaries, FunctionsRef, StructuresRef, Type,
+};
 
 pub fn transform_field_access<'a>(
     context: &(FunctionsRef, StructuresRef),
@@ -16,7 +16,13 @@ pub fn transform_field_access<'a>(
     r#type: &Type,
 ) -> Box<dyn Iterator<Item = Result<Instruction, TransformerErrors>> + 'a> {
     let flattened_field = flatten_field_access(structure, field);
-    copy_all_fields(context, temporaries, flattened_field.into(), result, r#type)
+    copy_all_fields(
+        &context.1,
+        temporaries,
+        flattened_field.into(),
+        result,
+        r#type,
+    )
 }
 
 fn flatten_field_access(structure: ExpressionNode, field: Box<str>) -> String {

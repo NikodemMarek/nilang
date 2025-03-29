@@ -18,7 +18,6 @@ pub fn transform_variable_declaration<'a>(
     temporaries.declare_named(name.clone(), r#type.clone());
 
     let Ok(_) = temporaries.access(&name) else {
-        println!("Temporary not found: {}", name);
         return Box::new(once(Err(TransformerErrors::TemporaryNotFound {
             name: name.clone(),
         })));
@@ -41,33 +40,33 @@ mod tests {
 
     #[test]
     fn test_variable_declaration() {
-        let mut temporaries = Temporaries::default();
-        let result = transform_variable_declaration(
-            (&FunctionsRef::default(), &StructuresRef::default()),
-            &mut temporaries,
-            "a".into(),
-            &Type::Int,
-            ExpressionNode::Number(10.),
-        )
-        .unwrap();
+        let temporaries = Temporaries::default();
         assert_eq!(
-            result,
+            transform_variable_declaration(
+                &(FunctionsRef::default(), StructuresRef::default()),
+                &temporaries,
+                "a".into(),
+                &Type::Int,
+                ExpressionNode::Number(10.),
+            )
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap(),
             [
                 Instruction::Declare("a".into()),
                 Instruction::LoadNumber("a".into(), 10.)
             ]
         );
 
-        let result = transform_variable_declaration(
-            (&FunctionsRef::default(), &StructuresRef::default()),
-            &mut temporaries,
-            "b".into(),
-            &Type::Int,
-            ExpressionNode::VariableReference("a".into()),
-        )
-        .unwrap();
         assert_eq!(
-            result,
+            transform_variable_declaration(
+                &(FunctionsRef::default(), StructuresRef::default()),
+                &temporaries,
+                "b".into(),
+                &Type::Int,
+                ExpressionNode::VariableReference("a".into()),
+            )
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap(),
             [
                 Instruction::Declare("b".into()),
                 Instruction::Copy("b".into(), "a".into())

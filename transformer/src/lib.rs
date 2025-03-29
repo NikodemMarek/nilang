@@ -1,136 +1,18 @@
+mod functions_ref;
+mod structures_ref;
 mod temporaries;
 mod transformers;
 
-use std::{collections::HashMap, iter::once};
+use std::iter::once;
 
 use errors::TransformerErrors;
+pub use functions_ref::FunctionsRef;
 use nilang_types::{
     instructions::Instruction,
-    nodes::{FunctionDeclaration, StatementNode, StructureDeclaration, Type},
+    nodes::{FunctionDeclaration, Parameter, StatementNode, Type},
 };
+pub use structures_ref::StructuresRef;
 use temporaries::Temporaries;
-
-#[derive(Debug, Default)]
-pub struct StructuresRef(
-    HashMap<Box<str>, HashMap<Box<str>, Type>>,
-    HashMap<Box<str>, HashMap<Box<str>, Type>>,
-);
-
-impl StructuresRef {
-    pub fn get_fields(&self, structure_name: &str) -> Option<&HashMap<Box<str>, Type>> {
-        self.0.get(structure_name)
-    }
-
-    fn get_fields_flattened(
-        &self,
-        object_type: &str,
-    ) -> Result<&HashMap<Box<str>, Type>, TransformerErrors> {
-        self.1
-            .get(object_type)
-            .ok_or_else(|| TransformerErrors::TypeNotFound {
-                name: object_type.into(),
-            })
-    }
-}
-
-impl TryFrom<&[StructureDeclaration]> for StructuresRef {
-    type Error = TransformerErrors;
-
-    fn try_from(
-        structures: &[StructureDeclaration],
-    ) -> Result<StructuresRef, errors::TransformerErrors> {
-        let nested_structures = structures
-            .iter()
-            .map(|StructureDeclaration { name, fields }| (name.clone(), fields.clone()))
-            .collect::<HashMap<_, _>>();
-        let flattened_structures = nested_structures
-            .keys()
-            .map(|structure_name| {
-                object_fields_recursive(&nested_structures, structure_name)
-                    .map(|fields| (structure_name.clone(), fields))
-            })
-            .collect::<Result<HashMap<_, _>, _>>()?;
-        Ok(StructuresRef(nested_structures, flattened_structures))
-    }
-}
-
-fn object_fields_recursive(
-    r: &HashMap<Box<str>, HashMap<Box<str>, Type>>,
-    object_type: &str,
-) -> Result<HashMap<Box<str>, Type>, TransformerErrors> {
-    let fields_map = if let Some(fields) = r.get(object_type) {
-        fields
-    } else {
-        return Err(TransformerErrors::TypeNotFound {
-            name: object_type.into(),
-        });
-    };
-
-    let mut fields = HashMap::new();
-    for (field, field_type) in fields_map {
-        if let Type::Object(field_type) = field_type {
-            fields.extend(&mut object_fields_recursive(r, field_type)?.iter().map(
-                |(subfield, r#type)| (format!("{}.{}", field, subfield).into(), r#type.clone()),
-            ));
-        } else {
-            fields.insert(field.clone(), field_type.clone());
-        }
-    }
-
-    Ok(fields)
-}
-
-#[derive(Debug, Default)]
-pub struct FunctionsRef(HashMap<Box<str>, (Type, Box<[(Box<str>, Type)]>)>);
-
-impl FunctionsRef {
-    pub fn get_parameters(&self, name: &str) -> Result<&[(Box<str>, Type)], TransformerErrors> {
-        self.0
-            .get(name)
-            .map(|(_, parameters)| parameters.as_ref())
-            .ok_or(TransformerErrors::FunctionNotFound { name: name.into() })
-    }
-}
-
-impl From<&[FunctionDeclaration]> for FunctionsRef {
-    fn from(functions: &[FunctionDeclaration]) -> Self {
-        let mut functions = FunctionsRef(
-            functions
-                .iter()
-                .map(
-                    |FunctionDeclaration {
-                         return_type,
-                         parameters,
-                         name,
-                         ..
-                     }| {
-                        (
-                            name.clone(),
-                            (
-                                return_type.clone(),
-                                parameters
-                                    .iter()
-                                    .map(|(name, r#type)| (name.clone(), r#type.clone()))
-                                    .collect(),
-                            ),
-                        )
-                    },
-                )
-                .collect(),
-        );
-
-        functions.0.insert(
-            "printi".into(),
-            (Type::Void, Box::new([("value".into(), Type::Int)])),
-        );
-        functions.0.insert(
-            "printc".into(),
-            (Type::Void, Box::new([("value".into(), Type::Char)])),
-        );
-
-        functions
-    }
-}
 
 pub fn transform_function<'a>(
     context: &'a (FunctionsRef, StructuresRef),
@@ -141,7 +23,7 @@ pub fn transform_function<'a>(
         ..
     }: &'a FunctionDeclaration,
 ) -> Box<dyn Iterator<Item = Result<Instruction, TransformerErrors>> + 'a> {
-    let mut temporaries = Temporaries::default();
+    let temporaries = Temporaries::default();
 
     let parameters = transform_parameters(
         &context.1,
@@ -171,7 +53,7 @@ fn transform_body<'a>(
 fn transform_parameters(
     context: &StructuresRef,
     temporaries: &Temporaries,
-    parameters: &[(Box<str>, Type)],
+    parameters: &[Parameter],
 ) -> Box<dyn Iterator<Item = Result<Instruction, TransformerErrors>>> {
     let mut instructions = Vec::new();
     let mut i = 0;

@@ -33,7 +33,7 @@ pub fn parse_variable_declaration<I: PeekableAssumingIterator>(
 #[cfg(test)]
 mod tests {
     use nilang_types::{
-        nodes::{ExpressionNode, FunctionCall, Operator, StatementNode},
+        nodes::{ExpressionNode, FunctionCall, Operator, StatementNode, Type},
         tokens::{Keyword, Token, TokenType},
     };
 
@@ -86,7 +86,7 @@ mod tests {
             .unwrap(),
             StatementNode::VariableDeclaration {
                 name: "test".into(),
-                r#type: "int".into(),
+                r#type: Type::Int,
                 value: Box::new(ExpressionNode::Number(9.))
             }
         );
@@ -136,7 +136,7 @@ mod tests {
             .unwrap(),
             StatementNode::VariableDeclaration {
                 name: "test".into(),
-                r#type: "int".into(),
+                r#type: Type::Int,
                 value: Box::new(ExpressionNode::VariableReference("test2".into()))
             }
         );
@@ -206,7 +206,7 @@ mod tests {
             .unwrap(),
             StatementNode::VariableDeclaration {
                 name: "test".into(),
-                r#type: "int".into(),
+                r#type: Type::Int,
                 value: Box::new(ExpressionNode::Operation {
                     operator: Operator::Add,
                     a: Box::new(ExpressionNode::Number(6.)),
@@ -280,7 +280,7 @@ mod tests {
             .unwrap(),
             StatementNode::VariableDeclaration {
                 name: "test".into(),
-                r#type: "int".into(),
+                r#type: Type::Int,
                 value: Box::new(ExpressionNode::Operation {
                     operator: Operator::Add,
                     a: Box::new(ExpressionNode::VariableReference("test2".into())),
@@ -359,7 +359,7 @@ mod tests {
             .unwrap(),
             StatementNode::VariableDeclaration {
                 name: "test".into(),
-                r#type: "int".into(),
+                r#type: Type::Int,
                 value: Box::new(ExpressionNode::FunctionCall(FunctionCall {
                     name: "abc".into(),
                     arguments: [ExpressionNode::Operation {

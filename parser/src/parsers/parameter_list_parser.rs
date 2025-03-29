@@ -1,6 +1,6 @@
 use errors::ParserErrors;
 use nilang_types::{
-    nodes::Type,
+    nodes::Parameter,
     tokens::{Token, TokenType},
 };
 
@@ -10,7 +10,7 @@ use super::type_annotation_parser::parse_type_annotation;
 
 pub fn parse_parameter_list<I: PeekableAssumingIterator>(
     tokens: &mut I,
-) -> Result<Box<[(Box<str>, Type)]>, ParserErrors> {
+) -> Result<Box<[Parameter]>, ParserErrors> {
     tokens.assume(TokenType::OpeningParenthesis)?;
 
     let mut parameters = Vec::new();
@@ -57,7 +57,10 @@ pub fn parse_parameter_list<I: PeekableAssumingIterator>(
 
 #[cfg(test)]
 mod test {
-    use nilang_types::tokens::{Token, TokenType};
+    use nilang_types::{
+        nodes::Type,
+        tokens::{Token, TokenType},
+    };
 
     use crate::parsers::parameter_list_parser::parse_parameter_list;
 
@@ -116,11 +119,7 @@ mod test {
                 .peekable(),
             )
             .unwrap(),
-            [
-                ("test1".into(), "int".into()),
-                ("test2".into(), "int".into()),
-            ]
-            .into()
+            [("test1".into(), Type::Int), ("test2".into(), Type::Int),].into()
         );
     }
 }

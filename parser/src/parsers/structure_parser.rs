@@ -63,7 +63,7 @@ pub fn parse_structure<I: PeekableAssumingIterator>(
 #[cfg(test)]
 mod test {
     use nilang_types::{
-        nodes::StructureDeclaration,
+        nodes::{StructureDeclaration, Type},
         tokens::{Keyword, Token, TokenType},
     };
 
@@ -137,8 +137,8 @@ mod test {
             StructureDeclaration {
                 name: "Test".into(),
                 fields: [
-                    ("test_field".into(), "int".into(),),
-                    ("test_field2".into(), "int".into(),),
+                    ("test_field".into(), Type::Int),
+                    ("test_field2".into(), Type::Int),
                 ]
                 .into(),
             }
@@ -194,7 +194,7 @@ mod test {
             .unwrap(),
             StructureDeclaration {
                 name: "Test".into(),
-                fields: [("test_field".into(), "int".into(),),].into(),
+                fields: [("test_field".into(), Type::Int)].into(),
             },
         );
     }

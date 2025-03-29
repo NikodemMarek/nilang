@@ -56,7 +56,7 @@ pub fn parse_function_definition<I: PeekableAssumingIterator>(
 #[cfg(test)]
 mod tests {
     use nilang_types::{
-        nodes::{ExpressionNode, FunctionDeclaration, StatementNode},
+        nodes::{ExpressionNode, FunctionDeclaration, StatementNode, Type},
         tokens::{Keyword, Token, TokenType},
     };
 
@@ -130,7 +130,7 @@ mod tests {
             FunctionDeclaration {
                 name: "main".into(),
                 parameters: [].into(),
-                return_type: "int".into(),
+                return_type: Type::Int,
                 body: Box::new([StatementNode::Return(Box::new(ExpressionNode::Number(6.)))]),
             }
         );

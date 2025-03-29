@@ -24,7 +24,10 @@ pub fn parse_type(r#type: &str) -> Type {
 
 #[cfg(test)]
 mod test {
-    use nilang_types::tokens::{Token, TokenType};
+    use nilang_types::{
+        nodes::Type,
+        tokens::{Token, TokenType},
+    };
 
     use crate::parsers::type_annotation_parser::parse_type_annotation;
 
@@ -48,7 +51,7 @@ mod test {
                 .peekable()
             )
             .unwrap(),
-            "int".into(),
+            Type::Int,
         );
     }
 }

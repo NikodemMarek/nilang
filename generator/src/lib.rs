@@ -206,7 +206,7 @@ fn builtin_functions<C: CallingConvention>(
     mm: &mut MemoryManager<C::R>,
     name: &str,
     arguments: &[Box<str>],
-    return_temporary: Option<Box<str>>,
+    _return_temporary: Option<Box<str>>,
 ) -> Option<Result<Vec<FullInstruction<C::R>>, GeneratorErrors>> {
     match name {
         "printi" => Some(C::generate_function_call(
