@@ -1,4 +1,8 @@
-use std::{collections::HashMap, iter::zip, ops::Deref};
+use std::{
+    collections::{BinaryHeap, HashMap},
+    iter::zip,
+    ops::Deref,
+};
 
 use errors::GeneratorErrors;
 
@@ -7,32 +11,45 @@ use crate::{
     registers::{Registers, X86Registers},
 };
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Location<R: Registers> {
     Register(R),
     Stack(usize),
     Hardcoded(Box<str>),
 }
 
+impl<R: Registers> PartialOrd for Location<R> {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl<R: Registers> Ord for Location<R> {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        match (self, other) {
+            (Location::Register(a), Location::Register(b)) => a.cmp(b),
+            (Location::Stack(a), Location::Stack(b)) => a.cmp(b).reverse(),
+            (Location::Hardcoded(_), Location::Hardcoded(_)) => std::cmp::Ordering::Equal,
+            (Location::Register(_), _) => std::cmp::Ordering::Greater,
+            (Location::Stack(_), Location::Register(_)) => std::cmp::Ordering::Less,
+            (Location::Stack(_), Location::Hardcoded(_)) => std::cmp::Ordering::Greater,
+            (Location::Hardcoded(_), _) => std::cmp::Ordering::Less,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct MemoryManager<R: Registers> {
-    // FIXME: do tests in some other way, so it does not require publics here
-    pub stack_position: usize,
-    pub free_registers: Vec<R>,
+    stack_position: usize,
+    next_locations: BinaryHeap<Location<R>>,
 
-    pub next_locations: Vec<Location<R>>,
-    pub reservations: HashMap<Box<str>, Location<R>>,
+    reservations: HashMap<Box<str>, Location<R>>,
 }
 
 impl<R: Registers> MemoryManager<R> {
     #[inline]
     pub fn reserve(&mut self, name: &str) -> Result<Location<R>, GeneratorErrors> {
-        self.reserve_nth_free(name, 0)
-    }
-
-    #[inline]
-    pub fn reserve_from_back(&mut self, name: &str) -> Result<Location<R>, GeneratorErrors> {
-        self.reserve_nth_free(name, self.next_locations.len() - 1)
+        self.reserve_nth_free(name, 1)
     }
 
     pub fn reserve_nth_free(
@@ -40,9 +57,16 @@ impl<R: Registers> MemoryManager<R> {
         name: &str,
         n: usize,
     ) -> Result<Location<R>, GeneratorErrors> {
-        self.add_n_next_locations(n.saturating_sub(self.next_locations.len() - 1));
-        let location = self.next_locations.remove(n);
+        self.ensure_n_next_locations(n);
+
+        let mut retained = (0..n.saturating_sub(1))
+            .map(|_| self.next_locations.pop().unwrap())
+            .collect();
+
+        let location = self.next_locations.pop().unwrap();
         self.reserve_location(name, location.clone())?;
+
+        self.next_locations.append(&mut retained);
         Ok(location)
     }
 
@@ -55,48 +79,31 @@ impl<R: Registers> MemoryManager<R> {
             return Err(GeneratorErrors::VariableAlreadyExists { name: name.into() });
         }
 
-        if let Location::Register(ref register) = location {
-            self.free_registers.retain(|r| r != register);
-        }
         self.reservations.insert(name.into(), location.clone());
 
-        if self.next_locations.contains(&location) {
-            self.next_locations.retain(|l| l != &location);
-        }
-        if self.next_locations.is_empty() {
-            self.add_next_location();
-        }
+        self.next_locations.retain(|l| l != &location);
 
         Ok(())
     }
 
     pub fn free(&mut self, name: &str) {
         match self.reservations.get(name) {
-            Some(location @ Location::Register(register)) => {
-                self.free_registers.push(register.clone());
-                self.next_locations.insert(0, location.clone());
-                self.reservations.remove(name);
-            }
-            Some(Location::Stack(_)) => {
-                self.next_locations.insert(0, Location::Stack(0));
-                self.reservations.remove(name);
-            }
             Some(Location::Hardcoded(_)) | None => (),
+            Some(location) => {
+                self.next_locations.push(location.to_owned());
+                self.reservations.remove(name);
+            }
         }
     }
 
     fn add_next_location(&mut self) {
+        self.stack_position += 1;
         self.next_locations
-            .push(if let Some(register) = self.free_registers.pop() {
-                Location::Register(register.clone())
-            } else {
-                self.stack_position += 1;
-                Location::Stack(self.stack_position - 1)
-            });
+            .push(Location::Stack(self.stack_position - 1));
     }
 
-    pub fn add_n_next_locations(&mut self, n: usize) {
-        for _ in 0..n {
+    pub fn ensure_n_next_locations(&mut self, n: usize) {
+        for _ in 0..n.saturating_sub(self.next_locations.len()) {
             self.add_next_location();
         }
     }
@@ -182,22 +189,22 @@ impl Default for MemoryManager<X86Registers> {
     fn default() -> Self {
         Self {
             stack_position: 0,
-            free_registers: vec![
-                X86Registers::R15,
-                X86Registers::R14,
-                X86Registers::R13,
-                X86Registers::R12,
-                X86Registers::R11,
-                X86Registers::R10,
-                X86Registers::R9,
-                X86Registers::R8,
-                X86Registers::Rdi,
-                X86Registers::Rsi,
-                X86Registers::Rdx,
-                X86Registers::Rcx,
-                X86Registers::Rbx,
-            ],
-            next_locations: Vec::from([Location::Register(X86Registers::Rax)]),
+            next_locations: BinaryHeap::from([
+                Location::Register(X86Registers::R15),
+                Location::Register(X86Registers::R14),
+                Location::Register(X86Registers::R13),
+                Location::Register(X86Registers::R12),
+                Location::Register(X86Registers::R11),
+                Location::Register(X86Registers::R10),
+                Location::Register(X86Registers::R9),
+                Location::Register(X86Registers::R8),
+                Location::Register(X86Registers::Rdi),
+                Location::Register(X86Registers::Rsi),
+                Location::Register(X86Registers::Rdx),
+                Location::Register(X86Registers::Rcx),
+                Location::Register(X86Registers::Rbx),
+                Location::Register(X86Registers::Rax),
+            ]),
             reservations: HashMap::from([
                 (
                     "printi_format".into(),
@@ -214,7 +221,10 @@ impl Default for MemoryManager<X86Registers> {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
+    use std::{
+        collections::{BinaryHeap, HashMap},
+        usize,
+    };
 
     use crate::{
         memory_manager::{Location, MemoryManager},
@@ -225,11 +235,55 @@ mod tests {
         fn default() -> Self {
             Self {
                 stack_position: 0,
-                free_registers: vec![TestRegisters::R(2), TestRegisters::R(1)],
-                next_locations: Vec::from([Location::Register(TestRegisters::R(0))]),
+                next_locations: BinaryHeap::from([
+                    Location::Register(TestRegisters::R(2)),
+                    Location::Register(TestRegisters::R(1)),
+                    Location::Register(TestRegisters::R(0)),
+                ]),
                 reservations: HashMap::from([("h_1".into(), Location::Hardcoded("h_1".into()))]),
             }
         }
+    }
+
+    #[test]
+    fn test_location_ord() {
+        assert!(Location::Register(TestRegisters::R(0)) > Location::Register(TestRegisters::R(1)));
+        assert!(Location::Register(TestRegisters::R(1)) > Location::Register(TestRegisters::R(2)));
+
+        assert!(Location::Register(TestRegisters::R(0)) > Location::Stack(0));
+        assert!(Location::Register(TestRegisters::R(2)) > Location::Stack(0));
+        assert!(Location::Register(TestRegisters::R(0)) > Location::Stack(usize::MAX));
+        assert!(Location::Register(TestRegisters::R(2)) > Location::Stack(usize::MAX));
+
+        assert!(Location::<TestRegisters>::Stack(0) > Location::Stack(1));
+        assert!(Location::<TestRegisters>::Stack(0) > Location::Stack(usize::MAX));
+        assert!(Location::<TestRegisters>::Stack(usize::MAX - 1) > Location::Stack(usize::MAX));
+
+        assert!(Location::Register(TestRegisters::R(0)) > Location::Hardcoded("a".into()));
+        assert!(Location::Register(TestRegisters::R(2)) > Location::Hardcoded("a".into()));
+        assert!(Location::<TestRegisters>::Stack(0) > Location::Hardcoded("a".into()));
+        assert!(Location::<TestRegisters>::Stack(usize::MAX) > Location::Hardcoded("a".into()));
+
+        let mut registers = BinaryHeap::from([
+            Location::Register(TestRegisters::R(2)),
+            Location::Stack(0),
+            Location::Register(TestRegisters::R(1)),
+            Location::Hardcoded("a".into()),
+            Location::Stack(1),
+        ]);
+
+        assert_eq!(
+            registers.pop(),
+            Some(Location::Register(TestRegisters::R(1)))
+        );
+        assert_eq!(
+            registers.pop(),
+            Some(Location::Register(TestRegisters::R(2)))
+        );
+        assert_eq!(registers.pop(), Some(Location::Stack(0)));
+        assert_eq!(registers.pop(), Some(Location::Stack(1)));
+        assert_eq!(registers.pop(), Some(Location::Hardcoded("a".into())));
+        assert_eq!(registers.pop(), None);
     }
 
     #[test]
@@ -248,11 +302,12 @@ mod tests {
                 ("c".into(), Location::Register(TestRegisters::R(2)))
             ])
         );
-        assert_eq!(mm.next_locations, Vec::from([Location::Stack(0)]));
+
+        assert_eq!(mm.next_locations.pop(), None);
 
         let mut mm = MemoryManager::default();
         mm.reserve("a").unwrap();
-        mm.add_n_next_locations(4);
+        mm.ensure_n_next_locations(5);
         mm.reserve("b").unwrap();
 
         assert_eq!(
@@ -263,63 +318,22 @@ mod tests {
                 ("b".into(), Location::Register(TestRegisters::R(1)))
             ])
         );
-        assert_eq!(
-            mm.next_locations,
-            Vec::from([
-                Location::Register(TestRegisters::R(2)),
-                Location::Stack(0),
-                Location::Stack(1),
-                Location::Stack(2),
-            ])
-        );
-    }
-
-    #[test]
-    fn test_reserve_from_back() {
-        let mut mm = MemoryManager::default();
-        mm.reserve_from_back("a").unwrap();
-        mm.reserve_from_back("b").unwrap();
-        mm.reserve_from_back("c").unwrap();
 
         assert_eq!(
-            mm.reservations,
-            HashMap::from([
-                ("h_1".into(), Location::Hardcoded("h_1".into())),
-                ("a".into(), Location::Register(TestRegisters::R(0))),
-                ("b".into(), Location::Register(TestRegisters::R(1))),
-                ("c".into(), Location::Register(TestRegisters::R(2)))
-            ])
+            mm.next_locations.pop(),
+            Some(Location::Register(TestRegisters::R(2)))
         );
-        assert_eq!(mm.next_locations, Vec::from([Location::Stack(0)]));
-
-        let mut mm = MemoryManager::default();
-        mm.reserve("a").unwrap();
-        mm.add_n_next_locations(3);
-        mm.reserve_from_back("b").unwrap();
-
-        assert_eq!(
-            mm.reservations,
-            HashMap::from([
-                ("h_1".into(), Location::Hardcoded("h_1".into())),
-                ("a".into(), Location::Register(TestRegisters::R(0))),
-                ("b".into(), Location::Stack(1))
-            ])
-        );
-        assert_eq!(
-            mm.next_locations,
-            Vec::from([
-                Location::Register(TestRegisters::R(1)),
-                Location::Register(TestRegisters::R(2)),
-                Location::Stack(0)
-            ]),
-        );
+        assert_eq!(mm.next_locations.pop(), Some(Location::Stack(0)));
+        assert_eq!(mm.next_locations.pop(), Some(Location::Stack(1)));
+        assert_eq!(mm.next_locations.pop(), Some(Location::Stack(2)));
+        assert_eq!(mm.next_locations.pop(), None);
     }
 
     #[test]
     fn test_reserve_nth_free() {
         let mut mm = MemoryManager::default();
         mm.reserve("a").unwrap();
-        mm.reserve_nth_free("b", 3).unwrap();
+        mm.reserve_nth_free("b", 4).unwrap();
 
         assert_eq!(
             mm.reservations,
@@ -329,17 +343,19 @@ mod tests {
                 ("b".into(), Location::Stack(1)),
             ])
         );
+
         assert_eq!(
-            mm.next_locations,
-            Vec::from([
-                Location::Register(TestRegisters::R(1)),
-                Location::Register(TestRegisters::R(2)),
-                Location::Stack(0)
-            ])
+            mm.next_locations.pop(),
+            Some(Location::Register(TestRegisters::R(1)))
         );
+        assert_eq!(
+            mm.next_locations.pop(),
+            Some(Location::Register(TestRegisters::R(2)))
+        );
+        assert_eq!(mm.next_locations.pop(), Some(Location::Stack(0)));
 
         let mut mm = MemoryManager::default();
-        mm.reserve("a").unwrap();
+        mm.reserve_nth_free("a", 1).unwrap();
         mm.reserve_nth_free("b", 2).unwrap();
         mm.reserve_nth_free("c", 1).unwrap();
         mm.reserve_nth_free("d", 3).unwrap();
@@ -349,19 +365,15 @@ mod tests {
             HashMap::from([
                 ("h_1".into(), Location::Hardcoded("h_1".into())),
                 ("a".into(), Location::Register(TestRegisters::R(0))),
-                ("b".into(), Location::Stack(0)),
-                ("c".into(), Location::Register(TestRegisters::R(2))),
-                ("d".into(), Location::Stack(3)),
+                ("b".into(), Location::Register(TestRegisters::R(2))),
+                ("c".into(), Location::Register(TestRegisters::R(1))),
+                ("d".into(), Location::Stack(2)),
             ])
         );
-        assert_eq!(
-            mm.next_locations,
-            Vec::from([
-                Location::Register(TestRegisters::R(1)),
-                Location::Stack(1),
-                Location::Stack(2),
-            ])
-        );
+
+        assert_eq!(mm.next_locations.pop(), Some(Location::Stack(0)));
+        assert_eq!(mm.next_locations.pop(), Some(Location::Stack(1)));
+        assert_eq!(mm.next_locations.pop(), None);
     }
 
     #[test]
@@ -381,10 +393,12 @@ mod tests {
                 ("c".into(), Location::Register(TestRegisters::R(2)))
             ])
         );
+
         assert_eq!(
-            mm.next_locations,
-            Vec::from([Location::Register(TestRegisters::R(1)), Location::Stack(0)])
+            mm.next_locations.pop(),
+            Some(Location::Register(TestRegisters::R(1)))
         );
+        assert_eq!(mm.next_locations.pop(), None);
 
         let mut mm = MemoryManager::default();
         mm.reserve("a").unwrap();
@@ -398,9 +412,14 @@ mod tests {
             ])
         );
         assert_eq!(
-            mm.next_locations,
-            Vec::from([Location::Register(TestRegisters::R(1)),])
+            mm.next_locations.pop(),
+            Some(Location::Register(TestRegisters::R(1)))
         );
+        assert_eq!(
+            mm.next_locations.pop(),
+            Some(Location::Register(TestRegisters::R(2)))
+        );
+        assert_eq!(mm.next_locations.pop(), None);
     }
 
     #[test]
@@ -410,29 +429,41 @@ mod tests {
         mm.add_next_location();
 
         assert_eq!(
-            mm.next_locations,
-            Vec::from([
-                Location::Register(TestRegisters::R(0)),
-                Location::Register(TestRegisters::R(1)),
-                Location::Register(TestRegisters::R(2))
-            ])
+            mm.next_locations.pop(),
+            Some(Location::Register(TestRegisters::R(0)))
         );
+        assert_eq!(
+            mm.next_locations.pop(),
+            Some(Location::Register(TestRegisters::R(1)))
+        );
+        assert_eq!(
+            mm.next_locations.pop(),
+            Some(Location::Register(TestRegisters::R(2)))
+        );
+        assert_eq!(mm.next_locations.pop(), Some(Location::Stack(0)));
+        assert_eq!(mm.next_locations.pop(), Some(Location::Stack(1)));
+        assert_eq!(mm.next_locations.pop(), None);
     }
 
     #[test]
-    fn test_add_n_next_locations() {
+    fn test_ensure_n_next_locations() {
         let mut mm = MemoryManager::default();
-        mm.add_n_next_locations(3);
+        mm.ensure_n_next_locations(4);
 
         assert_eq!(
-            mm.next_locations,
-            Vec::from([
-                Location::Register(TestRegisters::R(0)),
-                Location::Register(TestRegisters::R(1)),
-                Location::Register(TestRegisters::R(2)),
-                Location::Stack(0)
-            ])
+            mm.next_locations.pop(),
+            Some(Location::Register(TestRegisters::R(0)))
         );
+        assert_eq!(
+            mm.next_locations.pop(),
+            Some(Location::Register(TestRegisters::R(1)))
+        );
+        assert_eq!(
+            mm.next_locations.pop(),
+            Some(Location::Register(TestRegisters::R(2)))
+        );
+        assert_eq!(mm.next_locations.pop(), Some(Location::Stack(0)));
+        assert_eq!(mm.next_locations.pop(), None);
     }
 
     #[test]
@@ -449,9 +480,14 @@ mod tests {
             ])
         );
         assert_eq!(
-            mm.next_locations,
-            Vec::from([Location::Register(TestRegisters::R(1))])
+            mm.next_locations.pop(),
+            Some(Location::Register(TestRegisters::R(1)))
         );
+        assert_eq!(
+            mm.next_locations.pop(),
+            Some(Location::Register(TestRegisters::R(2)))
+        );
+        assert_eq!(mm.next_locations.pop(), None);
     }
 
     #[test]
@@ -583,8 +619,9 @@ mod tests {
             ])
         );
         assert_eq!(
-            mm.next_locations,
-            Vec::from([Location::Register(TestRegisters::R(2))])
+            mm.next_locations.pop(),
+            Some(Location::Register(TestRegisters::R(2)))
         );
+        assert_eq!(mm.next_locations.pop(), None);
     }
 }

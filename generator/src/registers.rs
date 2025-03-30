@@ -1,9 +1,10 @@
-pub trait Registers: Clone + PartialEq + std::fmt::Debug {
+pub trait Registers: Clone + PartialEq + Eq + PartialOrd + Ord + std::fmt::Debug {
+    fn how_many() -> usize;
     fn nth(n: usize) -> Option<Self>;
     fn name(&self) -> &'static str;
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum X86Registers {
     Rax,
     Rbx,
@@ -24,6 +25,11 @@ pub enum X86Registers {
 }
 
 impl Registers for X86Registers {
+    #[inline]
+    fn how_many() -> usize {
+        16
+    }
+
     fn nth(n: usize) -> Option<Self> {
         match n {
             0 => Some(X86Registers::Rax),
@@ -68,16 +74,113 @@ impl Registers for X86Registers {
     }
 }
 
+impl PartialOrd for X86Registers {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for X86Registers {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        use std::cmp::Ordering;
+        match (self, other) {
+            (X86Registers::Rax, X86Registers::Rax) => Ordering::Equal,
+            (X86Registers::Rax, _) => Ordering::Greater,
+            (_, X86Registers::Rax) => Ordering::Less,
+
+            (X86Registers::Rbx, X86Registers::Rbx) => Ordering::Equal,
+            (X86Registers::Rbx, _) => Ordering::Greater,
+            (_, X86Registers::Rbx) => Ordering::Less,
+
+            (X86Registers::Rcx, X86Registers::Rcx) => Ordering::Equal,
+            (X86Registers::Rcx, _) => Ordering::Greater,
+            (_, X86Registers::Rcx) => Ordering::Less,
+
+            (X86Registers::Rdx, X86Registers::Rdx) => Ordering::Equal,
+            (X86Registers::Rdx, _) => Ordering::Greater,
+            (_, X86Registers::Rdx) => Ordering::Less,
+
+            (X86Registers::Rsi, X86Registers::Rsi) => Ordering::Equal,
+            (X86Registers::Rsi, _) => Ordering::Greater,
+            (_, X86Registers::Rsi) => Ordering::Less,
+
+            (X86Registers::Rdi, X86Registers::Rdi) => Ordering::Equal,
+            (X86Registers::Rdi, _) => Ordering::Greater,
+            (_, X86Registers::Rdi) => Ordering::Less,
+
+            (X86Registers::Rbp, X86Registers::Rbp) => Ordering::Equal,
+            (X86Registers::Rbp, _) => Ordering::Greater,
+            (_, X86Registers::Rbp) => Ordering::Less,
+
+            (X86Registers::Rsp, X86Registers::Rsp) => Ordering::Equal,
+            (X86Registers::Rsp, _) => Ordering::Greater,
+            (_, X86Registers::Rsp) => Ordering::Less,
+
+            (X86Registers::R8, X86Registers::R8) => Ordering::Equal,
+            (X86Registers::R8, _) => Ordering::Greater,
+            (_, X86Registers::R8) => Ordering::Less,
+
+            (X86Registers::R9, X86Registers::R9) => Ordering::Equal,
+            (X86Registers::R9, _) => Ordering::Greater,
+            (_, X86Registers::R9) => Ordering::Less,
+
+            (X86Registers::R10, X86Registers::R10) => Ordering::Equal,
+            (X86Registers::R10, _) => Ordering::Greater,
+            (_, X86Registers::R10) => Ordering::Less,
+
+            (X86Registers::R11, X86Registers::R11) => Ordering::Equal,
+            (X86Registers::R11, _) => Ordering::Greater,
+            (_, X86Registers::R11) => Ordering::Less,
+
+            (X86Registers::R12, X86Registers::R12) => Ordering::Equal,
+            (X86Registers::R12, _) => Ordering::Greater,
+            (_, X86Registers::R12) => Ordering::Less,
+
+            (X86Registers::R13, X86Registers::R13) => Ordering::Equal,
+            (X86Registers::R13, _) => Ordering::Greater,
+            (_, X86Registers::R13) => Ordering::Less,
+
+            (X86Registers::R14, X86Registers::R14) => Ordering::Equal,
+            (X86Registers::R14, _) => Ordering::Greater,
+            (_, X86Registers::R14) => Ordering::Less,
+
+            (X86Registers::R15, X86Registers::R15) => Ordering::Equal,
+            // (X86Registers::R15, _) => Ordering::Greater,
+            // (_, X86Registers::R15) => Ordering::Less,
+        }
+    }
+}
+
 #[cfg(test)]
 pub mod tests {
+    use std::collections::BinaryHeap;
+
     use super::Registers;
 
-    #[derive(Debug, Clone, PartialEq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     pub enum TestRegisters {
         R(usize),
     }
 
+    impl PartialOrd for TestRegisters {
+        fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+            Some(self.cmp(other))
+        }
+    }
+
+    impl Ord for TestRegisters {
+        fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+            match (self, other) {
+                (TestRegisters::R(a), TestRegisters::R(b)) => a.cmp(b).reverse(),
+            }
+        }
+    }
+
     impl Registers for TestRegisters {
+        fn how_many() -> usize {
+            4
+        }
+
         fn nth(n: usize) -> Option<Self> {
             if n < 4 {
                 Some(TestRegisters::R(n))
@@ -89,5 +192,22 @@ pub mod tests {
         fn name(&self) -> &'static str {
             "test_register"
         }
+    }
+
+    #[test]
+    fn test_registers_ord() {
+        assert!(TestRegisters::R(0) > TestRegisters::R(1));
+        assert!(TestRegisters::R(1) > TestRegisters::R(2));
+
+        let mut registers = BinaryHeap::from([
+            TestRegisters::R(1),
+            TestRegisters::R(0),
+            TestRegisters::R(2),
+        ]);
+
+        assert_eq!(registers.pop(), Some(TestRegisters::R(0)));
+        assert_eq!(registers.pop(), Some(TestRegisters::R(1)));
+        assert_eq!(registers.pop(), Some(TestRegisters::R(2)));
+        assert_eq!(registers.pop(), None);
     }
 }
