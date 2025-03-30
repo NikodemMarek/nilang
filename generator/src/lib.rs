@@ -13,9 +13,9 @@ use std::iter::once;
 use assembly_flavour::{
     AssemblyFlavour, AssemblyInstruction, AssemblyInstructionParameter, FullInstruction,
 };
-use calling_convention::CallingConvention;
+use calling_convention::{allocate_in, CallingConvention};
 use errors::GeneratorErrors;
-use memory_manager::MemoryManager;
+use memory_manager::{Location, MemoryManager};
 use nilang_types::instructions::Instruction;
 use registers::X86Registers;
 
@@ -57,7 +57,14 @@ where
 {
     let mut mm = MemoryManager::default();
     Box::new(instructions.flat_map(move |instruction| {
-        match generate_instruction::<C>(&mut mm, instruction) {
+        let generated_instruction = match instruction {
+            Instruction::DivideVariables(_, _, _) | Instruction::ModuloVariables(_, _, _) => {
+                generate_instruction_specific(&mut mm, instruction)
+            }
+            _ => generate_instruction::<C>(&mut mm, instruction),
+        };
+
+        match generated_instruction {
             Ok(v) => v
                 .into_iter()
                 .map(
@@ -197,8 +204,110 @@ where
             ]
         }
         Instruction::DivideVariables(_, _, _) | Instruction::ModuloVariables(_, _, _) => {
-            todo!()
+            unreachable!()
         }
+    })
+}
+
+fn generate_instruction_specific(
+    mm: &mut MemoryManager<X86Registers>,
+    instruction: Instruction,
+) -> Result<Vec<FullInstruction<X86Registers>>, GeneratorErrors> {
+    Ok(match instruction {
+        Instruction::DivideVariables(result, divident, divisor) => {
+            let empty_temp = "@empty".to_string();
+            mm.reserve(&empty_temp)?;
+            let mut alloc = allocate_in(
+                mm,
+                &[divident.clone(), empty_temp.clone().into()],
+                &[
+                    Location::Register(X86Registers::Rax),
+                    Location::Register(X86Registers::Rdx),
+                ],
+            )?;
+            mm.free(&empty_temp);
+
+            alloc.append(&mut vec![
+                (
+                    AssemblyInstruction::Move,
+                    vec![
+                        Location::Register(X86Registers::Rdx).into(),
+                        AssemblyInstructionParameter::Number(0f64),
+                    ],
+                    format!("Prepare `{result}` for division").into(),
+                ),
+                (
+                    AssemblyInstruction::Move,
+                    vec![
+                        Location::Register(X86Registers::Rax).into(),
+                        mm.get_location_or_err(&divident)?.into(),
+                    ],
+                    format!("Prepare `{result}` for division").into(),
+                ),
+                (
+                    AssemblyInstruction::Div,
+                    vec![mm.get_location_or_err(&divisor)?.into()],
+                    format!("Divide `{divident}` by `{divisor}`").into(),
+                ),
+                (
+                    AssemblyInstruction::Move,
+                    vec![
+                        mm.get_location_or_err(&result)?.into(),
+                        Location::Register(X86Registers::Rax).into(),
+                    ],
+                    format!("Move result of division into `{result}`").into(),
+                ),
+            ]);
+
+            alloc
+        }
+        Instruction::ModuloVariables(result, divident, divisor) => {
+            let empty_temp = "@empty".to_string();
+            mm.reserve(&empty_temp)?;
+            let mut alloc = allocate_in(
+                mm,
+                &[divident.clone(), empty_temp.clone().into()],
+                &[
+                    Location::Register(X86Registers::Rax),
+                    Location::Register(X86Registers::Rdx),
+                ],
+            )?;
+            mm.free(&empty_temp);
+
+            alloc.append(&mut vec![
+                (
+                    AssemblyInstruction::Move,
+                    vec![
+                        Location::Register(X86Registers::Rdx).into(),
+                        AssemblyInstructionParameter::Number(0f64),
+                    ],
+                    format!("Prepare `{result}` for modulo").into(),
+                ),
+                (
+                    AssemblyInstruction::Move,
+                    vec![
+                        Location::Register(X86Registers::Rax).into(),
+                        mm.get_location_or_err(&divident)?.into(),
+                    ],
+                    format!("Prepare `{result}` for modulo").into(),
+                ),
+                (
+                    AssemblyInstruction::Div,
+                    vec![mm.get_location_or_err(&divisor)?.into()],
+                    format!("Divide `{divident}` by `{divisor}`").into(),
+                ),
+                (
+                    AssemblyInstruction::Move,
+                    vec![
+                        mm.get_location_or_err(&result)?.into(),
+                        Location::Register(X86Registers::Rdx).into(),
+                    ],
+                    format!("Move result of modulo into `{result}`").into(),
+                ),
+            ]);
+            alloc
+        }
+        _ => unreachable!(),
     })
 }
 

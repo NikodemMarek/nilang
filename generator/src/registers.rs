@@ -1,6 +1,5 @@
 pub trait Registers: Clone + PartialEq + Eq + PartialOrd + Ord + std::fmt::Debug {
     fn how_many() -> usize;
-    fn nth(n: usize) -> Option<Self>;
     fn name(&self) -> &'static str;
 }
 
@@ -28,28 +27,6 @@ impl Registers for X86Registers {
     #[inline]
     fn how_many() -> usize {
         16
-    }
-
-    fn nth(n: usize) -> Option<Self> {
-        match n {
-            0 => Some(X86Registers::Rax),
-            1 => Some(X86Registers::Rbx),
-            2 => Some(X86Registers::Rcx),
-            3 => Some(X86Registers::Rdx),
-            4 => Some(X86Registers::Rsi),
-            5 => Some(X86Registers::Rdi),
-            6 => Some(X86Registers::Rbp),
-            7 => Some(X86Registers::Rsp),
-            8 => Some(X86Registers::R8),
-            9 => Some(X86Registers::R9),
-            10 => Some(X86Registers::R10),
-            11 => Some(X86Registers::R11),
-            12 => Some(X86Registers::R12),
-            13 => Some(X86Registers::R13),
-            14 => Some(X86Registers::R14),
-            15 => Some(X86Registers::R15),
-            _ => None,
-        }
     }
 
     fn name(&self) -> &'static str {
@@ -179,14 +156,6 @@ pub mod tests {
     impl Registers for TestRegisters {
         fn how_many() -> usize {
             4
-        }
-
-        fn nth(n: usize) -> Option<Self> {
-            if n < 4 {
-                Some(TestRegisters::R(n))
-            } else {
-                None
-            }
         }
 
         fn name(&self) -> &'static str {

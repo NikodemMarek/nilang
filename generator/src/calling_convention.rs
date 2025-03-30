@@ -28,33 +28,32 @@ pub trait CallingConvention {
             .map(|(i, _)| Self::nth_argument_location(i))
             .collect()
     }
+}
 
-    fn arguments_allocations(
-        mm: &mut MemoryManager<Self::R>,
-        arguments: &[Box<str>],
-    ) -> Result<Vec<FullInstruction<Self::R>>, GeneratorErrors> {
-        let arguments_locations = Self::arguments_locations(arguments);
+pub fn allocate_in<R: Registers>(
+    mm: &mut MemoryManager<R>,
+    temporaries: &[Box<str>],
+    locations: &[Location<R>],
+) -> Result<Vec<FullInstruction<R>>, GeneratorErrors> {
+    let free = free_locations(mm, locations)?;
+    let allocations = zip(temporaries.iter(), locations.iter())
+        .enumerate()
+        .map(|(i, (arg_temp, desired_arg_location))| {
+            let current_arg_loc = mm.get_location_or_err(arg_temp)?.to_owned();
+            mm.reserve_location(&format!("@arg_{i}"), desired_arg_location.clone())?;
+            Ok((
+                AssemblyInstruction::Move,
+                vec![desired_arg_location.into(), current_arg_loc.clone().into()],
+                format!("Load `{arg_temp}` as argument {i}").into(),
+            ))
+        })
+        .collect::<Result<Vec<_>, GeneratorErrors>>()?;
 
-        let free = free_locations(mm, &arguments_locations)?;
-        let allocations = zip(arguments.iter(), arguments_locations.iter())
-            .enumerate()
-            .map(|(i, (arg_temp, desired_arg_location))| {
-                let current_arg_loc = mm.get_location_or_err(arg_temp)?.to_owned();
-                mm.reserve_location(&format!("@arg_{i}"), desired_arg_location.clone())?;
-                Ok((
-                    AssemblyInstruction::Move,
-                    vec![desired_arg_location.into(), current_arg_loc.clone().into()],
-                    format!("Load `{arg_temp}` as argument {i}").into(),
-                ))
-            })
-            .collect::<Result<Vec<_>, GeneratorErrors>>()?;
-
-        for i in 0..arguments.len() {
-            mm.free(&format!("@arg_{i}"));
-        }
-
-        Ok([free, allocations].concat())
+    for i in 0..temporaries.len() {
+        mm.free(&format!("@arg_{i}"));
     }
+
+    Ok([free, allocations].concat())
 }
 
 pub struct SystemVAmd64Abi;
@@ -65,10 +64,11 @@ impl CallingConvention for SystemVAmd64Abi {
     fn generate_function_call(
         mm: &mut MemoryManager<Self::R>,
         name: &str,
-        args: &[Box<str>],
+        arguments: &[Box<str>],
         return_temporary: Option<Box<str>>,
     ) -> Result<Vec<FullInstruction<Self::R>>, GeneratorErrors> {
-        let arguments_allocations = Self::arguments_allocations(mm, args)?;
+        let arguments_locations = Self::arguments_locations(arguments);
+        let arguments_allocations = allocate_in(mm, arguments, &arguments_locations)?;
 
         let stack_alignment = [];
 
@@ -95,7 +95,7 @@ impl CallingConvention for SystemVAmd64Abi {
             [].into()
         };
 
-        for i in 0..args.len() {
+        for i in 0..arguments.len() {
             mm.free(&format!("arg_{i}"));
         }
 
@@ -130,6 +130,7 @@ impl CallingConvention for SystemVAmd64Abi {
 mod tests {
     use crate::{
         assembly_flavour::AssemblyInstruction,
+        calling_convention::allocate_in,
         memory_manager::{Location, MemoryManager},
         registers::tests::TestRegisters,
     };
@@ -188,8 +189,8 @@ mod tests {
         mm.reserve("c").unwrap();
 
         let arguments = ["a".into(), "b".into(), "c".into()];
-        let instructions =
-            TestCallingConvention::arguments_allocations(&mut mm, &arguments).unwrap();
+        let arguments_locations = TestCallingConvention::arguments_locations(&arguments);
+        let instructions = allocate_in(&mut mm, &arguments, &arguments_locations).unwrap();
 
         assert_eq!(
             instructions,
