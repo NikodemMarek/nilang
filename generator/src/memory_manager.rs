@@ -6,10 +6,7 @@ use std::{
 
 use errors::GeneratorErrors;
 
-use crate::{
-    assembly_flavour::FullInstruction,
-    registers::{Registers, X86Registers},
-};
+use crate::{assembly_flavour::FullInstruction, registers::Registers};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Location<R: Registers> {
@@ -46,7 +43,32 @@ pub struct MemoryManager<R: Registers> {
     reservations: HashMap<Box<str>, Location<R>>,
 }
 
+impl<R: Registers> Default for MemoryManager<R> {
+    fn default() -> Self {
+        Self {
+            stack_position: 0,
+            next_locations: BinaryHeap::from(
+                R::all()
+                    .iter()
+                    .map(|r| Location::Register(*r))
+                    .collect::<Vec<Location<R>>>(),
+            ),
+            reservations: HashMap::new(),
+        }
+    }
+}
+
 impl<R: Registers> MemoryManager<R> {
+    pub fn new(builtins: &[Box<str>]) -> Self {
+        Self {
+            reservations: builtins
+                .iter()
+                .map(|l| (l.clone(), Location::Hardcoded(l.clone())))
+                .collect(),
+            ..Default::default()
+        }
+    }
+
     #[inline]
     pub fn reserve(&mut self, name: &str) -> Result<Location<R>, GeneratorErrors> {
         self.reserve_nth_free(name, 1)
@@ -185,40 +207,6 @@ pub fn swap<R: Registers>(
     ))
 }
 
-impl Default for MemoryManager<X86Registers> {
-    fn default() -> Self {
-        Self {
-            stack_position: 0,
-            next_locations: BinaryHeap::from([
-                Location::Register(X86Registers::R15),
-                Location::Register(X86Registers::R14),
-                Location::Register(X86Registers::R13),
-                Location::Register(X86Registers::R12),
-                Location::Register(X86Registers::R11),
-                Location::Register(X86Registers::R10),
-                Location::Register(X86Registers::R9),
-                Location::Register(X86Registers::R8),
-                Location::Register(X86Registers::Rdi),
-                Location::Register(X86Registers::Rsi),
-                Location::Register(X86Registers::Rdx),
-                Location::Register(X86Registers::Rcx),
-                Location::Register(X86Registers::Rbx),
-                Location::Register(X86Registers::Rax),
-            ]),
-            reservations: HashMap::from([
-                (
-                    "printi_format".into(),
-                    Location::Hardcoded("printi_format".into()),
-                ),
-                (
-                    "printc_format".into(),
-                    Location::Hardcoded("printc_format".into()),
-                ),
-            ]),
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use std::{
@@ -231,18 +219,8 @@ mod tests {
         registers::tests::TestRegisters,
     };
 
-    impl Default for MemoryManager<TestRegisters> {
-        fn default() -> Self {
-            Self {
-                stack_position: 0,
-                next_locations: BinaryHeap::from([
-                    Location::Register(TestRegisters::R(2)),
-                    Location::Register(TestRegisters::R(1)),
-                    Location::Register(TestRegisters::R(0)),
-                ]),
-                reservations: HashMap::from([("h_1".into(), Location::Hardcoded("h_1".into()))]),
-            }
-        }
+    fn test_builtin_variables() -> [Box<str>; 1] {
+        ["h_1".into()]
     }
 
     #[test]
@@ -288,7 +266,7 @@ mod tests {
 
     #[test]
     fn test_reserve() {
-        let mut mm = MemoryManager::default();
+        let mut mm = MemoryManager::new(&test_builtin_variables());
         mm.reserve("a").unwrap();
         mm.reserve("b").unwrap();
         mm.reserve("c").unwrap();

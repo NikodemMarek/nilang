@@ -23,7 +23,7 @@ pub struct AtAndTFlavour;
 impl<R: Registers> AssemblyFlavour<R> for AtAndTFlavour {
     fn generate_parameter(parameter: &AssemblyInstructionParameter<R>) -> String {
         match parameter {
-            AssemblyInstructionParameter::Register(register) => format!("%{}", register.name()),
+            AssemblyInstructionParameter::Register(register) => format!("%{}", register),
             AssemblyInstructionParameter::Memory(memory) => format!("-{}(%rax)", memory),
             AssemblyInstructionParameter::Number(number) => format!("${}", number),
             AssemblyInstructionParameter::Char(char) => format!("$'{}'", char),
@@ -176,7 +176,7 @@ impl<R: Registers> From<&crate::memory_manager::Location<R>> for AssemblyInstruc
     fn from(val: &crate::memory_manager::Location<R>) -> Self {
         match val {
             crate::memory_manager::Location::Register(register) => {
-                AssemblyInstructionParameter::Register(register.clone())
+                AssemblyInstructionParameter::Register(*register)
             }
             crate::memory_manager::Location::Stack(offset) => {
                 AssemblyInstructionParameter::Memory(*offset)

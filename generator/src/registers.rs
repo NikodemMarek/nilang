@@ -1,9 +1,11 @@
-pub trait Registers: Clone + PartialEq + Eq + PartialOrd + Ord + std::fmt::Debug {
-    fn how_many() -> usize;
-    fn name(&self) -> &'static str;
+pub trait Registers:
+    Copy + Clone + PartialEq + Eq + PartialOrd + Ord + std::fmt::Display + std::fmt::Debug
+{
+    const COUNT: usize;
+    fn all() -> Box<[Self]>;
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum X86Registers {
     Rax,
     Rbx,
@@ -24,30 +26,53 @@ pub enum X86Registers {
 }
 
 impl Registers for X86Registers {
-    #[inline]
-    fn how_many() -> usize {
-        16
+    const COUNT: usize = 16;
+    fn all() -> Box<[Self]> {
+        Box::new([
+            X86Registers::Rax,
+            X86Registers::Rbx,
+            X86Registers::Rcx,
+            X86Registers::Rdx,
+            X86Registers::Rsi,
+            X86Registers::Rdi,
+            X86Registers::Rbp,
+            X86Registers::Rsp,
+            X86Registers::R8,
+            X86Registers::R9,
+            X86Registers::R10,
+            X86Registers::R11,
+            X86Registers::R12,
+            X86Registers::R13,
+            X86Registers::R14,
+            X86Registers::R15,
+        ])
     }
+}
 
-    fn name(&self) -> &'static str {
-        match self {
-            X86Registers::Rax => "rax",
-            X86Registers::Rbx => "rbx",
-            X86Registers::Rcx => "rcx",
-            X86Registers::Rdx => "rdx",
-            X86Registers::Rsi => "rsi",
-            X86Registers::Rdi => "rdi",
-            X86Registers::Rbp => "rbp",
-            X86Registers::Rsp => "rsp",
-            X86Registers::R8 => "r8",
-            X86Registers::R9 => "r9",
-            X86Registers::R10 => "r10",
-            X86Registers::R11 => "r11",
-            X86Registers::R12 => "r12",
-            X86Registers::R13 => "r13",
-            X86Registers::R14 => "r14",
-            X86Registers::R15 => "r15",
-        }
+impl std::fmt::Display for X86Registers {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                X86Registers::Rax => "rax",
+                X86Registers::Rbx => "rbx",
+                X86Registers::Rcx => "rcx",
+                X86Registers::Rdx => "rdx",
+                X86Registers::Rsi => "rsi",
+                X86Registers::Rdi => "rdi",
+                X86Registers::Rbp => "rbp",
+                X86Registers::Rsp => "rsp",
+                X86Registers::R8 => "r8",
+                X86Registers::R9 => "r9",
+                X86Registers::R10 => "r10",
+                X86Registers::R11 => "r11",
+                X86Registers::R12 => "r12",
+                X86Registers::R13 => "r13",
+                X86Registers::R14 => "r14",
+                X86Registers::R15 => "r15",
+            }
+        )
     }
 }
 
@@ -134,7 +159,7 @@ pub mod tests {
 
     use super::Registers;
 
-    #[derive(Debug, Clone, PartialEq, Eq)]
+    #[derive(Debug, Copy, Clone, PartialEq, Eq)]
     pub enum TestRegisters {
         R(usize),
     }
@@ -154,12 +179,26 @@ pub mod tests {
     }
 
     impl Registers for TestRegisters {
-        fn how_many() -> usize {
-            4
+        const COUNT: usize = 4;
+        fn all() -> Box<[Self]> {
+            Box::new([
+                TestRegisters::R(0),
+                TestRegisters::R(1),
+                TestRegisters::R(2),
+                TestRegisters::R(3),
+            ])
         }
+    }
 
-        fn name(&self) -> &'static str {
-            "test_register"
+    impl std::fmt::Display for TestRegisters {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(
+                f,
+                "r{}",
+                match self {
+                    TestRegisters::R(r) => r.to_string(),
+                }
+            )
         }
     }
 

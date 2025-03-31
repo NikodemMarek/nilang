@@ -17,7 +17,7 @@ main:
     pushq %rbp
     movq %rsp, %rbp
     movq $9, %rbx                 # Load number '9' into `temp_1`
-    movq $3, %rcx                 # Load number '3' into `temp_2`
+    movq $5, %rcx                 # Load number '5' into `temp_2`
     xchgq %rax, %rsi              # Swap temp_0 and @swap_temp_0
     xchgq %rdx, %rdi              # Swap @empty and @swap_temp_1
     movq %rbx, %rax               # Load `temp_1` as argument 0

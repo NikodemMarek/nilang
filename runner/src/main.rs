@@ -3,7 +3,7 @@
 use std::fs::{read_to_string, write};
 
 use errors::{NilangError, TransformerErrors};
-use nilang_generator::options::{AtAndTFlavour, SystemVAmd64Abi};
+use nilang_generator::options::{AtAndTFlavour, SystemVAmd64Abi, X86Registers};
 use nilang_transformer::{FunctionsRef, StructuresRef};
 
 fn main() {
@@ -48,14 +48,17 @@ fn compile(code: &str) -> Box<str> {
     });
 
     let generated = transformed.map(|(name, instructions)| {
-        nilang_generator::generate_function::<SystemVAmd64Abi, AtAndTFlavour>(name, instructions)
-            .map(|result| match result {
-                Ok(instruction) => instruction,
-                Err(err) => {
-                    panic!("{}", err);
-                }
-            })
-            .collect::<String>()
+        nilang_generator::generate_function::<X86Registers, SystemVAmd64Abi, AtAndTFlavour>(
+            name,
+            instructions,
+        )
+        .map(|result| match result {
+            Ok(instruction) => instruction,
+            Err(err) => {
+                panic!("{}", err);
+            }
+        })
+        .collect::<String>()
     });
 
     nilang_generator::generate_program::<AtAndTFlavour>()
