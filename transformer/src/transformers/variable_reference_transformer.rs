@@ -1,10 +1,10 @@
 use std::iter::once;
 
 use errors::TransformerErrors;
-use nilang_types::instructions::Instruction;
 
 use crate::{
-    structures_ref::copy_all_fields, temporaries::Temporaries, FunctionsRef, StructuresRef, Type,
+    structures_ref::copy_all_fields, temporaries::Temporaries, FunctionsRef, InstructionsIterator,
+    StructuresRef, Type,
 };
 
 pub fn transform_variable_reference<'a>(
@@ -14,7 +14,7 @@ pub fn transform_variable_reference<'a>(
     variable: Box<str>,
     result: Box<str>,
     r#type: &Type,
-) -> Box<dyn Iterator<Item = Result<Instruction, TransformerErrors>> + 'a> {
+) -> InstructionsIterator<'a> {
     let Ok(source_type) = temporaries.type_of(&variable) else {
         return Box::new(once(Err(TransformerErrors::TemporaryNotFound {
             name: variable.clone(),

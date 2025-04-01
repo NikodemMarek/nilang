@@ -6,7 +6,7 @@ use std::{
 use errors::TransformerErrors;
 use nilang_types::{instructions::Instruction, nodes::ExpressionNode};
 
-use crate::{temporaries::Temporaries, FunctionsRef, StructuresRef, Type};
+use crate::{temporaries::Temporaries, FunctionsRef, InstructionsIterator, StructuresRef, Type};
 
 use super::transform_expression;
 
@@ -18,7 +18,7 @@ pub fn transform_object<'a>(
 
     result: Box<str>,
     r#type: &Type,
-) -> Box<dyn Iterator<Item = Result<Instruction, TransformerErrors>> + 'a> {
+) -> InstructionsIterator<'a> {
     let Type::Object(r#type) = r#type else {
         return Box::new(once(Err(TransformerErrors::TypeMismatch {
             expected: r#type.clone(),

@@ -9,7 +9,7 @@ use nilang_types::{
     nodes::{StructureDeclaration, Type},
 };
 
-use crate::temporaries::Temporaries;
+use crate::{temporaries::Temporaries, InstructionsIterator};
 
 #[derive(Debug, Default)]
 pub struct StructuresRef(
@@ -112,7 +112,7 @@ pub fn copy_all_fields<'a>(
     destination: Box<str>,
 
     object_type: &Type,
-) -> Box<dyn Iterator<Item = Result<Instruction, TransformerErrors>> + 'a> {
+) -> InstructionsIterator<'a> {
     let object_type = match object_type {
         Type::Object(object_type) => object_type,
         Type::Void => return Box::new(empty()),

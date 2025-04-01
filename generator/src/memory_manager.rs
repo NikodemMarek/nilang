@@ -283,7 +283,7 @@ mod tests {
 
         assert_eq!(mm.next_locations.pop(), None);
 
-        let mut mm = MemoryManager::default();
+        let mut mm = MemoryManager::new(&test_builtin_variables());
         mm.reserve("a").unwrap();
         mm.ensure_n_next_locations(5);
         mm.reserve("b").unwrap();
@@ -309,7 +309,7 @@ mod tests {
 
     #[test]
     fn test_reserve_nth_free() {
-        let mut mm = MemoryManager::default();
+        let mut mm = MemoryManager::new(&test_builtin_variables());
         mm.reserve("a").unwrap();
         mm.reserve_nth_free("b", 4).unwrap();
 
@@ -332,7 +332,7 @@ mod tests {
         );
         assert_eq!(mm.next_locations.pop(), Some(Location::Stack(0)));
 
-        let mut mm = MemoryManager::default();
+        let mut mm = MemoryManager::new(&test_builtin_variables());
         mm.reserve_nth_free("a", 1).unwrap();
         mm.reserve_nth_free("b", 2).unwrap();
         mm.reserve_nth_free("c", 1).unwrap();
@@ -356,7 +356,7 @@ mod tests {
 
     #[test]
     fn test_free() {
-        let mut mm = MemoryManager::default();
+        let mut mm = MemoryManager::new(&test_builtin_variables());
         mm.reserve("a").unwrap();
         mm.reserve("b").unwrap();
         mm.reserve("c").unwrap();
@@ -378,7 +378,7 @@ mod tests {
         );
         assert_eq!(mm.next_locations.pop(), None);
 
-        let mut mm = MemoryManager::default();
+        let mut mm = MemoryManager::new(&test_builtin_variables());
         mm.reserve("a").unwrap();
         mm.free("h_1");
 
@@ -402,7 +402,7 @@ mod tests {
 
     #[test]
     fn test_add_next_location() {
-        let mut mm = MemoryManager::default();
+        let mut mm = MemoryManager::new(&test_builtin_variables());
         mm.add_next_location();
         mm.add_next_location();
 
@@ -425,7 +425,7 @@ mod tests {
 
     #[test]
     fn test_ensure_n_next_locations() {
-        let mut mm = MemoryManager::default();
+        let mut mm = MemoryManager::new(&test_builtin_variables());
         mm.ensure_n_next_locations(4);
 
         assert_eq!(
@@ -446,7 +446,7 @@ mod tests {
 
     #[test]
     fn test_reserve_location() {
-        let mut mm = MemoryManager::default();
+        let mut mm = MemoryManager::new(&test_builtin_variables());
         mm.reserve_location("a", Location::Register(TestRegisters::R(0)))
             .unwrap();
 
@@ -470,7 +470,7 @@ mod tests {
 
     #[test]
     fn test_get_location() {
-        let mut mm = MemoryManager::default();
+        let mut mm = MemoryManager::new(&test_builtin_variables());
         mm.reserve("a").unwrap();
 
         assert_eq!(
@@ -482,7 +482,7 @@ mod tests {
 
     #[test]
     fn test_get_name() {
-        let mut mm = MemoryManager::default();
+        let mut mm = MemoryManager::new(&test_builtin_variables());
         mm.reserve("a").unwrap();
 
         assert_eq!(
@@ -516,7 +516,7 @@ mod tests {
 
     #[test]
     fn test_free_locations() {
-        let mut mm = MemoryManager::default();
+        let mut mm = MemoryManager::new(&test_builtin_variables());
         mm.reserve("a").unwrap();
         mm.reserve("b").unwrap();
         mm.reserve("c").unwrap();
@@ -572,7 +572,7 @@ mod tests {
 
     #[test]
     fn test_swap() {
-        let mut mm = MemoryManager::default();
+        let mut mm = MemoryManager::new(&test_builtin_variables());
         mm.reserve("a").unwrap();
         mm.reserve("b").unwrap();
 

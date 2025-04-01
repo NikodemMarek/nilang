@@ -6,7 +6,7 @@ use nilang_types::{
     nodes::{ExpressionNode, Operator},
 };
 
-use crate::{temporaries::Temporaries, FunctionsRef, StructuresRef, Type};
+use crate::{temporaries::Temporaries, FunctionsRef, InstructionsIterator, StructuresRef, Type};
 
 use super::transform_expression;
 
@@ -20,7 +20,7 @@ pub fn transform_operation<'a>(
 
     result: Box<str>,
     r#type: &Type,
-) -> Box<dyn Iterator<Item = Result<Instruction, TransformerErrors>> + 'a> {
+) -> InstructionsIterator<'a> {
     if *r#type != Type::Int {
         return Box::new(once(Err(TransformerErrors::TypeMismatch {
             expected: Type::Int,

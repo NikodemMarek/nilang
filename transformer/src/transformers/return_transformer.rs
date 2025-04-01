@@ -3,7 +3,9 @@ use std::iter::once;
 use errors::TransformerErrors;
 use nilang_types::nodes::ExpressionNode;
 
-use crate::{temporaries::Temporaries, FunctionsRef, Instruction, StructuresRef, Type};
+use crate::{
+    temporaries::Temporaries, FunctionsRef, Instruction, InstructionsIterator, StructuresRef, Type,
+};
 
 use super::transform_expression;
 
@@ -14,7 +16,7 @@ pub fn transform_return<'a>(
     node: ExpressionNode,
 
     return_type: &Type,
-) -> Box<dyn Iterator<Item = Result<Instruction, TransformerErrors>> + 'a> {
+) -> InstructionsIterator<'a> {
     let variable_name = temporaries.declare(return_type.clone());
     let instructions = transform_expression(
         context,

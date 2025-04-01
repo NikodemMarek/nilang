@@ -185,7 +185,6 @@ pub mod tests {
                 TestRegisters::R(0),
                 TestRegisters::R(1),
                 TestRegisters::R(2),
-                TestRegisters::R(3),
             ])
         }
     }

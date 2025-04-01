@@ -14,6 +14,9 @@ use nilang_types::{
 pub use structures_ref::StructuresRef;
 use temporaries::Temporaries;
 
+type InstructionsIterator<'a> =
+    Box<dyn Iterator<Item = Result<Instruction, TransformerErrors>> + 'a>;
+
 pub fn transform_function<'a>(
     context: &'a (FunctionsRef, StructuresRef),
     FunctionDeclaration {
@@ -22,7 +25,7 @@ pub fn transform_function<'a>(
         parameters,
         ..
     }: &'a FunctionDeclaration,
-) -> Box<dyn Iterator<Item = Result<Instruction, TransformerErrors>> + 'a> {
+) -> InstructionsIterator<'a> {
     let temporaries = Temporaries::default();
 
     let parameters = transform_parameters(
@@ -44,17 +47,17 @@ fn transform_body<'a>(
     temporaries: &'a Temporaries,
     body: &'a [StatementNode],
     return_type: &'a Type,
-) -> Box<dyn Iterator<Item = Result<Instruction, TransformerErrors>> + 'a> {
+) -> InstructionsIterator<'a> {
     Box::new(body.iter().flat_map(|node| {
         transformers::transform_statement(context, node.clone(), return_type, temporaries)
     }))
 }
 
-fn transform_parameters(
+fn transform_parameters<'a>(
     context: &StructuresRef,
     temporaries: &Temporaries,
     parameters: &[Parameter],
-) -> Box<dyn Iterator<Item = Result<Instruction, TransformerErrors>>> {
+) -> InstructionsIterator<'a> {
     let mut instructions = Vec::new();
     let mut i = 0;
     for (parameter_name, parameter_type) in parameters.iter() {

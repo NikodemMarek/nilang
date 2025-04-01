@@ -1,8 +1,8 @@
-use errors::TransformerErrors;
-use nilang_types::{instructions::Instruction, nodes::ExpressionNode};
+use nilang_types::nodes::ExpressionNode;
 
 use crate::{
-    structures_ref::copy_all_fields, temporaries::Temporaries, FunctionsRef, StructuresRef, Type,
+    structures_ref::copy_all_fields, temporaries::Temporaries, FunctionsRef, InstructionsIterator,
+    StructuresRef, Type,
 };
 
 pub fn transform_field_access<'a>(
@@ -14,7 +14,7 @@ pub fn transform_field_access<'a>(
 
     result: Box<str>,
     r#type: &Type,
-) -> Box<dyn Iterator<Item = Result<Instruction, TransformerErrors>> + 'a> {
+) -> InstructionsIterator<'a> {
     let flattened_field = flatten_field_access(structure, field);
     copy_all_fields(
         &context.1,

@@ -3,11 +3,13 @@ use std::iter::once;
 use errors::TransformerErrors;
 use nilang_types::nodes::ExpressionNode;
 
-use crate::{temporaries::Temporaries, FunctionsRef, Instruction, StructuresRef, Type};
+use crate::{
+    temporaries::Temporaries, FunctionsRef, Instruction, InstructionsIterator, StructuresRef, Type,
+};
 
 use super::transform_expression;
 
-pub fn transform_function_call(
+pub fn transform_function_call<'a>(
     context: &(FunctionsRef, StructuresRef),
     temporaries: &Temporaries,
 
@@ -16,7 +18,7 @@ pub fn transform_function_call(
 
     result: Box<str>,
     r#type: &Type,
-) -> Box<dyn Iterator<Item = Result<Instruction, TransformerErrors>>> {
+) -> InstructionsIterator<'a> {
     let Ok(function_parameters) = context.0.get_parameters(&name) else {
         return Box::new(once(Err(TransformerErrors::FunctionNotFound { name })));
     };

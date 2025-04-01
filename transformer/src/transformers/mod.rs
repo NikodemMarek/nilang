@@ -8,8 +8,6 @@ mod variable_reference_transformer;
 
 use std::iter::once;
 
-use errors::TransformerErrors;
-
 use field_access_transformator::transform_field_access;
 use function_call_transformer::transform_function_call;
 use nilang_types::nodes::{ExpressionNode, FunctionCall, StatementNode};
@@ -20,7 +18,8 @@ use variable_declaration_transformer::transform_variable_declaration;
 use variable_reference_transformer::transform_variable_reference;
 
 use crate::{
-    structures_ref::StructuresRef, temporaries::Temporaries, FunctionsRef, Instruction, Type,
+    structures_ref::StructuresRef, temporaries::Temporaries, FunctionsRef, Instruction,
+    InstructionsIterator, Type,
 };
 
 pub fn transform_statement<'a>(
@@ -28,7 +27,7 @@ pub fn transform_statement<'a>(
     node: StatementNode,
     return_type: &Type,
     temporaries: &'a Temporaries,
-) -> Box<dyn Iterator<Item = Result<Instruction, TransformerErrors>> + 'a> {
+) -> InstructionsIterator<'a> {
     match node {
         StatementNode::Return(node) => transform_return(context, temporaries, *node, return_type),
         StatementNode::VariableDeclaration {
@@ -55,7 +54,7 @@ pub fn transform_expression<'a>(
 
     result: Box<str>,
     r#type: &Type,
-) -> Box<dyn Iterator<Item = Result<Instruction, TransformerErrors>> + 'a> {
+) -> InstructionsIterator<'a> {
     match node {
         ExpressionNode::Number(number) => {
             Box::new(once(Ok(Instruction::LoadNumber(result, number))))
