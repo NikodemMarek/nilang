@@ -3,28 +3,19 @@ use std::iter::once;
 use errors::TransformerErrors;
 use nilang_types::nodes::ExpressionNode;
 
-use crate::{
-    temporaries::Temporaries, FunctionsRef, Instruction, InstructionsIterator, StructuresRef, Type,
-};
+use crate::{Context, Instruction, InstructionsIterator, Type};
 
 use super::transform_expression;
 
 pub fn transform_return<'a>(
-    context: &'a (FunctionsRef, StructuresRef),
-    temporaries: &'a Temporaries,
+    context @ Context { temporaries, .. }: &'a Context,
 
     node: ExpressionNode,
 
     return_type: &Type,
 ) -> InstructionsIterator<'a> {
     let variable_name = temporaries.declare(return_type.clone());
-    let instructions = transform_expression(
-        context,
-        temporaries,
-        node,
-        variable_name.clone(),
-        return_type,
-    );
+    let instructions = transform_expression(context, node, variable_name.clone(), return_type);
 
     let Ok(_) = temporaries.access(&variable_name) else {
         return Box::new(once(Err(TransformerErrors::TemporaryNotFound {

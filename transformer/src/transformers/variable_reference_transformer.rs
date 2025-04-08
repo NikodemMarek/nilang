@@ -2,14 +2,14 @@ use std::iter::once;
 
 use errors::TransformerErrors;
 
-use crate::{
-    structures_ref::copy_all_fields, temporaries::Temporaries, FunctionsRef, InstructionsIterator,
-    StructuresRef, Type,
-};
+use crate::{structures_ref::copy_all_fields, Context, InstructionsIterator, Type};
 
 pub fn transform_variable_reference<'a>(
-    context: &(FunctionsRef, StructuresRef),
-    temporaries: &'a Temporaries,
+    Context {
+        structures,
+        temporaries,
+        ..
+    }: &'a Context,
 
     variable: Box<str>,
     result: Box<str>,
@@ -28,7 +28,7 @@ pub fn transform_variable_reference<'a>(
         })));
     }
 
-    copy_all_fields(&context.1, temporaries, variable, result, &source_type)
+    copy_all_fields(structures, temporaries, variable, result, &source_type)
 }
 
 #[cfg(test)]

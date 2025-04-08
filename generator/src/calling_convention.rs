@@ -71,6 +71,16 @@ pub trait CallingConvention: Sized {
                     format!("Load character '{character}' into `{temporary}`").into(),
                 )]
             }
+            Instruction::LoadStringLocation(temporary, string) => {
+                let pointer_location = mm.get_location_or_err(&temporary)?;
+                let string_location = mm.get_location_or_err(&string)?;
+
+                vec![(
+                    AssemblyInstruction::Move,
+                    vec![pointer_location.into(), string_location.into()],
+                    format!("Load '{string}' string pointer into `{temporary}`").into(),
+                )]
+            }
             Instruction::ReturnVariable(temporary) => {
                 let location = mm.get_location_or_err(&temporary)?;
                 vec![(

@@ -1,13 +1,13 @@
 use nilang_types::nodes::ExpressionNode;
 
-use crate::{
-    structures_ref::copy_all_fields, temporaries::Temporaries, FunctionsRef, InstructionsIterator,
-    StructuresRef, Type,
-};
+use crate::{structures_ref::copy_all_fields, Context, InstructionsIterator, Type};
 
 pub fn transform_field_access<'a>(
-    context: &(FunctionsRef, StructuresRef),
-    temporaries: &'a Temporaries,
+    Context {
+        structures,
+        temporaries,
+        ..
+    }: &'a Context,
 
     structure: ExpressionNode,
     field: Box<str>,
@@ -17,7 +17,7 @@ pub fn transform_field_access<'a>(
 ) -> InstructionsIterator<'a> {
     let flattened_field = flatten_field_access(structure, field);
     copy_all_fields(
-        &context.1,
+        structures,
         temporaries,
         flattened_field.into(),
         result,

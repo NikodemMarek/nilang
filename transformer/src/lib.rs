@@ -3,7 +3,7 @@ mod structures_ref;
 mod temporaries;
 mod transformers;
 
-use std::iter::once;
+use std::{cell::RefCell, iter::once};
 
 use errors::TransformerErrors;
 pub use functions_ref::FunctionsRef;
@@ -17,19 +17,29 @@ use temporaries::Temporaries;
 type InstructionsIterator<'a> =
     Box<dyn Iterator<Item = Result<Instruction, TransformerErrors>> + 'a>;
 
+type Declaration = (Box<str>, Box<str>);
+type Data = RefCell<Vec<Declaration>>;
+
+struct Context<'a> {
+    functions: &'a FunctionsRef,
+    structures: &'a StructuresRef,
+    temporaries: Temporaries,
+    data: &'a Data,
+}
+
 pub fn transform_function<'a>(
-    context: &'a (FunctionsRef, StructuresRef),
+    refs: &'a (FunctionsRef, StructuresRef),
     FunctionDeclaration {
         body,
         return_type,
         parameters,
         ..
     }: &'a FunctionDeclaration,
-) -> InstructionsIterator<'a> {
+) -> (InstructionsIterator<'a>, Vec<Declaration>) {
     let temporaries = Temporaries::default();
 
     let parameters = transform_parameters(
-        &context.1,
+        &refs.1,
         &temporaries,
         parameters
             .iter()
@@ -37,19 +47,30 @@ pub fn transform_function<'a>(
             .collect::<Vec<_>>()
             .as_slice(),
     );
-    let body = transform_body(context, &temporaries, body, return_type);
+    let data: Data = RefCell::new(Vec::new());
+    let context = Context {
+        functions: &refs.0,
+        structures: &refs.1,
+        temporaries,
+        data: &data,
+    };
 
-    Box::new(parameters.chain(body).collect::<Vec<_>>().into_iter())
+    let body = transform_body(&context, body, return_type);
+
+    (
+        Box::new(parameters.chain(body).collect::<Vec<_>>().into_iter()),
+        data.take(),
+    )
 }
 
 fn transform_body<'a>(
-    context: &'a (FunctionsRef, StructuresRef),
-    temporaries: &'a Temporaries,
+    context: &'a Context,
+
     body: &'a [StatementNode],
     return_type: &'a Type,
 ) -> InstructionsIterator<'a> {
-    Box::new(body.iter().flat_map(|node| {
-        transformers::transform_statement(context, node.clone(), return_type, temporaries)
+    Box::new(body.iter().flat_map(move |node| {
+        transformers::transform_statement(context, node.clone(), return_type)
     }))
 }
 

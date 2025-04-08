@@ -70,6 +70,7 @@ impl<R: Registers> AssemblyFlavour<R> for AtAndTFlavour {
 .data
 printi_format: .asciz "%d\n"
 printc_format: .asciz "%c\n"
+print_format: .asciz "%s\n"
 "#;
         let start_fn = r#"
 .text

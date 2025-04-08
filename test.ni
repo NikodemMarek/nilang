@@ -9,7 +9,9 @@ st Rect {
 }
 
 fn main(): int {
-    printi(9 % 5);
+    vr text: string = "Hello World!";
+
+    print(text);
 
     rt 0;
 }

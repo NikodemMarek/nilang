@@ -18,6 +18,7 @@ pub fn parse_type(r#type: &str) -> Type {
         "void" => Type::Void,
         "int" => Type::Int,
         "char" => Type::Char,
+        "string" => Type::String,
         r#type => Type::Object(r#type.into()),
     }
 }

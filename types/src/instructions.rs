@@ -14,6 +14,7 @@ pub enum Instruction {
 
     LoadNumber(Temporary, Number),
     LoadChar(Temporary, Char),
+    LoadStringLocation(Temporary, Temporary),
 
     Copy(Temporary, Temporary),
 

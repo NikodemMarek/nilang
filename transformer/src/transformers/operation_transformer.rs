@@ -6,13 +6,12 @@ use nilang_types::{
     nodes::{ExpressionNode, Operator},
 };
 
-use crate::{temporaries::Temporaries, FunctionsRef, InstructionsIterator, StructuresRef, Type};
+use crate::{Context, InstructionsIterator, Type};
 
 use super::transform_expression;
 
 pub fn transform_operation<'a>(
-    context: &'a (FunctionsRef, StructuresRef),
-    temporaries: &'a Temporaries,
+    context @ Context { temporaries, .. }: &'a Context,
 
     operator: Operator,
     a: ExpressionNode,
@@ -29,9 +28,9 @@ pub fn transform_operation<'a>(
     }
 
     let a_temporary = temporaries.declare(r#type.clone());
-    let a_instructions = transform_expression(context, temporaries, a, a_temporary.clone(), r#type);
+    let a_instructions = transform_expression(context, a, a_temporary.clone(), r#type);
     let b_temporary = temporaries.declare(r#type.clone());
-    let b_instructions = transform_expression(context, temporaries, b, b_temporary.clone(), r#type);
+    let b_instructions = transform_expression(context, b, b_temporary.clone(), r#type);
 
     let Ok(_) = temporaries.access(&a_temporary) else {
         return Box::new(once(Err(TransformerErrors::TemporaryNotFound {

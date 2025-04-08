@@ -1,6 +1,9 @@
 #![feature(iterator_try_collect)]
 
-use std::fs::{read_to_string, write};
+use std::{
+    cell::RefCell,
+    fs::{read_to_string, write},
+};
 
 use errors::{NilangError, TransformerErrors};
 use nilang_generator::options::{AtAndTFlavour, SystemVAmd64Abi, X86Registers};
@@ -35,10 +38,14 @@ fn compile(code: &str) -> Box<str> {
 
     let context = create_transformer_context(&functions, &structures).unwrap();
 
+    let data = RefCell::new(Vec::new());
     let transformed = functions.iter().map(|function| {
+        let (function_instructions, mut new_data) =
+            nilang_transformer::transform_function(&context, function);
+        data.borrow_mut().append(&mut new_data);
         (
             function.name.clone(),
-            nilang_transformer::transform_function(&context, function).map(|result| match result {
+            function_instructions.map(|result| match result {
                 Ok(instruction) => instruction,
                 Err(err) => {
                     panic!("{}", err);
@@ -50,6 +57,11 @@ fn compile(code: &str) -> Box<str> {
     let generated = transformed.map(|(name, instructions)| {
         nilang_generator::generate_function::<X86Registers, SystemVAmd64Abi, AtAndTFlavour>(
             name,
+            &data
+                .borrow()
+                .iter()
+                .map(|(name, _)| name.clone())
+                .collect::<Vec<_>>(),
             instructions,
         )
         .map(|result| match result {
@@ -61,11 +73,15 @@ fn compile(code: &str) -> Box<str> {
         .collect::<String>()
     });
 
-    nilang_generator::generate_program::<AtAndTFlavour>()
+    let code = nilang_generator::generate_program::<AtAndTFlavour>()
         .chain(generated)
         .collect::<Vec<_>>()
-        .join("\n")
-        .into()
+        .join("\n");
+
+    let code = ".data\n".to_owned()
+        + &nilang_generator::generate_data::<AtAndTFlavour>(&data.borrow()).collect::<String>()
+        + &code;
+    code.into()
 }
 
 fn create_transformer_context(

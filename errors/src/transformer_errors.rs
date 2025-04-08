@@ -43,12 +43,14 @@ impl std::fmt::Display for TransformerErrors {
                             Type::Int => "int",
                             Type::Void => "void",
                             Type::Char => "char",
+                            Type::String => "string",
                             Type::Object(name) => name,
                         },
                         match found {
                             Type::Int => "int",
                             Type::Void => "void",
                             Type::Char => "char",
+                            Type::String => "string",
                             Type::Object(name) => name,
                         }
                     )

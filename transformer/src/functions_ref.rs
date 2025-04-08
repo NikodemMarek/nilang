@@ -50,6 +50,10 @@ impl From<&[FunctionDeclaration]> for FunctionsRef {
             "printc".into(),
             (Type::Void, Box::new([("value".into(), Type::Char)])),
         );
+        functions.0.insert(
+            "print".into(),
+            (Type::Void, Box::new([("value".into(), Type::String)])),
+        );
 
         functions
     }

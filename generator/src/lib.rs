@@ -27,8 +27,17 @@ where
     A::generate_program_scaffold()
 }
 
+pub fn generate_data<A>(data: &[(Box<str>, Box<str>)]) -> impl Iterator<Item = String> + '_
+where
+    A: AssemblyFlavour<X86Registers>,
+{
+    data.iter()
+        .map(move |(name, value)| format!("{}: .asciz \"{}\"\n", name, value))
+}
+
 pub fn generate_function<'a, R, C, A>(
     name: Box<str>,
+    data: &'a [Box<str>],
     instructions: impl Iterator<Item = Instruction> + 'a,
 ) -> impl Iterator<Item = Result<String, GeneratorErrors>> + 'a
 where
@@ -37,28 +46,30 @@ where
     A: AssemblyFlavour<R>,
 {
     let header = A::generate_function_header(&name);
-    let body = A::generate_function_body(generate_instructions::<R, C>(instructions)).map(|line| {
-        line.map(|line| {
-            let line = line.trim();
-            if line.is_empty() {
-                "".to_owned()
-            } else {
-                format!("    {}\n", line)
-            }
-        })
-    });
+    let body =
+        A::generate_function_body(generate_instructions::<R, C>(data, instructions)).map(|line| {
+            line.map(|line| {
+                let line = line.trim();
+                if line.is_empty() {
+                    "".to_owned()
+                } else {
+                    format!("    {}\n", line)
+                }
+            })
+        });
 
     once(Ok(header)).chain(body)
 }
 
 fn generate_instructions<'a, R, C>(
+    data: &'a [Box<str>],
     instructions: impl Iterator<Item = Instruction> + 'a,
 ) -> impl Iterator<Item = Result<FullInstruction<C::Registers>, GeneratorErrors>> + 'a
 where
     R: Registers + 'a,
     C: CallingConvention<Registers = R>,
 {
-    let mut mm = MemoryManager::<R>::new(&builtin_variables());
+    let mut mm = MemoryManager::<R>::new(&[builtin_variables(), data.into()].concat());
     Box::new(instructions.flat_map(move |instruction| {
         let generated_instruction = C::generate_instruction(&mut mm, instruction);
 
@@ -100,10 +111,20 @@ fn builtin_functions<C: CallingConvention>(
             &["printc_format".into(), arguments.first().unwrap().clone()],
             None,
         )),
+        "print" => Some(C::generate_function_call(
+            mm,
+            "printf",
+            &["print_format".into(), arguments.first().unwrap().clone()],
+            None,
+        )),
         _ => None,
     }
 }
 
 fn builtin_variables() -> Box<[Box<str>]> {
-    Box::new(["printi_format".into(), "printc_format".into()])
+    Box::new([
+        "printi_format".into(),
+        "printc_format".into(),
+        "print_format".into(),
+    ])
 }

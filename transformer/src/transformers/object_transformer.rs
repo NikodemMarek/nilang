@@ -6,13 +6,16 @@ use std::{
 use errors::TransformerErrors;
 use nilang_types::{instructions::Instruction, nodes::ExpressionNode};
 
-use crate::{temporaries::Temporaries, FunctionsRef, InstructionsIterator, StructuresRef, Type};
+use crate::{Context, InstructionsIterator, Type};
 
 use super::transform_expression;
 
 pub fn transform_object<'a>(
-    context: &'a (FunctionsRef, StructuresRef),
-    temporaries: &'a Temporaries,
+    context @ Context {
+        structures,
+        temporaries,
+        ..
+    }: &'a Context,
 
     fields: HashMap<Box<str>, ExpressionNode>,
 
@@ -26,7 +29,7 @@ pub fn transform_object<'a>(
         })));
     };
 
-    let object_fields = match context.1.get_fields_flattened(r#type) {
+    let object_fields = match structures.get_fields_flattened(r#type) {
         Ok(object_fields) => object_fields,
         Err(e) => return Box::new(once(Err(e))),
     };
@@ -49,13 +52,8 @@ pub fn transform_object<'a>(
             let field_temp = <Box<str>>::from(format!("{}.{}", result, field));
             temporaries.declare_named(field_temp.clone(), r#type.clone());
 
-            let expression = transform_expression(
-                context,
-                temporaries,
-                value.clone(),
-                field_temp.clone(),
-                r#type,
-            );
+            let expression =
+                transform_expression(context, value.clone(), field_temp.clone(), r#type);
             once(Ok(Instruction::Declare(field_temp))).chain(expression)
         });
 

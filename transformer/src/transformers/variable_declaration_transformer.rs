@@ -3,15 +3,12 @@ use std::iter::once;
 use errors::TransformerErrors;
 use nilang_types::nodes::ExpressionNode;
 
-use crate::{
-    temporaries::Temporaries, FunctionsRef, Instruction, InstructionsIterator, StructuresRef, Type,
-};
+use crate::{Context, Instruction, InstructionsIterator, Type};
 
 use super::transform_expression;
 
 pub fn transform_variable_declaration<'a>(
-    context: &'a (FunctionsRef, StructuresRef),
-    temporaries: &'a Temporaries,
+    context @ Context { temporaries, .. }: &'a Context,
 
     name: Box<str>,
     r#type: &Type,
@@ -26,13 +23,8 @@ pub fn transform_variable_declaration<'a>(
     };
 
     Box::new(
-        once(Ok(Instruction::Declare(name.clone()))).chain(transform_expression(
-            context,
-            temporaries,
-            node,
-            name,
-            r#type,
-        )),
+        once(Ok(Instruction::Declare(name.clone())))
+            .chain(transform_expression(context, node, name, r#type)),
     )
 }
 

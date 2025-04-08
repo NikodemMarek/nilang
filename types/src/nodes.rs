@@ -69,5 +69,6 @@ pub enum Type {
     Void,
     Int,
     Char,
+    String,
     Object(Box<str>),
 }

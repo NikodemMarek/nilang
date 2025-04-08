@@ -3,15 +3,16 @@ use std::iter::once;
 use errors::TransformerErrors;
 use nilang_types::nodes::ExpressionNode;
 
-use crate::{
-    temporaries::Temporaries, FunctionsRef, Instruction, InstructionsIterator, StructuresRef, Type,
-};
+use crate::{Context, Instruction, InstructionsIterator, Type};
 
 use super::transform_expression;
 
 pub fn transform_function_call<'a>(
-    context: &(FunctionsRef, StructuresRef),
-    temporaries: &Temporaries,
+    context @ Context {
+        functions,
+        temporaries,
+        ..
+    }: &'a Context,
 
     name: Box<str>,
     arguments: &[ExpressionNode],
@@ -19,7 +20,7 @@ pub fn transform_function_call<'a>(
     result: Box<str>,
     r#type: &Type,
 ) -> InstructionsIterator<'a> {
-    let Ok(function_parameters) = context.0.get_parameters(&name) else {
+    let Ok(function_parameters) = functions.get_parameters(&name) else {
         return Box::new(once(Err(TransformerErrors::FunctionNotFound { name })));
     };
     let mut function_parameters = function_parameters.iter();
@@ -34,7 +35,6 @@ pub fn transform_function_call<'a>(
             instructions.append(
                 &mut transform_expression(
                     context,
-                    temporaries,
                     node.clone(),
                     argument_temporary.clone(),
                     &argument_type.clone(),
@@ -43,7 +43,7 @@ pub fn transform_function_call<'a>(
             );
 
             if let Type::Object(object_type) = argument_type {
-                let fields = match context.1.get_fields_flattened(object_type) {
+                let fields = match context.structures.get_fields_flattened(object_type) {
                     Ok(fields) => fields,
                     Err(e) => return Box::new(once(Err(e))),
                 };

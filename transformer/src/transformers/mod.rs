@@ -17,38 +17,29 @@ use return_transformer::transform_return;
 use variable_declaration_transformer::transform_variable_declaration;
 use variable_reference_transformer::transform_variable_reference;
 
-use crate::{
-    structures_ref::StructuresRef, temporaries::Temporaries, FunctionsRef, Instruction,
-    InstructionsIterator, Type,
-};
+use crate::{Context, Instruction, InstructionsIterator, Type};
 
 pub fn transform_statement<'a>(
-    context: &'a (FunctionsRef, StructuresRef),
+    context: &'a Context,
+
     node: StatementNode,
     return_type: &Type,
-    temporaries: &'a Temporaries,
 ) -> InstructionsIterator<'a> {
     match node {
-        StatementNode::Return(node) => transform_return(context, temporaries, *node, return_type),
+        StatementNode::Return(node) => transform_return(context, *node, return_type),
         StatementNode::VariableDeclaration {
             name,
             r#type,
             value,
-        } => transform_variable_declaration(context, temporaries, name, &r#type, *value),
-        StatementNode::FunctionCall(FunctionCall { name, arguments }) => transform_function_call(
-            context,
-            temporaries,
-            name,
-            &arguments,
-            "".into(),
-            &Type::Void,
-        ),
+        } => transform_variable_declaration(context, name, &r#type, *value),
+        StatementNode::FunctionCall(FunctionCall { name, arguments }) => {
+            transform_function_call(context, name, &arguments, "".into(), &Type::Void)
+        }
     }
 }
 
 pub fn transform_expression<'a>(
-    context: &'a (FunctionsRef, StructuresRef),
-    temporaries: &'a Temporaries,
+    context: &'a Context,
 
     node: ExpressionNode,
 
@@ -60,21 +51,47 @@ pub fn transform_expression<'a>(
             Box::new(once(Ok(Instruction::LoadNumber(result, number))))
         }
         ExpressionNode::Char(char) => Box::new(once(Ok(Instruction::LoadChar(result, char)))),
-        ExpressionNode::String(_) => todo!(),
+        ExpressionNode::String(text) => transform_string_declaration(context, &text, result),
         ExpressionNode::Object { r#type, fields } => {
-            transform_object(context, temporaries, fields, result, &r#type)
+            transform_object(context, fields, result, &r#type)
         }
         ExpressionNode::VariableReference(variable) => {
-            transform_variable_reference(context, temporaries, variable, result, r#type)
+            transform_variable_reference(context, variable, result, r#type)
         }
         ExpressionNode::FieldAccess { structure, field } => {
-            transform_field_access(context, temporaries, *structure, field, result, r#type)
+            transform_field_access(context, *structure, field, result, r#type)
         }
         ExpressionNode::Operation { operator, a, b } => {
-            transform_operation(context, temporaries, operator, *a, *b, result, r#type)
+            transform_operation(context, operator, *a, *b, result, r#type)
         }
         ExpressionNode::FunctionCall(FunctionCall { name, arguments }) => {
-            transform_function_call(context, temporaries, name, &arguments, result, r#type)
+            transform_function_call(context, name, &arguments, result, r#type)
         }
     }
+}
+
+fn transform_string_declaration<'a>(
+    Context {
+        temporaries, data, ..
+    }: &'a Context,
+
+    text: &str,
+    result: Box<str>,
+) -> InstructionsIterator<'a> {
+    let size_temporary = temporaries.declare(Type::Int);
+    let name = <Box<str>>::from(format!("string__{}", result));
+
+    data.borrow_mut().push((name.clone(), text.into()));
+
+    Box::new(
+        [
+            Ok(Instruction::Declare(size_temporary.clone())),
+            Ok(Instruction::LoadNumber(
+                size_temporary.clone(),
+                text.len() as f64,
+            )),
+            Ok(Instruction::LoadStringLocation(result.clone(), name)),
+        ]
+        .into_iter(),
+    )
 }
