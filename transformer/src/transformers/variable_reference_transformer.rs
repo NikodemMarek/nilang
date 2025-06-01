@@ -33,26 +33,35 @@ pub fn transform_variable_reference<'a>(
 
 #[cfg(test)]
 mod tests {
+    use std::cell::RefCell;
+
     use nilang_types::instructions::Instruction;
 
     use crate::{
         structures_ref::tests::test_structures_ref, temporaries::Temporaries,
-        transformers::variable_reference_transformer::transform_variable_reference, FunctionsRef,
-        Type,
+        transformers::variable_reference_transformer::transform_variable_reference, Context,
+        FunctionsRef, Type,
     };
 
     #[test]
     fn test_transform_variable_reference() {
-        let types_ref = test_structures_ref();
+        let context = Context {
+            functions: &FunctionsRef::default(),
+            structures: &test_structures_ref(),
+            temporaries: Temporaries::default(),
+            data: &RefCell::new(Vec::new()),
+        };
 
-        let temporaries = Temporaries::default();
-        temporaries.declare_named("original".into(), Type::Object("Rect".into()));
-        temporaries.declare_named("copy".into(), Type::Object("Rect".into()));
+        context
+            .temporaries
+            .declare_named("original".into(), Type::Object("Rect".into()));
+        context
+            .temporaries
+            .declare_named("copy".into(), Type::Object("Rect".into()));
 
         assert_eq!(
             transform_variable_reference(
-                &(FunctionsRef::default(), types_ref),
-                &temporaries,
+                &context,
                 "original".into(),
                 "copy".into(),
                 &Type::Object("Rect".into()),

@@ -32,19 +32,32 @@ pub fn transform_return<'a>(
 
 #[cfg(test)]
 mod tests {
-    use crate::{temporaries::Temporaries, FunctionsRef, StructuresRef};
+    use std::cell::RefCell;
 
-    use super::*;
+    use nilang_types::{
+        instructions::Instruction,
+        nodes::{ExpressionNode, Type},
+    };
+
+    use crate::{
+        structures_ref::tests::test_structures_ref, temporaries::Temporaries,
+        transformers::return_transformer::transform_return, Context, FunctionsRef,
+    };
 
     #[test]
     fn test_transform_return_variable() {
-        let temporaries = Temporaries::default();
-        temporaries.declare_named("x".into(), Type::Int);
+        let context = Context {
+            functions: &FunctionsRef::default(),
+            structures: &test_structures_ref(),
+            temporaries: Temporaries::default(),
+            data: &RefCell::new(Vec::new()),
+        };
+
+        context.temporaries.declare_named("x".into(), Type::Int);
 
         assert_eq!(
             transform_return(
-                &(FunctionsRef::default(), StructuresRef::default()),
-                &temporaries,
+                &context,
                 ExpressionNode::VariableReference("x".into()),
                 &Type::Int,
             )
@@ -60,14 +73,21 @@ mod tests {
 
     #[test]
     fn test_transform_return_field_access() {
-        let temporaries = Temporaries::default();
-        temporaries.declare_named("x".into(), Type::Object("struct".into()));
-        temporaries.declare_named("x.y".into(), Type::Int);
+        let context = Context {
+            functions: &FunctionsRef::default(),
+            structures: &test_structures_ref(),
+            temporaries: Temporaries::default(),
+            data: &RefCell::new(Vec::new()),
+        };
+
+        context
+            .temporaries
+            .declare_named("x".into(), Type::Object("struct".into()));
+        context.temporaries.declare_named("x.y".into(), Type::Int);
 
         assert_eq!(
             transform_return(
-                &(FunctionsRef::default(), StructuresRef::default()),
-                &temporaries,
+                &context,
                 ExpressionNode::FieldAccess {
                     structure: Box::new(ExpressionNode::VariableReference("x".into())),
                     field: "y".into(),

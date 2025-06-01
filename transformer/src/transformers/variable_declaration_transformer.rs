@@ -30,15 +30,26 @@ pub fn transform_variable_declaration<'a>(
 
 #[cfg(test)]
 mod tests {
+    use std::cell::RefCell;
+
+    use crate::{
+        structures_ref::tests::test_structures_ref, temporaries::Temporaries, FunctionsRef,
+    };
+
     use super::*;
 
     #[test]
     fn test_variable_declaration() {
-        let temporaries = Temporaries::default();
+        let context = Context {
+            functions: &FunctionsRef::default(),
+            structures: &test_structures_ref(),
+            temporaries: Temporaries::default(),
+            data: &RefCell::new(Vec::new()),
+        };
+
         assert_eq!(
             transform_variable_declaration(
-                &(FunctionsRef::default(), StructuresRef::default()),
-                &temporaries,
+                &context,
                 "a".into(),
                 &Type::Int,
                 ExpressionNode::Number(10.),
@@ -53,8 +64,7 @@ mod tests {
 
         assert_eq!(
             transform_variable_declaration(
-                &(FunctionsRef::default(), StructuresRef::default()),
-                &temporaries,
+                &context,
                 "b".into(),
                 &Type::Int,
                 ExpressionNode::VariableReference("a".into()),
