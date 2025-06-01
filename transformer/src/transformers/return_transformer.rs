@@ -32,6 +32,8 @@ pub fn transform_return<'a>(
 
 #[cfg(test)]
 mod tests {
+    use crate::{temporaries::Temporaries, FunctionsRef, StructuresRef};
+
     use super::*;
 
     #[test]

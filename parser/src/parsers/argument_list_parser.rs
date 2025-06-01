@@ -1,4 +1,4 @@
-use errors::ParserErrors;
+use errors::{CodeLocation, NilangError, ParserErrors};
 use nilang_types::{
     nodes::ExpressionNode,
     tokens::{Token, TokenType},
@@ -10,7 +10,7 @@ use super::parse_expression;
 
 pub fn parse_argument_list<I: PeekableAssumingIterator>(
     tokens: &mut I,
-) -> Result<Box<[ExpressionNode]>, ParserErrors> {
+) -> Result<Box<[ExpressionNode]>, NilangError> {
     tokens.assume(TokenType::OpeningParenthesis)?;
 
     let mut arguments = Vec::new();
@@ -33,9 +33,13 @@ pub fn parse_argument_list<I: PeekableAssumingIterator>(
                         token: TokenType::Comma,
                         ..
                     } => {}
-                    Token { start, .. } => Err(ParserErrors::ExpectedTokens {
-                        tokens: Vec::from([TokenType::Comma, TokenType::ClosingParenthesis]),
-                        loc: start,
+                    Token { start, .. } => Err(NilangError {
+                        location: CodeLocation::at(start.0, start.1),
+                        error: ParserErrors::ExpectedTokens(Vec::from([
+                            TokenType::Comma,
+                            TokenType::ClosingParenthesis,
+                        ]))
+                        .into(),
                     })?,
                 }
             }
@@ -46,14 +50,15 @@ pub fn parse_argument_list<I: PeekableAssumingIterator>(
                 tokens.next();
                 break;
             }
-            Token { start, .. } => Err(ParserErrors::ExpectedTokens {
-                tokens: Vec::from([
+            Token { start, .. } => Err(NilangError {
+                location: CodeLocation::at(start.0, start.1),
+                error: ParserErrors::ExpectedTokens(Vec::from([
                     TokenType::Identifier("".into()),
                     TokenType::Literal("".into()),
                     TokenType::OpeningParenthesis,
                     TokenType::ClosingParenthesis,
-                ]),
-                loc: *start,
+                ]))
+                .into(),
             })?,
         }
     }

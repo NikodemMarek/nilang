@@ -5,7 +5,7 @@ use std::{
     fs::{read_to_string, write},
 };
 
-use errors::{NilangError, TransformerErrors};
+use errors::TransformerErrors;
 use nilang_generator::options::{AtAndTFlavour, SystemVAmd64Abi, X86Registers};
 use nilang_transformer::{FunctionsRef, StructuresRef};
 
@@ -22,17 +22,7 @@ fn compile(code: &str) -> Box<str> {
     let (functions, structures) = match nilang_parser::parse(lexed) {
         Ok(parsed) => parsed,
         Err(err) => {
-            let (start, end, message): ((usize, usize), (usize, usize), String) = (&err).into();
-
-            panic!(
-                "{}",
-                NilangError {
-                    code: code.to_owned(),
-                    start,
-                    end,
-                    message,
-                }
-            );
+            panic!("{}", err.format_error(code));
         }
     };
 

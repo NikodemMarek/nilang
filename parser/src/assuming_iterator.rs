@@ -1,6 +1,6 @@
 use std::iter::Peekable;
 
-use errors::{LexerErrors, ParserErrors};
+use errors::{CodeLocation, NilangError, ParserErrors};
 use nilang_types::{
     nodes::Operator,
     tokens::{Keyword, Token, TokenType},
@@ -9,72 +9,75 @@ use nilang_types::{
 type Loc = (usize, usize);
 
 pub trait AssumingIterator: Iterator {
-    fn assume_next(&mut self) -> Result<Token, ParserErrors>;
+    fn assume_next(&mut self) -> Result<Token, NilangError>;
 
-    fn assume(&mut self, token: TokenType) -> Result<Loc, ParserErrors>;
-    fn assume_literal(&mut self) -> Result<(Loc, Loc, Box<str>), ParserErrors>;
-    fn assume_identifier(&mut self) -> Result<(Loc, Loc, Box<str>), ParserErrors>;
-    fn assume_keyword(&mut self, keyword: Keyword) -> Result<(Loc, Loc), ParserErrors>;
-    fn assume_operator(&mut self) -> Result<(Loc, Loc, Operator), ParserErrors>;
+    fn assume(&mut self, token: TokenType) -> Result<Loc, NilangError>;
+    fn assume_literal(&mut self) -> Result<(Loc, Loc, Box<str>), NilangError>;
+    fn assume_identifier(&mut self) -> Result<(Loc, Loc, Box<str>), NilangError>;
+    fn assume_keyword(&mut self, keyword: Keyword) -> Result<(Loc, Loc), NilangError>;
+    fn assume_operator(&mut self) -> Result<(Loc, Loc, Operator), NilangError>;
 }
 
-impl<I: Iterator<Item = Result<Token, LexerErrors>>> AssumingIterator for I {
+impl<I: Iterator<Item = Result<Token, NilangError>>> AssumingIterator for I {
     #[inline]
-    fn assume(&mut self, token: TokenType) -> Result<Loc, ParserErrors> {
+    fn assume(&mut self, token: TokenType) -> Result<Loc, NilangError> {
         match self.assume_next()? {
             Token {
                 start, token: t, ..
             } if t == token => Ok(start),
-            Token { start, .. } => Err(ParserErrors::ExpectedTokens {
-                tokens: Vec::from([token]),
-                loc: start,
+            Token { start, .. } => Err(NilangError {
+                location: CodeLocation::at(start.0, start.1),
+                error: ParserErrors::ExpectedTokens(Vec::from([token])).into(),
             }),
         }
     }
 
     #[inline]
-    fn assume_next(&mut self) -> Result<Token, ParserErrors> {
+    fn assume_next(&mut self) -> Result<Token, NilangError> {
         match self.next() {
             Some(Ok(token)) => Ok(token),
-            Some(Err(e)) => Err(ParserErrors::LexerError(e)),
-            None => Err(ParserErrors::EndOfInput {
-                loc: (usize::MAX, usize::MAX),
+            Some(Err(e)) => Err(e.clone()),
+            None => Err(NilangError {
+                location: CodeLocation::at(usize::MAX, usize::MAX),
+                error: ParserErrors::EndOfInput.into(),
             }),
         }
     }
 
     #[inline]
-    fn assume_literal(&mut self) -> Result<(Loc, Loc, Box<str>), ParserErrors> {
+    fn assume_literal(&mut self) -> Result<(Loc, Loc, Box<str>), NilangError> {
         match self.assume_next()? {
             Token {
                 start,
                 end,
                 token: TokenType::Literal(value),
             } => Ok((start, end, value)),
-            Token { start, .. } => Err(ParserErrors::ExpectedTokens {
-                tokens: Vec::from([TokenType::Literal("".into())]),
-                loc: start,
+            Token { start, .. } => Err(NilangError {
+                location: CodeLocation::at(start.0, start.1),
+                error: ParserErrors::ExpectedTokens(Vec::from([TokenType::Literal("".into())]))
+                    .into(),
             }),
         }
     }
 
     #[inline]
-    fn assume_identifier(&mut self) -> Result<(Loc, Loc, Box<str>), ParserErrors> {
+    fn assume_identifier(&mut self) -> Result<(Loc, Loc, Box<str>), NilangError> {
         match self.assume_next()? {
             Token {
                 start,
                 end,
                 token: TokenType::Identifier(value),
             } => Ok((start, end, value)),
-            Token { start, .. } => Err(ParserErrors::ExpectedTokens {
-                tokens: Vec::from([TokenType::Identifier("".into())]),
-                loc: start,
+            Token { start, .. } => Err(NilangError {
+                location: CodeLocation::at(start.0, start.1),
+                error: ParserErrors::ExpectedTokens(Vec::from([TokenType::Identifier("".into())]))
+                    .into(),
             }),
         }
     }
 
     #[inline]
-    fn assume_keyword(&mut self, keyword: Keyword) -> Result<(Loc, Loc), ParserErrors> {
+    fn assume_keyword(&mut self, keyword: Keyword) -> Result<(Loc, Loc), NilangError> {
         match self.assume_next()? {
             Token {
                 start,
@@ -82,49 +85,55 @@ impl<I: Iterator<Item = Result<Token, LexerErrors>>> AssumingIterator for I {
                 token: TokenType::Keyword(value),
             } => {
                 if value != keyword {
-                    Err(ParserErrors::ExpectedTokens {
-                        tokens: Vec::from([TokenType::Keyword(keyword)]),
-                        loc: (0, 1),
+                    Err(NilangError {
+                        location: CodeLocation::at(0, 1),
+                        error: ParserErrors::ExpectedTokens(Vec::from([TokenType::Keyword(
+                            keyword,
+                        )]))
+                        .into(),
                     })?
                 }
 
                 Ok((start, end))
             }
-            Token { start, .. } => Err(ParserErrors::ExpectedTokens {
-                tokens: Vec::from([TokenType::Keyword(keyword)]),
-                loc: start,
+            Token { start, .. } => Err(NilangError {
+                location: CodeLocation::at(start.0, start.1),
+                error: ParserErrors::ExpectedTokens(Vec::from([TokenType::Keyword(keyword)]))
+                    .into(),
             }),
         }
     }
 
     #[inline]
-    fn assume_operator(&mut self) -> Result<(Loc, Loc, Operator), ParserErrors> {
+    fn assume_operator(&mut self) -> Result<(Loc, Loc, Operator), NilangError> {
         match self.assume_next()? {
             Token {
                 start,
                 end,
                 token: TokenType::Operator(operator),
             } => Ok((start, end, operator)),
-            Token { start, .. } => Err(ParserErrors::ExpectedTokens {
-                tokens: Vec::from([TokenType::OpeningParenthesis]),
-                loc: start,
+            Token { start, .. } => Err(NilangError {
+                location: CodeLocation::at(start.0, start.1),
+                error: ParserErrors::ExpectedTokens(Vec::from([TokenType::OpeningParenthesis]))
+                    .into(),
             }),
         }
     }
 }
 
 pub trait PeekableAssumingIterator: AssumingIterator {
-    fn peek_valid(&mut self) -> Result<&Token, ParserErrors>;
+    fn peek_valid(&mut self) -> Result<&Token, NilangError>;
 }
 
-impl<I: Iterator<Item = Result<Token, LexerErrors>>> PeekableAssumingIterator for Peekable<I> {
+impl<I: Iterator<Item = Result<Token, NilangError>>> PeekableAssumingIterator for Peekable<I> {
     #[inline]
-    fn peek_valid(&mut self) -> Result<&Token, ParserErrors> {
+    fn peek_valid(&mut self) -> Result<&Token, NilangError> {
         match self.peek() {
             Some(Ok(token)) => Ok(token),
-            Some(Err(e)) => Err(ParserErrors::LexerError(e.clone())),
-            None => Err(ParserErrors::EndOfInput {
-                loc: (usize::MAX, usize::MAX),
+            Some(Err(e)) => Err(e.clone()),
+            None => Err(NilangError {
+                location: CodeLocation::at(usize::MAX, usize::MAX),
+                error: ParserErrors::EndOfInput.into(),
             }),
         }
     }

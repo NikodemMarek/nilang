@@ -1,4 +1,4 @@
-use errors::ParserErrors;
+use errors::NilangError;
 use nilang_types::{
     nodes::{ExpressionNode, FunctionCall, StatementNode},
     tokens::TokenType,
@@ -14,7 +14,7 @@ use super::{
 pub fn parse_function_call_statement<I: PeekableAssumingIterator>(
     tokens: &mut I,
     name: Box<str>,
-) -> Result<StatementNode, ParserErrors> {
+) -> Result<StatementNode, NilangError> {
     let function_call = parse_function_call_only(tokens, name)?;
     Ok(StatementNode::FunctionCall(function_call))
 }
@@ -22,7 +22,7 @@ pub fn parse_function_call_statement<I: PeekableAssumingIterator>(
 pub fn parse_function_call_expression<I: PeekableAssumingIterator>(
     tokens: &mut I,
     name: Box<str>,
-) -> Result<ExpressionNode, ParserErrors> {
+) -> Result<ExpressionNode, NilangError> {
     let function_call = parse_function_call_only(tokens, name)?;
     let function_call_field_access =
         expand_function_call_if_dot_follows(tokens, ExpressionNode::FunctionCall(function_call))?;
@@ -32,7 +32,7 @@ pub fn parse_function_call_expression<I: PeekableAssumingIterator>(
 fn parse_function_call_only<I: PeekableAssumingIterator>(
     tokens: &mut I,
     name: Box<str>,
-) -> Result<FunctionCall, ParserErrors> {
+) -> Result<FunctionCall, NilangError> {
     let arguments = parse_argument_list(tokens)?;
 
     Ok(FunctionCall { name, arguments })
@@ -41,7 +41,7 @@ fn parse_function_call_only<I: PeekableAssumingIterator>(
 fn expand_function_call_if_dot_follows<I: PeekableAssumingIterator>(
     tokens: &mut I,
     function_call: ExpressionNode, // only FunctionCall is allowed here
-) -> Result<ExpressionNode, ParserErrors> {
+) -> Result<ExpressionNode, NilangError> {
     if let TokenType::Dot = tokens.peek_valid()?.token {
         tokens.assume(TokenType::Dot)?;
 

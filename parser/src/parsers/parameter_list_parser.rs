@@ -1,4 +1,4 @@
-use errors::ParserErrors;
+use errors::{CodeLocation, NilangError, ParserErrors};
 use nilang_types::{
     nodes::Parameter,
     tokens::{Token, TokenType},
@@ -10,7 +10,7 @@ use super::type_annotation_parser::parse_type_annotation;
 
 pub fn parse_parameter_list<I: PeekableAssumingIterator>(
     tokens: &mut I,
-) -> Result<Box<[Parameter]>, ParserErrors> {
+) -> Result<Box<[Parameter]>, NilangError> {
     tokens.assume(TokenType::OpeningParenthesis)?;
 
     let mut parameters = Vec::new();
@@ -32,9 +32,13 @@ pub fn parse_parameter_list<I: PeekableAssumingIterator>(
                         token: TokenType::Comma,
                         ..
                     } => {}
-                    Token { start, .. } => Err(ParserErrors::ExpectedTokens {
-                        tokens: Vec::from([TokenType::Comma, TokenType::ClosingParenthesis]),
-                        loc: start,
+                    Token { start, .. } => Err(NilangError {
+                        location: CodeLocation::at(start.0, start.1),
+                        error: ParserErrors::ExpectedTokens(Vec::from([
+                            TokenType::Comma,
+                            TokenType::ClosingParenthesis,
+                        ]))
+                        .into(),
                     })?,
                 }
             }
@@ -42,12 +46,13 @@ pub fn parse_parameter_list<I: PeekableAssumingIterator>(
                 token: TokenType::ClosingParenthesis,
                 ..
             } => break,
-            Token { start, .. } => Err(ParserErrors::ExpectedTokens {
-                tokens: Vec::from([
+            Token { start, .. } => Err(NilangError {
+                location: CodeLocation::at(start.0, start.1),
+                error: ParserErrors::ExpectedTokens(Vec::from([
                     TokenType::Identifier("".into()),
                     TokenType::ClosingParenthesis,
-                ]),
-                loc: start,
+                ]))
+                .into(),
             })?,
         }
     }

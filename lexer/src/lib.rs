@@ -1,10 +1,10 @@
-use aggregated_iterator::Tokenizer;
-use errors::LexerErrors;
+use errors::NilangError;
 use nilang_types::tokens::Token;
+use tokenizer::Tokenizer;
 
-mod aggregated_iterator;
+mod tokenizer;
 
-pub fn lex(input: &str) -> impl Iterator<Item = Result<Token, LexerErrors>> + '_ {
+pub fn lex(input: &str) -> impl Iterator<Item = Result<Token, NilangError>> + '_ {
     Tokenizer::new(input)
 }
 

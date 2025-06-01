@@ -9,37 +9,63 @@ mod lexer_errors;
 mod parser_errors;
 mod transformer_errors;
 
-#[derive(Debug, Clone)]
-pub struct NilangError {
-    pub code: String,
-
-    // Range
-    pub start: (usize, usize),
-    pub end: (usize, usize),
-
-    pub message: String,
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CodeLocation(usize, usize, usize, usize);
+impl CodeLocation {
+    pub fn at(line: usize, char: usize) -> Self {
+        Self(line, char, line, char)
+    }
+    pub fn range(line_from: usize, char_from: usize, line_to: usize, char_to: usize) -> Self {
+        Self(line_from, char_from, line_to, char_to)
+    }
 }
 
-impl std::fmt::Display for NilangError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        let context = highlight_with_context(&self.code, self.start, self.end);
-        write!(
-            f,
+#[derive(Debug, Clone)]
+pub struct NilangError {
+    pub location: CodeLocation,
+    pub error: NilangErrorKind,
+}
+
+impl NilangError {
+    pub fn format_error(&self, code: &str) -> String {
+        let context = highlight_with_context(code, self.location);
+        format!(
             "{}\n{}",
-            format_error_message(self.start, self.end, &self.message),
+            format_error_message(self.location, &self.error),
             context
         )
     }
 }
 
+impl std::fmt::Display for NilangError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}", format_error_message(self.location, &self.error))
+    }
+}
+
 impl std::error::Error for NilangError {}
 
+#[derive(Debug, Clone)]
+pub enum NilangErrorKind {
+    LexerError(LexerErrors),
+    ParserError(ParserErrors),
+    // TODO: GeneratorError, TransformerError
+}
+
+impl std::fmt::Display for NilangErrorKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            NilangErrorKind::LexerError(err) => write!(f, "Lexer: {}", err),
+            NilangErrorKind::ParserError(err) => write!(f, "Parser: {}", err),
+        }
+    }
+}
+
 fn format_error_message(
-    (start_line, start_column): (usize, usize),
-    _: (usize, usize),
-    message: &str,
+    CodeLocation(line_from, _, line_to, _): CodeLocation,
+    error: &NilangErrorKind,
 ) -> String {
-    format!("[{}:{}] {}", start_line, start_column, message)
+    format!("[{}:{}] {}", line_from, line_to, error)
         .as_str()
         .red()
         .to_string()
@@ -47,38 +73,37 @@ fn format_error_message(
 
 fn highlight_with_context(
     code: &str,
-    (start_line, start_column): (usize, usize),
-    (end_line, end_column): (usize, usize),
+    CodeLocation(line_from, char_from, line_to, char_to): CodeLocation,
 ) -> String {
-    let first_line = if start_line < 3 { 0 } else { start_line - 3 };
+    let first_line = if line_from < 3 { 0 } else { line_from - 3 };
     let window = code
         .lines()
         .skip(first_line)
-        .take(if start_line < 3 {
-            end_line + 3
+        .take(if line_from < 3 {
+            line_to + 3
         } else {
-            end_line - start_line + 6
+            line_to - line_from + 6
         })
         .enumerate()
         .map(|(i, line)| {
-            let line = if i >= start_line && i <= end_line {
-                if i == start_line && start_line == end_line {
-                    let before_error = line.chars().take(start_column).collect::<String>();
+            let line = if i >= line_from && i <= line_to {
+                if i == line_from && line_from == line_to {
+                    let before_error = line.chars().take(char_from).collect::<String>();
                     let error = line
                         .chars()
-                        .skip(start_column)
-                        .take(end_column - start_column + 1)
+                        .skip(char_from)
+                        .take(char_to - char_from + 1)
                         .collect::<String>();
-                    let after_error = line.chars().skip(end_column + 1).collect::<String>();
+                    let after_error = line.chars().skip(char_to + 1).collect::<String>();
                     format!("{}{}{}", before_error, error.red().underline(), after_error)
-                } else if i == start_line {
-                    let before_error = line.chars().clone().take(start_column).collect::<String>();
-                    let error = line.chars().clone().skip(start_column).collect::<String>();
+                } else if i == line_from {
+                    let before_error = line.chars().clone().take(char_from).collect::<String>();
+                    let error = line.chars().clone().skip(char_from).collect::<String>();
                     format!("{}{}", before_error, error.red().underline())
-                } else if i == end_line {
-                    let chars = line.chars().skip(start_column);
-                    let error = chars.clone().take(end_column).collect::<String>();
-                    let after_error = chars.clone().skip(end_column + 1).collect::<String>();
+                } else if i == line_to {
+                    let chars = line.chars().skip(char_from);
+                    let error = chars.clone().take(char_to).collect::<String>();
+                    let after_error = chars.clone().skip(char_to + 1).collect::<String>();
                     format!("{}{}", error.red().underline(), after_error)
                 } else {
                     format!("{}", line.red().underline())

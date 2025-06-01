@@ -1,18 +1,18 @@
-use errors::ParserErrors;
+use errors::{CodeLocation, NilangError, ParserErrors};
 use nilang_types::nodes::ExpressionNode;
 
 use crate::assuming_iterator::PeekableAssumingIterator;
 
 pub fn parse_literal<I: PeekableAssumingIterator>(
     tokens: &mut I,
-) -> Result<ExpressionNode, ParserErrors> {
+) -> Result<ExpressionNode, NilangError> {
     let (start, end, value) = tokens.assume_literal()?;
 
     if value.starts_with('\'') && value.ends_with('\'') {
         if value.len() != 3 {
-            return Err(ParserErrors::InvalidLiteral {
-                from: start,
-                to: end,
+            return Err(NilangError {
+                location: CodeLocation::range(start.0, start.1, end.0, end.1),
+                error: ParserErrors::InvalidLiteral.into(),
             });
         }
         return Ok(ExpressionNode::Char(value.chars().nth(1).unwrap()));
@@ -24,9 +24,9 @@ pub fn parse_literal<I: PeekableAssumingIterator>(
 
     Ok(match value.parse() {
         Ok(parsed) => ExpressionNode::Number(parsed),
-        Err(_) => Err(ParserErrors::InvalidLiteral {
-            from: start,
-            to: end,
+        Err(_) => Err(NilangError {
+            location: CodeLocation::range(start.0, start.1, end.0, end.1),
+            error: ParserErrors::InvalidLiteral.into(),
         })?,
     })
 }

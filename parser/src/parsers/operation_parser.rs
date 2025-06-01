@@ -1,4 +1,4 @@
-use errors::ParserErrors;
+use errors::{CodeLocation, NilangError, ParserErrors};
 use nilang_types::{
     nodes::{ExpressionNode, Operator},
     tokens::{Token, TokenType},
@@ -11,7 +11,7 @@ use super::parse_single_expression;
 pub fn parse_operation_if_operator_follows<I: PeekableAssumingIterator>(
     tokens: &mut I,
     node: ExpressionNode,
-) -> Result<ExpressionNode, ParserErrors> {
+) -> Result<ExpressionNode, NilangError> {
     Ok(
         if let Token {
             token: TokenType::Operator(_),
@@ -29,7 +29,7 @@ pub fn parse_operation_if_operator_follows<I: PeekableAssumingIterator>(
 pub fn parse_operation_if_operator_follows_no_rearrange<I: PeekableAssumingIterator>(
     tokens: &mut I,
     node: ExpressionNode,
-) -> Result<ExpressionNode, ParserErrors> {
+) -> Result<ExpressionNode, NilangError> {
     Ok(
         if let Token {
             token: TokenType::Operator(_),
@@ -48,7 +48,7 @@ fn parse_operation<I: PeekableAssumingIterator>(
     tokens: &mut I,
     preceeding: ExpressionNode,
     rearrange: bool,
-) -> Result<ExpressionNode, ParserErrors> {
+) -> Result<ExpressionNode, NilangError> {
     let (start, _, operator) = tokens.assume_operator()?;
 
     Ok(match preceeding {
@@ -82,8 +82,9 @@ fn parse_operation<I: PeekableAssumingIterator>(
             }
         }
         ExpressionNode::Object { .. } | ExpressionNode::Char(_) | ExpressionNode::String(_) => {
-            Err(ParserErrors::InvalidOperand {
-                loc: (start.0, start.1 - 1),
+            Err(NilangError {
+                location: CodeLocation::at(start.0, start.1 - 1),
+                error: ParserErrors::InvalidOperand.into(),
             })?
         }
     })
@@ -93,7 +94,7 @@ fn extend_operation(
     operation: ExpressionNode,
     operator: Operator,
     node: ExpressionNode,
-) -> Result<ExpressionNode, ParserErrors> {
+) -> Result<ExpressionNode, NilangError> {
     if let ExpressionNode::Operation {
         operator: prev_operator,
         a: prev_a,

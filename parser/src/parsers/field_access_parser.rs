@@ -1,4 +1,4 @@
-use errors::ParserErrors;
+use errors::NilangError;
 use nilang_types::{nodes::ExpressionNode, tokens::TokenType};
 
 use crate::assuming_iterator::PeekableAssumingIterator;
@@ -6,7 +6,7 @@ use crate::assuming_iterator::PeekableAssumingIterator;
 pub fn parse_field_access<I: PeekableAssumingIterator>(
     tokens: &mut I,
     name: Box<str>,
-) -> Result<ExpressionNode, ParserErrors> {
+) -> Result<ExpressionNode, NilangError> {
     let mut field_access = ExpressionNode::VariableReference(name);
 
     while let TokenType::Dot = tokens.peek_valid()?.token {

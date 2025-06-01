@@ -1,4 +1,4 @@
-use errors::ParserErrors;
+use errors::{CodeLocation, NilangError, ParserErrors};
 use nilang_types::{
     nodes::ExpressionNode,
     tokens::{Token, TokenType},
@@ -13,7 +13,7 @@ use super::{
 
 pub fn parse_parenthesis<I: PeekableAssumingIterator>(
     tokens: &mut I,
-) -> Result<ExpressionNode, ParserErrors> {
+) -> Result<ExpressionNode, NilangError> {
     let start = tokens.assume(TokenType::OpeningParenthesis)?;
 
     let content = match tokens.peek_valid()? {
@@ -42,13 +42,13 @@ pub fn parse_parenthesis<I: PeekableAssumingIterator>(
             token: TokenType::ClosingParenthesis,
             end,
             ..
-        } => Err(ParserErrors::EmptyParenthesis {
-            from: start,
-            to: *end,
+        } => Err(NilangError {
+            location: CodeLocation::range(start.0, start.1, end.0, end.1),
+            error: ParserErrors::EmptyParenthesis.into(),
         })?,
-        Token { token, start, .. } => Err(ParserErrors::UnexpectedToken {
-            token: token.clone(),
-            loc: *start,
+        Token { token, start, .. } => Err(NilangError {
+            location: CodeLocation::at(start.0, start.1),
+            error: ParserErrors::UnexpectedToken(token.clone()).into(),
         })?,
     };
 

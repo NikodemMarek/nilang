@@ -1,4 +1,4 @@
-use errors::ParserErrors;
+use errors::NilangError;
 use nilang_types::{
     nodes::StatementNode,
     tokens::{Keyword, TokenType},
@@ -10,7 +10,7 @@ use super::parse_expression;
 
 pub fn parse_return<I: PeekableAssumingIterator>(
     tokens: &mut I,
-) -> Result<StatementNode, ParserErrors> {
+) -> Result<StatementNode, NilangError> {
     tokens.assume_keyword(Keyword::Return)?;
 
     let value = parse_expression(tokens)?;

@@ -1,6 +1,6 @@
 use std::iter::Peekable;
 
-use errors::LexerErrors;
+use errors::{CodeLocation, LexerErrors, NilangError};
 use nilang_types::tokens::{Keyword, Token, TokenType};
 
 pub struct Tokenizer<'a> {
@@ -9,7 +9,7 @@ pub struct Tokenizer<'a> {
 }
 
 impl<'a> Iterator for Tokenizer<'a> {
-    type Item = Result<Token, LexerErrors>;
+    type Item = Result<Token, NilangError>;
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
@@ -150,9 +150,9 @@ impl<'a> Iterator for Tokenizer<'a> {
                                 aggregation.push(char);
                             }
                             None => {
-                                return Some(Err(LexerErrors::ExpectedCharacter {
-                                    char: '"',
-                                    loc: self.loc,
+                                return Some(Err(NilangError {
+                                    location: CodeLocation::at(self.loc.0, self.loc.1),
+                                    error: LexerErrors::ExpectedCharacter('"').into(),
                                 }));
                             }
                         }
@@ -175,25 +175,28 @@ impl<'a> Iterator for Tokenizer<'a> {
 
                     if let Some(c) = self.iter.next() {
                         if c == '\'' {
-                            return Some(Err(LexerErrors::UnexpectedCharacter {
-                                char: '\'',
-                                loc: self.loc,
+                            return Some(Err(NilangError {
+                                location: CodeLocation::at(self.loc.0, self.loc.1),
+                                error: LexerErrors::UnexpectedCharacter('\'').into(),
                             }));
                         } else {
                             self.loc.1 += 1;
                             aggregation.push(c);
                         }
                     } else {
-                        return Some(Err(LexerErrors::UnexpectedEndOfFile { loc: self.loc }));
+                        return Some(Err(NilangError {
+                            location: CodeLocation::at(self.loc.0, self.loc.1),
+                            error: LexerErrors::UnexpectedEndOfFile.into(),
+                        }));
                     }
 
                     if let Some('\'') = self.iter.next() {
                         self.loc.1 += 1;
                         aggregation.push('\'');
                     } else {
-                        return Some(Err(LexerErrors::ExpectedCharacter {
-                            char: '\'',
-                            loc: self.loc,
+                        return Some(Err(NilangError {
+                            location: CodeLocation::at(self.loc.0, self.loc.1),
+                            error: LexerErrors::ExpectedCharacter('\'').into(),
                         }));
                     }
 
@@ -337,9 +340,9 @@ impl<'a> Iterator for Tokenizer<'a> {
                     }));
                 }
                 char => {
-                    return Some(Err(LexerErrors::UnexpectedCharacter {
-                        char: *char,
-                        loc: self.loc,
+                    return Some(Err(NilangError {
+                        location: CodeLocation::at(self.loc.0, self.loc.1),
+                        error: LexerErrors::UnexpectedCharacter(*char).into(),
                     }));
                 }
             };
@@ -366,7 +369,7 @@ mod tests {
         tokens::{Keyword, Token, TokenType},
     };
 
-    use crate::aggregated_iterator::Tokenizer;
+    use crate::tokenizer::Tokenizer;
 
     #[test]
     fn test_tokenizer() {

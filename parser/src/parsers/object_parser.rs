@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use errors::ParserErrors;
+use errors::{CodeLocation, NilangError, ParserErrors};
 use nilang_types::{
     nodes::ExpressionNode,
     tokens::{Token, TokenType},
@@ -13,7 +13,7 @@ use super::{parse_expression, type_annotation_parser::parse_type};
 pub fn parse_object<I: PeekableAssumingIterator>(
     tokens: &mut I,
     name: Box<str>,
-) -> Result<ExpressionNode, ParserErrors> {
+) -> Result<ExpressionNode, NilangError> {
     tokens.assume(TokenType::OpeningBrace)?;
 
     let mut fields = HashMap::new();
@@ -32,10 +32,9 @@ pub fn parse_object<I: PeekableAssumingIterator>(
                     .insert(name.clone(), parse_expression(tokens)?)
                     .is_some()
                 {
-                    return Err(ParserErrors::DuplicateField {
-                        from: start,
-                        to: end,
-                        name,
+                    return Err(NilangError {
+                        location: CodeLocation::range(start.0, start.1, end.0, end.1),
+                        error: ParserErrors::DuplicateField(name).into(),
                     });
                 };
 
@@ -50,9 +49,13 @@ pub fn parse_object<I: PeekableAssumingIterator>(
                     } => {
                         break;
                     }
-                    Token { start, .. } => Err(ParserErrors::ExpectedTokens {
-                        tokens: Vec::from([TokenType::Comma, TokenType::ClosingBrace]),
-                        loc: start,
+                    Token { start, .. } => Err(NilangError {
+                        location: CodeLocation::at(start.0, start.1),
+                        error: ParserErrors::ExpectedTokens(Vec::from([
+                            TokenType::Comma,
+                            TokenType::ClosingBrace,
+                        ]))
+                        .into(),
                     })?,
                 }
             }
@@ -60,9 +63,13 @@ pub fn parse_object<I: PeekableAssumingIterator>(
                 token: TokenType::ClosingBrace,
                 ..
             } => break,
-            Token { start, .. } => Err(ParserErrors::ExpectedTokens {
-                tokens: Vec::from([TokenType::Identifier("".into()), TokenType::ClosingBrace]),
-                loc: start,
+            Token { start, .. } => Err(NilangError {
+                location: CodeLocation::at(start.0, start.1),
+                error: ParserErrors::ExpectedTokens(Vec::from([
+                    TokenType::Identifier("".into()),
+                    TokenType::ClosingBrace,
+                ]))
+                .into(),
             })?,
         }
     }

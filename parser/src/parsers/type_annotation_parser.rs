@@ -1,11 +1,11 @@
-use errors::ParserErrors;
+use errors::NilangError;
 use nilang_types::{nodes::Type, tokens::TokenType};
 
 use crate::assuming_iterator::PeekableAssumingIterator;
 
 pub fn parse_type_annotation<I: PeekableAssumingIterator>(
     tokens: &mut I,
-) -> Result<Type, ParserErrors> {
+) -> Result<Type, NilangError> {
     tokens.assume(TokenType::Colon)?;
 
     let (_, _, r#type) = tokens.assume_identifier()?;

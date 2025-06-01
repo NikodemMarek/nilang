@@ -1,4 +1,4 @@
-use errors::ParserErrors;
+use errors::NilangError;
 use nilang_types::{
     nodes::StatementNode,
     tokens::{Keyword, TokenType},
@@ -10,7 +10,7 @@ use super::{parse_expression, type_annotation_parser::parse_type_annotation};
 
 pub fn parse_variable_declaration<I: PeekableAssumingIterator>(
     tokens: &mut I,
-) -> Result<StatementNode, ParserErrors> {
+) -> Result<StatementNode, NilangError> {
     tokens.assume_keyword(Keyword::Variable)?;
 
     let (_, _, name) = tokens.assume_identifier()?;

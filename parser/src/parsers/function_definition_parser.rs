@@ -1,4 +1,4 @@
-use errors::ParserErrors;
+use errors::NilangError;
 use nilang_types::{
     nodes::FunctionDeclaration,
     tokens::{Keyword, Token, TokenType},
@@ -13,7 +13,7 @@ use super::{
 
 pub fn parse_function_definition<I: PeekableAssumingIterator>(
     tokens: &mut I,
-) -> Result<FunctionDeclaration, ParserErrors> {
+) -> Result<FunctionDeclaration, NilangError> {
     tokens.assume_keyword(Keyword::Function)?;
 
     let (_, _, name) = tokens.assume_identifier()?;

@@ -1,4 +1,4 @@
-use errors::ParserErrors;
+use errors::NilangError;
 use nilang_types::{
     nodes::ExpressionNode,
     tokens::{Token, TokenType},
@@ -13,7 +13,7 @@ use super::{
 
 pub fn parse_identifier<I: PeekableAssumingIterator>(
     tokens: &mut I,
-) -> Result<ExpressionNode, ParserErrors> {
+) -> Result<ExpressionNode, NilangError> {
     let (_, _, name) = tokens.assume_identifier()?;
 
     let peek_valid = if let Ok(token) = tokens.peek_valid() {

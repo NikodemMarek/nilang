@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use errors::ParserErrors;
+use errors::{CodeLocation, NilangError, ParserErrors};
 use nilang_types::{
     nodes::StructureDeclaration,
     tokens::{Keyword, Token, TokenType},
@@ -12,7 +12,7 @@ use super::type_annotation_parser::parse_type_annotation;
 
 pub fn parse_structure<I: PeekableAssumingIterator>(
     tokens: &mut I,
-) -> Result<StructureDeclaration, ParserErrors> {
+) -> Result<StructureDeclaration, NilangError> {
     tokens.assume_keyword(Keyword::Structure)?;
 
     let (_, _, name) = tokens.assume_identifier()?;
@@ -47,9 +47,16 @@ pub fn parse_structure<I: PeekableAssumingIterator>(
                 ..
             } => break,
             _ => {
-                return Err(ParserErrors::ExpectedTokens {
-                    tokens: vec![TokenType::Comma, TokenType::ClosingBrace],
-                    loc: tokens.peek_valid()?.start,
+                return Err(NilangError {
+                    location: {
+                        let start = tokens.peek_valid()?.start;
+                        CodeLocation::at(start.0, start.1)
+                    },
+                    error: ParserErrors::ExpectedTokens(vec![
+                        TokenType::Comma,
+                        TokenType::ClosingBrace,
+                    ])
+                    .into(),
                 });
             }
         }

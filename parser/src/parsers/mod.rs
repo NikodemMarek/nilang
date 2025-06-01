@@ -1,4 +1,4 @@
-use errors::ParserErrors;
+use errors::{CodeLocation, NilangError, ParserErrors};
 use function_call_parser::parse_function_call_statement;
 use identifier_parser::parse_identifier;
 use literal_parser::parse_literal;
@@ -31,7 +31,7 @@ mod variable_declaration_parser;
 
 pub fn parse_statement<I: PeekableAssumingIterator>(
     tokens: &mut I,
-) -> Result<StatementNode, ParserErrors> {
+) -> Result<StatementNode, NilangError> {
     let peek_valid = tokens.peek_valid()?;
 
     Ok(match &peek_valid.token {
@@ -39,9 +39,9 @@ pub fn parse_statement<I: PeekableAssumingIterator>(
             Keyword::Variable => parse_variable_declaration(tokens)?,
             Keyword::Return => parse_return(tokens)?,
             Keyword::Function | Keyword::Structure => {
-                return Err(ParserErrors::UnexpectedToken {
-                    token: peek_valid.token.clone(),
-                    loc: peek_valid.start,
+                return Err(NilangError {
+                    location: CodeLocation::at(peek_valid.start.0, peek_valid.start.1),
+                    error: ParserErrors::UnexpectedToken(peek_valid.token.clone()).into(),
                 })
             }
         },
@@ -61,27 +61,27 @@ pub fn parse_statement<I: PeekableAssumingIterator>(
         | TokenType::Semicolon
         | TokenType::Colon
         | TokenType::Comma
-        | TokenType::Dot => Err(ParserErrors::UnexpectedToken {
-            token: peek_valid.token.clone(),
-            loc: peek_valid.start,
+        | TokenType::Dot => Err(NilangError {
+            location: CodeLocation::at(peek_valid.start.0, peek_valid.start.1),
+            error: ParserErrors::UnexpectedToken(peek_valid.token.clone()).into(),
         })?,
     })
 }
 
 pub fn parse_expression<I: PeekableAssumingIterator>(
     tokens: &mut I,
-) -> Result<ExpressionNode, ParserErrors> {
+) -> Result<ExpressionNode, NilangError> {
     let expression_node = parse_single_expression(tokens)?;
     parse_operation_if_operator_follows(tokens, expression_node)
 }
 
 pub fn parse_single_expression<I: PeekableAssumingIterator>(
     tokens: &mut I,
-) -> Result<ExpressionNode, ParserErrors> {
+) -> Result<ExpressionNode, NilangError> {
     let peek_valid = tokens.peek_valid()?;
 
     Ok(match peek_valid.token {
-        TokenType::Literal(_) => parse_literal(tokens)?,
+        TokenType::Literal(_) => parse_literal::<_>(tokens)?,
         TokenType::OpeningParenthesis => parse_parenthesis(tokens)?,
         TokenType::Identifier(_) => parse_identifier(tokens)?,
         TokenType::Operator(_)
@@ -93,9 +93,9 @@ pub fn parse_single_expression<I: PeekableAssumingIterator>(
         | TokenType::Semicolon
         | TokenType::Colon
         | TokenType::Comma
-        | TokenType::Dot => Err(ParserErrors::UnexpectedToken {
-            token: peek_valid.token.clone(),
-            loc: peek_valid.start,
+        | TokenType::Dot => Err(NilangError {
+            location: CodeLocation::at(peek_valid.start.0, peek_valid.start.1),
+            error: ParserErrors::UnexpectedToken(peek_valid.token.clone()).into(),
         })?,
     })
 }
