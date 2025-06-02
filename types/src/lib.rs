@@ -28,7 +28,10 @@ impl<T: Sized + Clone> Localizable<T> {
     pub fn new(location: Location, object: T) -> Self {
         Self { location, object }
     }
+}
 
+#[cfg(test)]
+impl<T: Sized + Clone> Localizable<T> {
     pub fn irrelevant(object: T) -> Self {
         Self {
             location: Location::at(0, 0),
