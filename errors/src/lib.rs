@@ -39,7 +39,8 @@ impl std::error::Error for NilangError {}
 pub enum NilangErrorKind {
     LexerError(LexerErrors),
     ParserError(ParserErrors),
-    // TODO: GeneratorError, TransformerError
+    TransformerError(TransformerErrors),
+    GeneratorError(GeneratorErrors),
 }
 
 impl std::fmt::Display for NilangErrorKind {
@@ -47,6 +48,8 @@ impl std::fmt::Display for NilangErrorKind {
         match self {
             NilangErrorKind::LexerError(err) => write!(f, "Lexer: {}", err),
             NilangErrorKind::ParserError(err) => write!(f, "Parser: {}", err),
+            NilangErrorKind::TransformerError(err) => write!(f, "Transformer: {}", err),
+            NilangErrorKind::GeneratorError(err) => write!(f, "Generator: {}", err),
         }
     }
 }

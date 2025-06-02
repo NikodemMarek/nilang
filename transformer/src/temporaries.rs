@@ -1,7 +1,5 @@
 use std::{cell::RefCell, collections::HashMap};
 
-use errors::TransformerErrors;
-
 use crate::Type;
 
 type Declared = HashMap<Box<str>, (Type, u8)>;
@@ -22,20 +20,18 @@ impl Temporaries {
         name
     }
 
-    pub fn access(&self, name: &str) -> Result<Type, TransformerErrors> {
-        match self.0.borrow_mut().0.get_mut(name) {
-            Some(r#type) => {
-                r#type.1 += 1;
-                Ok(r#type.0.clone())
-            }
-            None => Err(TransformerErrors::TemporaryNotFound { name: name.into() }),
-        }
+    pub fn access(&self, name: &str) -> Option<Type> {
+        self.0.borrow_mut().0.get_mut(name).map(|r#type| {
+            r#type.1 += 1;
+            r#type.0.clone()
+        })
     }
 
-    pub fn type_of(&self, name: &str) -> Result<Type, TransformerErrors> {
-        match self.0.borrow_mut().0.get_mut(name) {
-            Some(r#type) => Ok(r#type.0.clone()),
-            None => Err(TransformerErrors::TemporaryNotFound { name: name.into() }),
-        }
+    pub fn type_of(&self, name: &str) -> Option<Type> {
+        self.0
+            .borrow_mut()
+            .0
+            .get_mut(name)
+            .map(|r#type| r#type.0.clone())
     }
 }

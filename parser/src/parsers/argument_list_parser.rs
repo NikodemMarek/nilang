@@ -97,9 +97,7 @@ mod tests {
             .object,
             [
                 Localizable::irrelevant(ExpressionNode::Number(5.)),
-                Localizable::irrelevant(ExpressionNode::VariableReference(
-                    Localizable::irrelevant("x".into())
-                ))
+                Localizable::irrelevant(ExpressionNode::VariableReference("x".into()))
             ]
             .into()
         );
@@ -121,7 +119,7 @@ mod tests {
             [Localizable::irrelevant(ExpressionNode::Operation {
                 operator: Localizable::irrelevant(Operator::Add),
                 a: Box::new(Localizable::irrelevant(ExpressionNode::VariableReference(
-                    Localizable::irrelevant("x".into())
+                    "x".into()
                 ))),
                 b: Box::new(Localizable::irrelevant(ExpressionNode::Number(4.))),
             })]

@@ -1,6 +1,5 @@
 use std::iter::once;
 
-use errors::TransformerErrors;
 use nilang_types::{nodes::ExpressionNode, Localizable};
 
 use crate::{Context, Instruction, InstructionsIterator, Type};
@@ -11,20 +10,20 @@ pub fn transform_variable_declaration<'a>(
     context @ Context { temporaries, .. }: &'a Context,
 
     name: Localizable<Box<str>>,
-    r#type: &Type,
-    node: ExpressionNode,
+    r#type: &Localizable<Type>,
+    node: Localizable<ExpressionNode>,
 ) -> InstructionsIterator<'a> {
-    temporaries.declare_named(name.object.clone(), r#type.clone());
+    temporaries.declare_named((*name).clone(), (**r#type).clone());
 
-    let Ok(_) = temporaries.access(&name) else {
-        return Box::new(once(Err(TransformerErrors::TemporaryNotFound {
-            name: name.clone(),
-        })));
-    };
+    assert!(temporaries.access(&name).is_some());
 
     Box::new(
-        once(Ok(Instruction::Declare(name.clone())))
-            .chain(transform_expression(context, node, name, r#type)),
+        once(Ok(Instruction::Declare((*name).clone()))).chain(transform_expression(
+            context,
+            node,
+            (*name).clone(),
+            r#type,
+        )),
     )
 }
 
@@ -50,9 +49,9 @@ mod tests {
         assert_eq!(
             transform_variable_declaration(
                 &context,
-                "a".into(),
-                &Type::Int,
-                ExpressionNode::Number(10.),
+                Localizable::irrelevant("a".into()),
+                &Localizable::irrelevant(Type::Int),
+                Localizable::irrelevant(ExpressionNode::Number(10.)),
             )
             .collect::<Result<Vec<_>, _>>()
             .unwrap(),
@@ -65,9 +64,9 @@ mod tests {
         assert_eq!(
             transform_variable_declaration(
                 &context,
-                "b".into(),
-                &Type::Int,
-                ExpressionNode::VariableReference("a".into()),
+                Localizable::irrelevant("b".into()),
+                &Localizable::irrelevant(Type::Int),
+                Localizable::irrelevant(ExpressionNode::VariableReference("a".into())),
             )
             .collect::<Result<Vec<_>, _>>()
             .unwrap(),

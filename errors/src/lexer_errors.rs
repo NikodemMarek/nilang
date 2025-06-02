@@ -22,8 +22,8 @@ impl std::fmt::Display for LexerErrors {
 }
 
 impl From<LexerErrors> for NilangErrorKind {
-    fn from(val: LexerErrors) -> Self {
-        NilangErrorKind::LexerError(val)
+    fn from(value: LexerErrors) -> Self {
+        NilangErrorKind::LexerError(value)
     }
 }
 

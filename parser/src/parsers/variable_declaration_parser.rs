@@ -99,7 +99,7 @@ mod tests {
                 name: Localizable::irrelevant("test".into()),
                 r#type: Localizable::irrelevant(Type::Int),
                 value: Box::new(Localizable::irrelevant(ExpressionNode::VariableReference(
-                    Localizable::irrelevant("test2".into())
+                    "test2".into()
                 )))
             }
         );
@@ -171,7 +171,7 @@ mod tests {
                 value: Box::new(Localizable::irrelevant(ExpressionNode::Operation {
                     operator: Localizable::irrelevant(Operator::Add),
                     a: Box::new(Localizable::irrelevant(ExpressionNode::VariableReference(
-                        Localizable::irrelevant("test2".into())
+                        "test2".into()
                     ))),
                     b: Box::new(Localizable::irrelevant(ExpressionNode::Number(9.))),
                 }))
@@ -207,7 +207,7 @@ mod tests {
                 name: Localizable::irrelevant("test".into()),
                 r#type: Localizable::irrelevant(Type::Int),
                 value: Box::new(Localizable::irrelevant(ExpressionNode::FunctionCall(
-                    Localizable::irrelevant(FunctionCall {
+                    FunctionCall {
                         name: Localizable::irrelevant("abc".into()),
                         arguments: Localizable::irrelevant(
                             [Localizable::irrelevant(ExpressionNode::Operation {
@@ -217,7 +217,7 @@ mod tests {
                             })]
                             .into()
                         )
-                    })
+                    }
                 )))
             }
         );

@@ -1,6 +1,7 @@
 use std::iter::once;
 
-use errors::TransformerErrors;
+use errors::{NilangError, TransformerErrors};
+use nilang_types::Localizable;
 
 use crate::{structures_ref::copy_all_fields, Context, InstructionsIterator, Type};
 
@@ -13,29 +14,31 @@ pub fn transform_variable_reference<'a>(
 
     variable: Box<str>,
     result: Box<str>,
-    r#type: &Type,
+    r#type: &Localizable<Type>,
 ) -> InstructionsIterator<'a> {
-    let Ok(source_type) = temporaries.type_of(&variable) else {
-        return Box::new(once(Err(TransformerErrors::TemporaryNotFound {
-            name: variable.clone(),
-        })));
+    let Some(source_type) = temporaries.type_of(&variable) else {
+        unreachable!()
     };
 
-    if *r#type != source_type {
-        return Box::new(once(Err(TransformerErrors::TypeMismatch {
-            expected: r#type.clone(),
-            found: source_type.clone(),
+    if **r#type != source_type {
+        return Box::new(once(Err(NilangError {
+            location: r#type.location,
+            error: TransformerErrors::TypeMismatch {
+                expected: (**r#type).clone(),
+                found: source_type,
+            }
+            .into(),
         })));
     }
 
-    copy_all_fields(structures, temporaries, variable, result, &source_type)
+    copy_all_fields(structures, temporaries, variable, result, r#type)
 }
 
 #[cfg(test)]
 mod tests {
     use std::cell::RefCell;
 
-    use nilang_types::instructions::Instruction;
+    use nilang_types::{instructions::Instruction, Localizable};
 
     use crate::{
         structures_ref::tests::test_structures_ref, temporaries::Temporaries,
@@ -64,7 +67,7 @@ mod tests {
                 &context,
                 "original".into(),
                 "copy".into(),
-                &Type::Object("Rect".into()),
+                &Localizable::irrelevant(Type::Object("Rect".into())),
             )
             .collect::<Result<Vec<_>, _>>()
             .unwrap(),

@@ -1,5 +1,7 @@
 use colored::Colorize;
 
+use crate::NilangErrorKind;
+
 #[derive(Debug, Clone)]
 pub enum GeneratorErrors {
     VariableAlreadyExists {
@@ -48,6 +50,12 @@ impl std::fmt::Display for GeneratorErrors {
                 }
             }
         )
+    }
+}
+
+impl From<GeneratorErrors> for NilangErrorKind {
+    fn from(value: GeneratorErrors) -> Self {
+        NilangErrorKind::GeneratorError(value)
     }
 }
 

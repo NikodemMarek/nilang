@@ -1,7 +1,7 @@
 use std::iter::once;
 
-use errors::TransformerErrors;
-use nilang_types::nodes::ExpressionNode;
+use errors::{NilangError, TransformerErrors};
+use nilang_types::{nodes::ExpressionNode, Localizable};
 
 use crate::{Context, Instruction, InstructionsIterator, Type};
 
@@ -14,57 +14,64 @@ pub fn transform_function_call<'a>(
         ..
     }: &'a Context,
 
-    name: Box<str>,
-    arguments: &[ExpressionNode],
+    name: Localizable<Box<str>>,
+    arguments: Localizable<Box<[Localizable<ExpressionNode>]>>,
 
     result: Box<str>,
-    r#type: &Type,
+    r#type: &Localizable<Type>,
 ) -> InstructionsIterator<'a> {
     let Ok(function_parameters) = functions.get_parameters(&name) else {
-        return Box::new(once(Err(TransformerErrors::FunctionNotFound { name })));
+        return Box::new(once(Err(NilangError {
+            location: name.location,
+            error: TransformerErrors::FunctionNotFound((*name).clone()).into(),
+        })));
     };
-    let mut function_parameters = function_parameters.iter();
+    let mut function_parameters_iter = function_parameters.iter();
 
     let mut instructions = vec![];
     let mut arguments_names = vec![];
 
-    for node in arguments {
-        if let Some((_, argument_type)) = function_parameters.next() {
-            let argument_temporary = temporaries.declare(argument_type.clone());
-            instructions.push(Ok(Instruction::Declare(argument_temporary.clone())));
-            instructions.append(
-                &mut transform_expression(
-                    context,
-                    node.clone(),
-                    argument_temporary.clone(),
-                    &argument_type.clone(),
-                )
-                .collect(),
-            );
-
-            if let Type::Object(object_type) = argument_type {
-                let fields = match context.structures.get_fields_flattened(object_type) {
-                    Ok(fields) => fields,
-                    Err(e) => return Box::new(once(Err(e))),
-                };
-
-                arguments_names.append(
-                    &mut fields
-                        .iter()
-                        .map(|(field, _)| format!("{}.{}", argument_temporary, field).into())
-                        .collect(),
-                );
-            } else {
-                arguments_names.push(argument_temporary);
-            }
-        } else {
-            return Box::new(once(Err(
-                TransformerErrors::FunctionCallArgumentsMismatch {
-                    name,
-                    expected: function_parameters.len() + 1,
+    for node in arguments.object.iter() {
+        let Some((_, argument_type)) = function_parameters_iter.next() else {
+            return Box::new(once(Err(NilangError {
+                location: arguments.location,
+                error: TransformerErrors::FunctionCallArgumentsMismatch {
+                    name: (*name).clone(),
+                    expected: function_parameters_iter.len() + 1,
                     got: arguments.len(),
-                },
-            )));
+                }
+                .into(),
+            })));
+        };
+
+        let argument_temporary = temporaries.declare((**argument_type).clone());
+        instructions.push(Ok(Instruction::Declare(argument_temporary.clone())));
+        instructions.append(
+            &mut transform_expression(
+                context,
+                node.clone(),
+                argument_temporary.clone(),
+                argument_type,
+            )
+            .collect(),
+        );
+
+        if let Type::Object(object_type) = (**argument_type).clone() {
+            let Some(fields) = context.structures.get_fields_flattened(&object_type) else {
+                return Box::new(once(Err(NilangError {
+                    location: node.location,
+                    error: TransformerErrors::TypeNotFound(object_type).into(),
+                })));
+            };
+
+            arguments_names.append(
+                &mut fields
+                    .iter()
+                    .map(|(field, _)| format!("{}.{}", argument_temporary, field).into())
+                    .collect(),
+            );
+        } else {
+            arguments_names.push(argument_temporary);
         }
     }
 
@@ -72,9 +79,9 @@ pub fn transform_function_call<'a>(
         instructions
             .into_iter()
             .chain(once(Ok(Instruction::FunctionCall(
-                name,
+                (*name).clone(),
                 arguments_names.into(),
-                if let Type::Void = r#type {
+                if let Type::Void = **r#type {
                     None
                 } else {
                     Some(result.clone())

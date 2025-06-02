@@ -3,10 +3,11 @@ use std::{
     iter::{empty, once},
 };
 
-use errors::TransformerErrors;
+use errors::{NilangError, TransformerErrors};
 use nilang_types::{
     instructions::Instruction,
     nodes::{StructureDeclaration, Type},
+    Localizable,
 };
 
 use crate::{temporaries::Temporaries, InstructionsIterator};
@@ -22,15 +23,8 @@ impl StructuresRef {
         self.0.get(structure_name)
     }
 
-    pub fn get_fields_flattened(
-        &self,
-        object_type: &str,
-    ) -> Result<&HashMap<Box<str>, Type>, TransformerErrors> {
-        self.1
-            .get(object_type)
-            .ok_or_else(|| TransformerErrors::TypeNotFound {
-                name: object_type.into(),
-            })
+    pub fn get_fields_flattened(&self, object_type: &str) -> Option<&HashMap<Box<str>, Type>> {
+        self.1.get(object_type)
     }
 }
 
@@ -40,9 +34,20 @@ impl TryFrom<&[StructureDeclaration]> for StructuresRef {
     fn try_from(
         structures: &[StructureDeclaration],
     ) -> Result<StructuresRef, errors::TransformerErrors> {
+        fn parse_structure_unnested(
+            StructureDeclaration { name, fields }: &StructureDeclaration,
+        ) -> (Box<str>, HashMap<Box<str>, Type>) {
+            (
+                (**name).clone(),
+                HashMap::from_iter(fields.iter().map(|(field_name, field_type)| {
+                    ((**field_name).clone(), (**field_type).clone())
+                })),
+            )
+        }
+
         let nested_structures = structures
             .iter()
-            .map(|StructureDeclaration { name, fields }| (name.clone(), fields.clone()))
+            .map(parse_structure_unnested)
             .collect::<HashMap<_, _>>();
         let flattened_structures = nested_structures
             .keys()
@@ -59,12 +64,8 @@ fn object_fields_recursive(
     r: &HashMap<Box<str>, HashMap<Box<str>, Type>>,
     object_type: &str,
 ) -> Result<HashMap<Box<str>, Type>, TransformerErrors> {
-    let fields_map = if let Some(fields) = r.get(object_type) {
-        fields
-    } else {
-        return Err(TransformerErrors::TypeNotFound {
-            name: object_type.into(),
-        });
+    let Some(fields_map) = r.get(object_type) else {
+        return Err(TransformerErrors::TypeNotFound(object_type.into()));
     };
 
     let mut fields = HashMap::new();
@@ -90,8 +91,11 @@ pub fn object_fields_from_to(
 
     object_type: &str,
 ) -> Result<Vec<FromToType>, TransformerErrors> {
-    let mut collect = context
-        .get_fields_flattened(object_type)?
+    let Some(flattened) = context.get_fields_flattened(object_type) else {
+        return Err(TransformerErrors::TypeNotFound(object_type.into()));
+    };
+
+    let mut collect = flattened
         .iter()
         .map(|(field, field_type)| {
             let destination_temporary = <Box<str>>::from(format!("{}.{}", destination, field));
@@ -111,9 +115,9 @@ pub fn copy_all_fields<'a>(
     source: Box<str>,
     destination: Box<str>,
 
-    object_type: &Type,
+    object_type: &Localizable<Type>,
 ) -> InstructionsIterator<'a> {
-    let object_type = match object_type {
+    let r#type = match (**object_type).clone() {
         Type::Object(object_type) => object_type,
         Type::Void => return Box::new(empty()),
         Type::Int | Type::Char | Type::String => {
@@ -121,11 +125,11 @@ pub fn copy_all_fields<'a>(
         }
     };
 
-    let Ok(object_fields_from_to) =
-        object_fields_from_to(context, source, destination, object_type)
+    let Ok(object_fields_from_to) = object_fields_from_to(context, source, destination, &r#type)
     else {
-        return Box::new(once(Err(TransformerErrors::TypeNotFound {
-            name: object_type.clone(),
+        return Box::new(once(Err(NilangError {
+            location: object_type.location,
+            error: TransformerErrors::TypeNotFound(r#type.clone()).into(),
         })));
     };
 
@@ -134,12 +138,13 @@ pub fn copy_all_fields<'a>(
             temporaries.declare_named(source_temporary.clone(), field_type);
 
             once(Ok(Instruction::Declare(destination_temporary.clone()))).chain(Ok::<
-                Result<Instruction, TransformerErrors>,
-                TransformerErrors,
+                Result<Instruction, NilangError>,
+                NilangError,
             >(
-                temporaries
-                    .access(&source_temporary.clone())
-                    .map(|_| Instruction::Copy(destination_temporary, source_temporary)),
+                match temporaries.access(&source_temporary.clone()) {
+                    Some(_) => Ok(Instruction::Copy(destination_temporary, source_temporary)),
+                    None => unreachable!(),
+                },
             ))
         },
     );
@@ -151,7 +156,10 @@ pub fn copy_all_fields<'a>(
 pub mod tests {
     use std::collections::HashMap;
 
-    use nilang_types::nodes::{StructureDeclaration, Type};
+    use nilang_types::{
+        nodes::{StructureDeclaration, Type},
+        Localizable,
+    };
 
     use crate::structures_ref::{object_fields_recursive, StructuresRef};
 
@@ -159,22 +167,43 @@ pub mod tests {
         StructuresRef::try_from(
             [
                 StructureDeclaration {
-                    name: "Point".into(),
-                    fields: HashMap::from([("x".into(), Type::Int), ("y".into(), Type::Int)]),
+                    name: Localizable::irrelevant("Point".into()),
+                    fields: Localizable::irrelevant(HashMap::from([
+                        (
+                            Localizable::irrelevant("x".into()),
+                            Localizable::irrelevant(Type::Int),
+                        ),
+                        (
+                            Localizable::irrelevant("y".into()),
+                            Localizable::irrelevant(Type::Int),
+                        ),
+                    ])),
                 },
                 StructureDeclaration {
-                    name: "Rect".into(),
-                    fields: HashMap::from([
-                        ("start".into(), Type::Object("Point".into())),
-                        ("end".into(), Type::Object("Point".into())),
-                    ]),
+                    name: Localizable::irrelevant("Rect".into()),
+                    fields: Localizable::irrelevant(HashMap::from([
+                        (
+                            Localizable::irrelevant("start".into()),
+                            Localizable::irrelevant(Type::Object("Point".into())),
+                        ),
+                        (
+                            Localizable::irrelevant("end".into()),
+                            Localizable::irrelevant(Type::Object("Point".into())),
+                        ),
+                    ])),
                 },
                 StructureDeclaration {
-                    name: "Label".into(),
-                    fields: HashMap::from([
-                        ("text".into(), Type::Char),
-                        ("anchor".into(), Type::Object("Point".into())),
-                    ]),
+                    name: Localizable::irrelevant("Label".into()),
+                    fields: Localizable::irrelevant(HashMap::from([
+                        (
+                            Localizable::irrelevant("text".into()),
+                            Localizable::irrelevant(Type::Char),
+                        ),
+                        (
+                            Localizable::irrelevant("anchor".into()),
+                            Localizable::irrelevant(Type::Object("Point".into())),
+                        ),
+                    ])),
                 },
             ]
             .as_ref(),

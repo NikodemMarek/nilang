@@ -7,7 +7,10 @@ pub fn parse_field_access<I: PeekableAssumingIterator>(
     tokens: &mut I,
     name: Localizable<Box<str>>,
 ) -> Result<Localizable<ExpressionNode>, NilangError> {
-    let mut field_access = Localizable::new(name.location, ExpressionNode::VariableReference(name));
+    let mut field_access = Localizable::new(
+        name.location,
+        ExpressionNode::VariableReference(name.object),
+    );
 
     while let TokenType::Dot = tokens.peek_valid()?.object {
         tokens.assume(TokenType::Dot)?;
@@ -51,7 +54,7 @@ mod tests {
             .object,
             ExpressionNode::FieldAccess {
                 structure: Box::new(Localizable::irrelevant(ExpressionNode::VariableReference(
-                    Localizable::irrelevant("x".into())
+                    "x".into()
                 ))),
                 field: Localizable::irrelevant("test".into())
             }
@@ -79,7 +82,7 @@ mod tests {
             ExpressionNode::FieldAccess {
                 structure: Box::new(Localizable::irrelevant(ExpressionNode::FieldAccess {
                     structure: Box::new(Localizable::irrelevant(
-                        ExpressionNode::VariableReference(Localizable::irrelevant("x".into()))
+                        ExpressionNode::VariableReference("x".into())
                     )),
                     field: Localizable::irrelevant("test1".into())
                 })),
@@ -114,7 +117,7 @@ mod tests {
                 structure: Box::new(Localizable::irrelevant(ExpressionNode::FieldAccess {
                     structure: Box::new(Localizable::irrelevant(ExpressionNode::FieldAccess {
                         structure: Box::new(Localizable::irrelevant(
-                            ExpressionNode::VariableReference(Localizable::irrelevant("x".into()))
+                            ExpressionNode::VariableReference("x".into())
                         )),
                         field: Localizable::irrelevant("test1".into())
                     })),

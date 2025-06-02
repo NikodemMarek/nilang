@@ -1,4 +1,4 @@
-use nilang_types::nodes::ExpressionNode;
+use nilang_types::{nodes::ExpressionNode, Localizable};
 
 use crate::{structures_ref::copy_all_fields, Context, InstructionsIterator, Type};
 
@@ -9,13 +9,13 @@ pub fn transform_field_access<'a>(
         ..
     }: &'a Context,
 
-    structure: ExpressionNode,
-    field: Box<str>,
+    structure: Localizable<ExpressionNode>,
+    field: Localizable<Box<str>>,
 
     result: Box<str>,
-    r#type: &Type,
+    r#type: &Localizable<Type>,
 ) -> InstructionsIterator<'a> {
-    let flattened_field = flatten_field_access(structure, field);
+    let flattened_field = flatten_field_access((*structure).clone(), (*field).clone());
     copy_all_fields(
         structures,
         temporaries,
@@ -31,7 +31,11 @@ fn flatten_field_access(structure: ExpressionNode, field: Box<str>) -> String {
         ExpressionNode::FieldAccess {
             structure: st,
             field: fl,
-        } => format!("{}.{}", flatten_field_access(*st, fl), field),
+        } => format!(
+            "{}.{}",
+            flatten_field_access((**st).clone(), (*fl).clone()),
+            field
+        ),
         _ => unimplemented!(),
     }
 }

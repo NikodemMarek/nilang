@@ -10,7 +10,10 @@ use std::iter::once;
 
 use field_access_transformator::transform_field_access;
 use function_call_transformer::transform_function_call;
-use nilang_types::nodes::{ExpressionNode, FunctionCall, StatementNode};
+use nilang_types::{
+    nodes::{ExpressionNode, FunctionCall, StatementNode},
+    Localizable,
+};
 use object_transformer::transform_object;
 use operation_transformer::transform_operation;
 use return_transformer::transform_return;
@@ -22,31 +25,35 @@ use crate::{Context, Instruction, InstructionsIterator, Type};
 pub fn transform_statement<'a>(
     context: &'a Context,
 
-    node: StatementNode,
-    return_type: &Type,
+    node: Localizable<StatementNode>,
+    return_type: &Localizable<Type>,
 ) -> InstructionsIterator<'a> {
-    match node {
+    match (*node).clone() {
         StatementNode::Return(node) => transform_return(context, *node, return_type),
         StatementNode::VariableDeclaration {
             name,
             r#type,
             value,
         } => transform_variable_declaration(context, name, &r#type, *value),
-        StatementNode::FunctionCall(FunctionCall { name, arguments }) => {
-            transform_function_call(context, name, &arguments, "".into(), &Type::Void)
-        }
+        StatementNode::FunctionCall(FunctionCall { name, arguments }) => transform_function_call(
+            context,
+            name,
+            arguments,
+            "".into(),
+            &Localizable::irrelevant(Type::Void),
+        ),
     }
 }
 
 pub fn transform_expression<'a>(
     context: &'a Context,
 
-    node: ExpressionNode,
+    node: Localizable<ExpressionNode>,
 
     result: Box<str>,
-    r#type: &Type,
+    r#type: &Localizable<Type>,
 ) -> InstructionsIterator<'a> {
-    match node {
+    match (*node).clone() {
         ExpressionNode::Number(number) => {
             Box::new(once(Ok(Instruction::LoadNumber(result, number))))
         }
@@ -65,7 +72,7 @@ pub fn transform_expression<'a>(
             transform_operation(context, operator, *a, *b, result, r#type)
         }
         ExpressionNode::FunctionCall(FunctionCall { name, arguments }) => {
-            transform_function_call(context, name, &arguments, result, r#type)
+            transform_function_call(context, name, arguments, result, r#type)
         }
     }
 }

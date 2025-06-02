@@ -5,17 +5,17 @@ mod transformers;
 
 use std::{cell::RefCell, iter::once};
 
-use errors::TransformerErrors;
+use errors::NilangError;
 pub use functions_ref::FunctionsRef;
 use nilang_types::{
     instructions::Instruction,
     nodes::{FunctionDeclaration, Parameter, StatementNode, Type},
+    Localizable,
 };
 pub use structures_ref::StructuresRef;
 use temporaries::Temporaries;
 
-type InstructionsIterator<'a> =
-    Box<dyn Iterator<Item = Result<Instruction, TransformerErrors>> + 'a>;
+type InstructionsIterator<'a> = Box<dyn Iterator<Item = Result<Instruction, NilangError>> + 'a>;
 
 type Declaration = (Box<str>, Box<str>);
 type Data = RefCell<Vec<Declaration>>;
@@ -66,8 +66,8 @@ pub fn transform_function<'a>(
 fn transform_body<'a>(
     context: &'a Context,
 
-    body: &'a [StatementNode],
-    return_type: &'a Type,
+    body: &'a [Localizable<StatementNode>],
+    return_type: &'a Localizable<Type>,
 ) -> InstructionsIterator<'a> {
     Box::new(body.iter().flat_map(move |node| {
         transformers::transform_statement(context, node.clone(), return_type)
@@ -83,21 +83,23 @@ fn transform_parameters<'a>(
     let mut i = 0;
     for (parameter_name, parameter_type) in parameters.iter() {
         let parameter_type = parameter_type.clone();
-        if let Type::Object(object_type) = &parameter_type {
-            let object_fields_recursive = match context.get_fields_flattened(object_type) {
-                Ok(object_fields_recursive) => object_fields_recursive,
-                Err(e) => return Box::new(once(Err(e))),
+        if let Type::Object(object_type) = &*parameter_type {
+            let Some(object_fields_recursive) = context.get_fields_flattened(object_type) else {
+                return Box::new(once(Err(NilangError {
+                    location: parameter_name.location,
+                    error: errors::TransformerErrors::TypeNotFound(object_type.clone()).into(),
+                })));
             };
 
             for (field, field_type) in object_fields_recursive {
-                let field = Into::<Box<str>>::into(format!("{}.{}", parameter_name, field));
+                let field = Into::<Box<str>>::into(format!("{}.{}", parameter_name.object, field));
                 temporaries.declare_named(field.clone(), field_type.to_owned());
                 instructions.push(Ok(Instruction::TakeArgument(i, field.clone())));
                 i += 1;
             }
         } else {
-            temporaries.declare_named(parameter_name.clone(), parameter_type);
-            instructions.push(Ok(Instruction::TakeArgument(i, parameter_name.clone())));
+            temporaries.declare_named((**parameter_name).clone(), (*parameter_type).clone());
+            instructions.push(Ok(Instruction::TakeArgument(i, (**parameter_name).clone())));
             i += 1;
         }
     }

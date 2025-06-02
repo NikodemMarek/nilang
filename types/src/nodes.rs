@@ -32,12 +32,12 @@ pub enum ExpressionNode {
         a: Box<Localizable<ExpressionNode>>,
         b: Box<Localizable<ExpressionNode>>,
     },
-    VariableReference(Localizable<Box<str>>),
+    VariableReference(Box<str>),
     FieldAccess {
         structure: Box<Localizable<ExpressionNode>>,
         field: Localizable<Box<str>>,
     },
-    FunctionCall(Localizable<FunctionCall>),
+    FunctionCall(FunctionCall),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -48,7 +48,7 @@ pub enum StatementNode {
         value: Box<Localizable<ExpressionNode>>,
     },
     Return(Box<Localizable<ExpressionNode>>),
-    FunctionCall(Localizable<FunctionCall>),
+    FunctionCall(FunctionCall),
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -1,7 +1,6 @@
 use std::iter::once;
 
-use errors::TransformerErrors;
-use nilang_types::nodes::ExpressionNode;
+use nilang_types::{nodes::ExpressionNode, Localizable};
 
 use crate::{Context, Instruction, InstructionsIterator, Type};
 
@@ -10,18 +9,14 @@ use super::transform_expression;
 pub fn transform_return<'a>(
     context @ Context { temporaries, .. }: &'a Context,
 
-    node: ExpressionNode,
+    node: Localizable<ExpressionNode>,
 
-    return_type: &Type,
+    return_type: &Localizable<Type>,
 ) -> InstructionsIterator<'a> {
-    let variable_name = temporaries.declare(return_type.clone());
+    let variable_name = temporaries.declare((**return_type).clone());
     let instructions = transform_expression(context, node, variable_name.clone(), return_type);
 
-    let Ok(_) = temporaries.access(&variable_name) else {
-        return Box::new(once(Err(TransformerErrors::TemporaryNotFound {
-            name: variable_name,
-        })));
-    };
+    assert!(temporaries.access(&variable_name).is_some());
 
     Box::new(
         once(Ok(Instruction::Declare(variable_name.clone())))
@@ -37,6 +32,7 @@ mod tests {
     use nilang_types::{
         instructions::Instruction,
         nodes::{ExpressionNode, Type},
+        Localizable,
     };
 
     use crate::{
@@ -58,8 +54,8 @@ mod tests {
         assert_eq!(
             transform_return(
                 &context,
-                ExpressionNode::VariableReference("x".into()),
-                &Type::Int,
+                Localizable::irrelevant(ExpressionNode::VariableReference("x".into())),
+                &Localizable::irrelevant(Type::Int),
             )
             .collect::<Result<Vec<_>, _>>()
             .unwrap(),
@@ -88,11 +84,13 @@ mod tests {
         assert_eq!(
             transform_return(
                 &context,
-                ExpressionNode::FieldAccess {
-                    structure: Box::new(ExpressionNode::VariableReference("x".into())),
-                    field: "y".into(),
-                },
-                &Type::Int,
+                Localizable::irrelevant(ExpressionNode::FieldAccess {
+                    structure: Box::new(Localizable::irrelevant(
+                        ExpressionNode::VariableReference("x".into())
+                    )),
+                    field: Localizable::irrelevant("y".into()),
+                }),
+                &Localizable::irrelevant(Type::Int),
             )
             .collect::<Result<Vec<_>, _>>()
             .unwrap(),

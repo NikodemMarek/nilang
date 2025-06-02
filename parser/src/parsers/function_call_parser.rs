@@ -19,7 +19,7 @@ pub fn parse_function_call_statement<I: PeekableAssumingIterator>(
     let function_call = parse_function_call_only(tokens, name)?;
     Ok(Localizable::new(
         function_call.location,
-        StatementNode::FunctionCall(function_call),
+        StatementNode::FunctionCall(function_call.object),
     ))
 }
 
@@ -30,7 +30,7 @@ pub fn parse_function_call_expression<I: PeekableAssumingIterator>(
     let function_call = parse_function_call_only(tokens, name)?;
     let function_call_expression = Localizable::new(
         function_call.location,
-        ExpressionNode::FunctionCall(function_call),
+        ExpressionNode::FunctionCall(function_call.object),
     );
     let function_call_field_access =
         expand_function_call_if_dot_follows(tokens, function_call_expression)?;
@@ -93,10 +93,10 @@ mod tests {
             )
             .unwrap()
             .object,
-            ExpressionNode::FunctionCall(Localizable::irrelevant(FunctionCall {
+            ExpressionNode::FunctionCall(FunctionCall {
                 name: Localizable::irrelevant("x".into()),
                 arguments: Localizable::irrelevant([].into())
-            }))
+            })
         );
 
         assert_eq!(
@@ -118,10 +118,10 @@ mod tests {
             .object,
             ExpressionNode::FieldAccess {
                 structure: Box::new(Localizable::irrelevant(ExpressionNode::FunctionCall(
-                    Localizable::irrelevant(FunctionCall {
+                    FunctionCall {
                         name: Localizable::irrelevant("x".into()),
                         arguments: Localizable::irrelevant([].into())
-                    })
+                    }
                 ))),
                 field: Localizable::irrelevant("test".into())
             }

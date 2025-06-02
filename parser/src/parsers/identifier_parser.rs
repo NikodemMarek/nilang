@@ -23,7 +23,10 @@ pub fn parse_identifier<I: PeekableAssumingIterator>(
             ..
         } => parse_operation_if_operator_follows(
             tokens,
-            Localizable::new(name.location, ExpressionNode::VariableReference(name)),
+            Localizable::new(
+                name.location,
+                ExpressionNode::VariableReference(name.object),
+            ),
         )?,
         Localizable {
             object: TokenType::OpeningBrace,
@@ -33,9 +36,10 @@ pub fn parse_identifier<I: PeekableAssumingIterator>(
             object: TokenType::Dot,
             ..
         } => parse_field_access(tokens, name)?,
-        Localizable { .. } => {
-            Localizable::new(name.location, ExpressionNode::VariableReference(name))
-        }
+        Localizable { .. } => Localizable::new(
+            name.location,
+            ExpressionNode::VariableReference(name.object),
+        ),
     };
 
     Ok(expression)
@@ -59,7 +63,7 @@ mod tests {
             )
             .unwrap()
             .object,
-            ExpressionNode::VariableReference(Localizable::irrelevant("x".into()))
+            ExpressionNode::VariableReference("x".into())
         );
     }
 }
