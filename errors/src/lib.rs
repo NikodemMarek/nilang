@@ -1,6 +1,7 @@
 use colored::Colorize;
 pub use generator_errors::GeneratorErrors;
 pub use lexer_errors::LexerErrors;
+use nilang_types::Location;
 pub use parser_errors::ParserErrors;
 pub use transformer_errors::TransformerErrors;
 
@@ -9,20 +10,9 @@ mod lexer_errors;
 mod parser_errors;
 mod transformer_errors;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct CodeLocation(usize, usize, usize, usize);
-impl CodeLocation {
-    pub fn at(line: usize, char: usize) -> Self {
-        Self(line, char, line, char)
-    }
-    pub fn range(line_from: usize, char_from: usize, line_to: usize, char_to: usize) -> Self {
-        Self(line_from, char_from, line_to, char_to)
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct NilangError {
-    pub location: CodeLocation,
+    pub location: Location,
     pub error: NilangErrorKind,
 }
 
@@ -62,7 +52,7 @@ impl std::fmt::Display for NilangErrorKind {
 }
 
 fn format_error_message(
-    CodeLocation(line_from, _, line_to, _): CodeLocation,
+    Location(line_from, _, line_to, _): Location,
     error: &NilangErrorKind,
 ) -> String {
     format!("[{}:{}] {}", line_from, line_to, error)
@@ -73,7 +63,7 @@ fn format_error_message(
 
 fn highlight_with_context(
     code: &str,
-    CodeLocation(line_from, char_from, line_to, char_to): CodeLocation,
+    Location(line_from, char_from, line_to, char_to): Location,
 ) -> String {
     let first_line = if line_from < 3 { 0 } else { line_from - 3 };
     let window = code

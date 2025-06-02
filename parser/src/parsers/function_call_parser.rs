@@ -2,6 +2,7 @@ use errors::NilangError;
 use nilang_types::{
     nodes::{ExpressionNode, FunctionCall, StatementNode},
     tokens::TokenType,
+    Localizable, Location,
 };
 
 use crate::assuming_iterator::PeekableAssumingIterator;
@@ -13,44 +14,55 @@ use super::{
 
 pub fn parse_function_call_statement<I: PeekableAssumingIterator>(
     tokens: &mut I,
-    name: Box<str>,
-) -> Result<StatementNode, NilangError> {
+    name: Localizable<Box<str>>,
+) -> Result<Localizable<StatementNode>, NilangError> {
     let function_call = parse_function_call_only(tokens, name)?;
-    Ok(StatementNode::FunctionCall(function_call))
+    Ok(Localizable::new(
+        function_call.location,
+        StatementNode::FunctionCall(function_call),
+    ))
 }
 
 pub fn parse_function_call_expression<I: PeekableAssumingIterator>(
     tokens: &mut I,
-    name: Box<str>,
-) -> Result<ExpressionNode, NilangError> {
+    name: Localizable<Box<str>>,
+) -> Result<Localizable<ExpressionNode>, NilangError> {
     let function_call = parse_function_call_only(tokens, name)?;
+    let function_call_expression = Localizable::new(
+        function_call.location,
+        ExpressionNode::FunctionCall(function_call),
+    );
     let function_call_field_access =
-        expand_function_call_if_dot_follows(tokens, ExpressionNode::FunctionCall(function_call))?;
+        expand_function_call_if_dot_follows(tokens, function_call_expression)?;
     parse_operation_if_operator_follows(tokens, function_call_field_access)
 }
 
 fn parse_function_call_only<I: PeekableAssumingIterator>(
     tokens: &mut I,
-    name: Box<str>,
-) -> Result<FunctionCall, NilangError> {
+    name: Localizable<Box<str>>,
+) -> Result<Localizable<FunctionCall>, NilangError> {
     let arguments = parse_argument_list(tokens)?;
 
-    Ok(FunctionCall { name, arguments })
+    let location = Location::between(&name.location, &arguments.location.clone());
+    Ok(Localizable::new(location, FunctionCall { name, arguments }))
 }
 
 fn expand_function_call_if_dot_follows<I: PeekableAssumingIterator>(
     tokens: &mut I,
-    function_call: ExpressionNode, // only FunctionCall is allowed here
-) -> Result<ExpressionNode, NilangError> {
-    if let TokenType::Dot = tokens.peek_valid()?.token {
+    function_call: Localizable<ExpressionNode>, // only FunctionCall is allowed here
+) -> Result<Localizable<ExpressionNode>, NilangError> {
+    if let TokenType::Dot = tokens.peek_valid()?.object {
         tokens.assume(TokenType::Dot)?;
 
-        let (_, _, field) = tokens.assume_identifier()?;
+        let field = tokens.assume_identifier()?;
 
-        Ok(ExpressionNode::FieldAccess {
-            structure: Box::new(function_call),
-            field,
-        })
+        Ok(Localizable::new(
+            Location::between(&function_call.location, &field.location),
+            ExpressionNode::FieldAccess {
+                structure: Box::new(function_call),
+                field,
+            },
+        ))
     } else {
         Ok(function_call)
     }
@@ -60,7 +72,8 @@ fn expand_function_call_if_dot_follows<I: PeekableAssumingIterator>(
 mod tests {
     use nilang_types::{
         nodes::{ExpressionNode, FunctionCall},
-        tokens::{Token, TokenType},
+        tokens::TokenType,
+        Localizable,
     };
 
     use crate::parsers::function_call_parser::parse_function_call_expression;
@@ -70,73 +83,47 @@ mod tests {
         assert_eq!(
             parse_function_call_expression(
                 &mut [
-                    Ok(Token {
-                        token: TokenType::OpeningParenthesis,
-                        start: (0, 1),
-                        end: (0, 1),
-                    }),
-                    Ok(Token {
-                        token: TokenType::ClosingParenthesis,
-                        start: (0, 2),
-                        end: (0, 2),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Semicolon,
-                        start: (0, 3),
-                        end: (0, 3),
-                    })
+                    Ok(Localizable::irrelevant(TokenType::OpeningParenthesis,)),
+                    Ok(Localizable::irrelevant(TokenType::ClosingParenthesis,)),
+                    Ok(Localizable::irrelevant(TokenType::Semicolon))
                 ]
                 .into_iter()
                 .peekable(),
-                "x".into()
+                Localizable::irrelevant("x".into())
             )
-            .unwrap(),
-            ExpressionNode::FunctionCall(FunctionCall {
-                name: "x".into(),
-                arguments: [].into()
-            })
+            .unwrap()
+            .object,
+            ExpressionNode::FunctionCall(Localizable::irrelevant(FunctionCall {
+                name: Localizable::irrelevant("x".into()),
+                arguments: Localizable::irrelevant([].into())
+            }))
         );
 
         assert_eq!(
             parse_function_call_expression(
                 &mut [
-                    Ok(Token {
-                        token: TokenType::OpeningParenthesis,
-                        start: (0, 1),
-                        end: (0, 1),
-                    }),
-                    Ok(Token {
-                        token: TokenType::ClosingParenthesis,
-                        start: (0, 2),
-                        end: (0, 2),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Dot,
-                        start: (0, 3),
-                        end: (0, 3),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Identifier("test".into()),
-                        start: (0, 4),
-                        end: (0, 7),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Semicolon,
-                        start: (0, 8),
-                        end: (0, 8),
-                    })
+                    Ok(Localizable::irrelevant(TokenType::OpeningParenthesis,)),
+                    Ok(Localizable::irrelevant(TokenType::ClosingParenthesis,)),
+                    Ok(Localizable::irrelevant(TokenType::Dot,)),
+                    Ok(Localizable::irrelevant(TokenType::Identifier(
+                        "test".into()
+                    ),)),
+                    Ok(Localizable::irrelevant(TokenType::Semicolon,))
                 ]
                 .into_iter()
                 .peekable(),
-                "x".into()
+                Localizable::irrelevant("x".into())
             )
-            .unwrap(),
+            .unwrap()
+            .object,
             ExpressionNode::FieldAccess {
-                structure: Box::new(ExpressionNode::FunctionCall(FunctionCall {
-                    name: "x".into(),
-                    arguments: [].into()
-                })),
-                field: "test".into()
+                structure: Box::new(Localizable::irrelevant(ExpressionNode::FunctionCall(
+                    Localizable::irrelevant(FunctionCall {
+                        name: Localizable::irrelevant("x".into()),
+                        arguments: Localizable::irrelevant([].into())
+                    })
+                ))),
+                field: Localizable::irrelevant("test".into())
             }
         );
     }

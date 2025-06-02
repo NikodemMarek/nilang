@@ -1,7 +1,8 @@
 use errors::NilangError;
 use nilang_types::{
     nodes::FunctionDeclaration,
-    tokens::{Keyword, Token, TokenType},
+    tokens::{Keyword, TokenType},
+    Localizable, Location,
 };
 
 use crate::assuming_iterator::PeekableAssumingIterator;
@@ -16,48 +17,49 @@ pub fn parse_function_definition<I: PeekableAssumingIterator>(
 ) -> Result<FunctionDeclaration, NilangError> {
     tokens.assume_keyword(Keyword::Function)?;
 
-    let (_, _, name) = tokens.assume_identifier()?;
+    let name = tokens.assume_identifier()?;
 
     let parameters = parse_parameter_list(tokens)?;
 
     let return_type = parse_type_annotation(tokens)?;
 
-    tokens.assume(TokenType::OpeningBrace)?;
+    let start = tokens.assume(TokenType::OpeningBrace)?;
 
-    let body = {
+    {
         let mut program = Vec::new();
 
         loop {
             match tokens.peek_valid()? {
-                Token {
-                    token: TokenType::ClosingBrace,
-                    ..
+                Localizable {
+                    object: TokenType::ClosingBrace,
+                    location: end,
                 } => {
-                    tokens.next();
-                    break;
+                    let location = Location::between(&start, end);
+                    let body = Localizable::new(location, program.into_boxed_slice());
+
+                    tokens.assume(TokenType::ClosingBrace)?;
+
+                    return Ok(FunctionDeclaration {
+                        name,
+                        parameters,
+                        return_type,
+                        body,
+                    });
                 }
-                Token { .. } => {
+                Localizable { .. } => {
                     program.push(parse_statement(tokens)?);
                 }
             }
         }
-
-        program
-    };
-
-    Ok(FunctionDeclaration {
-        name,
-        parameters,
-        return_type,
-        body: body.into(),
-    })
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use nilang_types::{
         nodes::{ExpressionNode, FunctionDeclaration, StatementNode, Type},
-        tokens::{Keyword, Token, TokenType},
+        tokens::{Keyword, TokenType},
+        Localizable,
     };
 
     use super::parse_function_definition;
@@ -67,71 +69,35 @@ mod tests {
         assert_eq!(
             parse_function_definition(
                 &mut [
-                    Ok(Token {
-                        token: TokenType::Keyword(Keyword::Function),
-                        start: (0, 0),
-                        end: (0, 1),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Identifier("main".into()),
-                        start: (0, 3),
-                        end: (0, 6),
-                    }),
-                    Ok(Token {
-                        token: TokenType::OpeningParenthesis,
-                        start: (0, 7),
-                        end: (0, 7),
-                    }),
-                    Ok(Token {
-                        token: TokenType::ClosingParenthesis,
-                        start: (0, 8),
-                        end: (0, 8),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Colon,
-                        start: (0, 9),
-                        end: (0, 9)
-                    }),
-                    Ok(Token {
-                        token: TokenType::Identifier("int".into()),
-                        start: (0, 10),
-                        end: (0, 12)
-                    }),
-                    Ok(Token {
-                        token: TokenType::OpeningBrace,
-                        start: (0, 13),
-                        end: (0, 13),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Keyword(Keyword::Return),
-                        start: (0, 14),
-                        end: (0, 15),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("6".into()),
-                        start: (0, 14),
-                        end: (0, 14),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Semicolon,
-                        start: (0, 15),
-                        end: (0, 15),
-                    }),
-                    Ok(Token {
-                        token: TokenType::ClosingBrace,
-                        start: (0, 16),
-                        end: (0, 16),
-                    })
+                    Ok(Localizable::irrelevant(TokenType::Keyword(
+                        Keyword::Function
+                    ),)),
+                    Ok(Localizable::irrelevant(TokenType::Identifier(
+                        "main".into()
+                    ),)),
+                    Ok(Localizable::irrelevant(TokenType::OpeningParenthesis,)),
+                    Ok(Localizable::irrelevant(TokenType::ClosingParenthesis,)),
+                    Ok(Localizable::irrelevant(TokenType::Colon,)),
+                    Ok(Localizable::irrelevant(TokenType::Identifier("int".into()),)),
+                    Ok(Localizable::irrelevant(TokenType::OpeningBrace,)),
+                    Ok(Localizable::irrelevant(TokenType::Keyword(Keyword::Return),)),
+                    Ok(Localizable::irrelevant(TokenType::Literal("6".into()),)),
+                    Ok(Localizable::irrelevant(TokenType::Semicolon,)),
+                    Ok(Localizable::irrelevant(TokenType::ClosingBrace,))
                 ]
                 .into_iter()
                 .peekable(),
             )
             .unwrap(),
             FunctionDeclaration {
-                name: "main".into(),
-                parameters: [].into(),
-                return_type: Type::Int,
-                body: Box::new([StatementNode::Return(Box::new(ExpressionNode::Number(6.)))]),
+                name: Localizable::irrelevant("main".into()),
+                parameters: Localizable::irrelevant([].into()),
+                return_type: Localizable::irrelevant(Type::Int),
+                body: Localizable::irrelevant(Box::new([Localizable::irrelevant(
+                    StatementNode::Return(Box::new(Localizable::irrelevant(
+                        ExpressionNode::Number(6.)
+                    )))
+                )])),
             }
         );
     }

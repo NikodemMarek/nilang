@@ -28,7 +28,7 @@ impl From<&[FunctionDeclaration]> for FunctionsRef {
                          ..
                      }| {
                         (
-                            name.clone(),
+                            name.object.clone(),
                             (
                                 return_type.clone(),
                                 parameters

@@ -1,8 +1,5 @@
 use errors::NilangError;
-use nilang_types::{
-    nodes::ExpressionNode,
-    tokens::{Token, TokenType},
-};
+use nilang_types::{nodes::ExpressionNode, tokens::TokenType, Localizable};
 
 use crate::assuming_iterator::PeekableAssumingIterator;
 
@@ -13,33 +10,32 @@ use super::{
 
 pub fn parse_identifier<I: PeekableAssumingIterator>(
     tokens: &mut I,
-) -> Result<ExpressionNode, NilangError> {
-    let (_, _, name) = tokens.assume_identifier()?;
+) -> Result<Localizable<ExpressionNode>, NilangError> {
+    let name = tokens.assume_identifier()?;
 
-    let peek_valid = if let Ok(token) = tokens.peek_valid() {
-        token
-    } else {
-        return Ok(ExpressionNode::VariableReference(name));
-    };
-
-    let expression = match peek_valid {
-        Token {
-            token: TokenType::OpeningParenthesis,
+    let expression = match tokens.peek_valid()? {
+        Localizable {
+            object: TokenType::OpeningParenthesis,
             ..
         } => parse_function_call_expression(tokens, name)?,
-        Token {
-            token: TokenType::Operator(_),
+        Localizable {
+            object: TokenType::Operator(_),
             ..
-        } => parse_operation_if_operator_follows(tokens, ExpressionNode::VariableReference(name))?,
-        Token {
-            token: TokenType::OpeningBrace,
+        } => parse_operation_if_operator_follows(
+            tokens,
+            Localizable::new(name.location, ExpressionNode::VariableReference(name)),
+        )?,
+        Localizable {
+            object: TokenType::OpeningBrace,
             ..
         } => parse_object(tokens, name)?,
-        Token {
-            token: TokenType::Dot,
+        Localizable {
+            object: TokenType::Dot,
             ..
         } => parse_field_access(tokens, name)?,
-        Token { .. } => ExpressionNode::VariableReference(name),
+        Localizable { .. } => {
+            Localizable::new(name.location, ExpressionNode::VariableReference(name))
+        }
     };
 
     Ok(expression)
@@ -48,32 +44,22 @@ pub fn parse_identifier<I: PeekableAssumingIterator>(
 #[cfg(test)]
 mod tests {
     use crate::parsers::identifier_parser::parse_identifier;
-    use nilang_types::{
-        nodes::ExpressionNode,
-        tokens::{Token, TokenType},
-    };
+    use nilang_types::{nodes::ExpressionNode, tokens::TokenType, Localizable};
 
     #[test]
     fn test_parse_identifier() {
         assert_eq!(
             parse_identifier(
                 &mut [
-                    Ok(Token {
-                        token: TokenType::Identifier("x".into()),
-                        start: (0, 0),
-                        end: (0, 0),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Semicolon,
-                        start: (0, 1),
-                        end: (0, 1),
-                    })
+                    Ok(Localizable::irrelevant(TokenType::Identifier("x".into()),)),
+                    Ok(Localizable::irrelevant(TokenType::Semicolon,))
                 ]
                 .into_iter()
                 .peekable()
             )
-            .unwrap(),
-            ExpressionNode::VariableReference("x".into())
+            .unwrap()
+            .object,
+            ExpressionNode::VariableReference(Localizable::irrelevant("x".into()))
         );
     }
 }

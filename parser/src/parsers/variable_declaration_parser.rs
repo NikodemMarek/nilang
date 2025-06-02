@@ -2,6 +2,7 @@ use errors::NilangError;
 use nilang_types::{
     nodes::StatementNode,
     tokens::{Keyword, TokenType},
+    Localizable, Location,
 };
 
 use crate::assuming_iterator::PeekableAssumingIterator;
@@ -10,10 +11,10 @@ use super::{parse_expression, type_annotation_parser::parse_type_annotation};
 
 pub fn parse_variable_declaration<I: PeekableAssumingIterator>(
     tokens: &mut I,
-) -> Result<StatementNode, NilangError> {
-    tokens.assume_keyword(Keyword::Variable)?;
+) -> Result<Localizable<StatementNode>, NilangError> {
+    let start = tokens.assume_keyword(Keyword::Variable)?;
 
-    let (_, _, name) = tokens.assume_identifier()?;
+    let name = tokens.assume_identifier()?;
 
     let r#type = parse_type_annotation(tokens)?;
 
@@ -21,20 +22,24 @@ pub fn parse_variable_declaration<I: PeekableAssumingIterator>(
 
     let value = parse_expression(tokens)?;
 
-    tokens.assume(TokenType::Semicolon)?;
+    let end = tokens.assume(TokenType::Semicolon)?;
 
-    Ok(StatementNode::VariableDeclaration {
-        name,
-        r#type,
-        value: Box::new(value),
-    })
+    Ok(Localizable::new(
+        Location::between(&start, &end),
+        StatementNode::VariableDeclaration {
+            name,
+            r#type,
+            value: Box::new(value),
+        },
+    ))
 }
 
 #[cfg(test)]
 mod tests {
     use nilang_types::{
         nodes::{ExpressionNode, FunctionCall, Operator, StatementNode, Type},
-        tokens::{Keyword, Token, TokenType},
+        tokens::{Keyword, TokenType},
+        Localizable,
     };
 
     use crate::parsers::variable_declaration_parser::parse_variable_declaration;
@@ -44,331 +49,176 @@ mod tests {
         assert_eq!(
             parse_variable_declaration(
                 &mut [
-                    Ok(Token {
-                        token: TokenType::Keyword(Keyword::Variable),
-                        start: (0, 0),
-                        end: (0, 1),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Identifier("test".into()),
-                        start: (0, 1),
-                        end: (0, 4),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Colon,
-                        start: (0, 5),
-                        end: (0, 5),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Identifier("int".into()),
-                        start: (0, 6),
-                        end: (0, 8),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Equals,
-                        start: (0, 9),
-                        end: (0, 9),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("9".into()),
-                        start: (0, 10),
-                        end: (0, 10),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Semicolon,
-                        start: (0, 11),
-                        end: (0, 11),
-                    }),
+                    Ok(Localizable::irrelevant(TokenType::Keyword(
+                        Keyword::Variable
+                    ))),
+                    Ok(Localizable::irrelevant(TokenType::Identifier(
+                        "test".into()
+                    ))),
+                    Ok(Localizable::irrelevant(TokenType::Colon,)),
+                    Ok(Localizable::irrelevant(TokenType::Identifier("int".into()),)),
+                    Ok(Localizable::irrelevant(TokenType::Equals,)),
+                    Ok(Localizable::irrelevant(TokenType::Literal("9".into()),)),
+                    Ok(Localizable::irrelevant(TokenType::Semicolon,)),
                 ]
                 .into_iter()
                 .peekable(),
             )
-            .unwrap(),
+            .unwrap()
+            .object,
             StatementNode::VariableDeclaration {
-                name: "test".into(),
-                r#type: Type::Int,
-                value: Box::new(ExpressionNode::Number(9.))
+                name: Localizable::irrelevant("test".into()),
+                r#type: Localizable::irrelevant(Type::Int),
+                value: Box::new(Localizable::irrelevant(ExpressionNode::Number(9.)))
             }
         );
 
         assert_eq!(
             parse_variable_declaration(
                 &mut [
-                    Ok(Token {
-                        token: TokenType::Keyword(Keyword::Variable),
-                        start: (0, 0),
-                        end: (0, 1),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Identifier("test".into()),
-                        start: (0, 1),
-                        end: (0, 4),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Colon,
-                        start: (0, 5),
-                        end: (0, 5),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Identifier("int".into()),
-                        start: (0, 6),
-                        end: (0, 8),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Equals,
-                        start: (0, 9),
-                        end: (0, 9),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Identifier("test2".into()),
-                        start: (0, 10),
-                        end: (0, 14),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Semicolon,
-                        start: (0, 15),
-                        end: (0, 15),
-                    }),
+                    Ok(Localizable::irrelevant(TokenType::Keyword(
+                        Keyword::Variable
+                    ))),
+                    Ok(Localizable::irrelevant(TokenType::Identifier(
+                        "test".into()
+                    ))),
+                    Ok(Localizable::irrelevant(TokenType::Colon,)),
+                    Ok(Localizable::irrelevant(TokenType::Identifier("int".into()),)),
+                    Ok(Localizable::irrelevant(TokenType::Equals,)),
+                    Ok(Localizable::irrelevant(TokenType::Identifier(
+                        "test2".into()
+                    ))),
+                    Ok(Localizable::irrelevant(TokenType::Semicolon,)),
                 ]
                 .into_iter()
                 .peekable(),
             )
-            .unwrap(),
+            .unwrap()
+            .object,
             StatementNode::VariableDeclaration {
-                name: "test".into(),
-                r#type: Type::Int,
-                value: Box::new(ExpressionNode::VariableReference("test2".into()))
+                name: Localizable::irrelevant("test".into()),
+                r#type: Localizable::irrelevant(Type::Int),
+                value: Box::new(Localizable::irrelevant(ExpressionNode::VariableReference(
+                    Localizable::irrelevant("test2".into())
+                )))
             }
         );
 
         assert_eq!(
             parse_variable_declaration(
                 &mut [
-                    Ok(Token {
-                        token: TokenType::Keyword(Keyword::Variable),
-                        start: (0, 0),
-                        end: (0, 1),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Identifier("test".into()),
-                        start: (0, 1),
-                        end: (0, 4),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Colon,
-                        start: (0, 5),
-                        end: (0, 5),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Identifier("int".into()),
-                        start: (0, 6),
-                        end: (0, 8),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Equals,
-                        start: (0, 9),
-                        end: (0, 9),
-                    }),
-                    Ok(Token {
-                        token: TokenType::OpeningParenthesis,
-                        start: (0, 10),
-                        end: (0, 10),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("6".into()),
-                        start: (0, 11),
-                        end: (0, 11),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Add),
-                        start: (0, 12),
-                        end: (0, 12),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("9".into()),
-                        start: (0, 13),
-                        end: (0, 13),
-                    }),
-                    Ok(Token {
-                        token: TokenType::ClosingParenthesis,
-                        start: (0, 14),
-                        end: (0, 14),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Semicolon,
-                        start: (0, 15),
-                        end: (0, 15),
-                    }),
+                    Ok(Localizable::irrelevant(TokenType::Keyword(
+                        Keyword::Variable
+                    ))),
+                    Ok(Localizable::irrelevant(TokenType::Identifier(
+                        "test".into()
+                    ))),
+                    Ok(Localizable::irrelevant(TokenType::Colon,)),
+                    Ok(Localizable::irrelevant(TokenType::Identifier("int".into()),)),
+                    Ok(Localizable::irrelevant(TokenType::Equals,)),
+                    Ok(Localizable::irrelevant(TokenType::OpeningParenthesis,)),
+                    Ok(Localizable::irrelevant(TokenType::Literal("6".into()),)),
+                    Ok(Localizable::irrelevant(TokenType::Operator(Operator::Add),)),
+                    Ok(Localizable::irrelevant(TokenType::Literal("9".into()),)),
+                    Ok(Localizable::irrelevant(TokenType::ClosingParenthesis,)),
+                    Ok(Localizable::irrelevant(TokenType::Semicolon,)),
                 ]
                 .into_iter()
                 .peekable(),
             )
-            .unwrap(),
+            .unwrap()
+            .object,
             StatementNode::VariableDeclaration {
-                name: "test".into(),
-                r#type: Type::Int,
-                value: Box::new(ExpressionNode::Operation {
-                    operator: Operator::Add,
-                    a: Box::new(ExpressionNode::Number(6.)),
-                    b: Box::new(ExpressionNode::Number(9.)),
-                })
-            }
-        );
-
-        assert_eq!(
-            parse_variable_declaration(
-                &mut [
-                    Ok(Token {
-                        token: TokenType::Keyword(Keyword::Variable),
-                        start: (0, 0),
-                        end: (0, 1),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Identifier("test".into()),
-                        start: (0, 1),
-                        end: (0, 4),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Colon,
-                        start: (0, 5),
-                        end: (0, 5),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Identifier("int".into()),
-                        start: (0, 6),
-                        end: (0, 8),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Equals,
-                        start: (0, 9),
-                        end: (0, 9),
-                    }),
-                    Ok(Token {
-                        token: TokenType::OpeningParenthesis,
-                        start: (0, 10),
-                        end: (0, 10),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Identifier("test2".into()),
-                        start: (0, 11),
-                        end: (0, 15),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Add),
-                        start: (0, 16),
-                        end: (0, 16),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("9".into()),
-                        start: (0, 17),
-                        end: (0, 17),
-                    }),
-                    Ok(Token {
-                        token: TokenType::ClosingParenthesis,
-                        start: (0, 18),
-                        end: (0, 18),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Semicolon,
-                        start: (0, 19),
-                        end: (0, 19),
-                    }),
-                ]
-                .into_iter()
-                .peekable(),
-            )
-            .unwrap(),
-            StatementNode::VariableDeclaration {
-                name: "test".into(),
-                r#type: Type::Int,
-                value: Box::new(ExpressionNode::Operation {
-                    operator: Operator::Add,
-                    a: Box::new(ExpressionNode::VariableReference("test2".into())),
-                    b: Box::new(ExpressionNode::Number(9.)),
-                })
-            }
-        );
-
-        assert_eq!(
-            parse_variable_declaration(
-                &mut [
-                    Ok(Token {
-                        token: TokenType::Keyword(Keyword::Variable),
-                        start: (0, 0),
-                        end: (0, 1),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Identifier("test".into()),
-                        start: (0, 1),
-                        end: (0, 4),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Colon,
-                        start: (0, 5),
-                        end: (0, 5),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Identifier("int".into()),
-                        start: (0, 6),
-                        end: (0, 8),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Equals,
-                        start: (0, 9),
-                        end: (0, 9),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Identifier("abc".into()),
-                        start: (0, 10),
-                        end: (0, 12),
-                    }),
-                    Ok(Token {
-                        token: TokenType::OpeningParenthesis,
-                        start: (0, 13),
-                        end: (0, 13),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("6".into()),
-                        start: (0, 14),
-                        end: (0, 14),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Add),
-                        start: (0, 15),
-                        end: (0, 15),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("9".into()),
-                        start: (0, 16),
-                        end: (0, 16),
-                    }),
-                    Ok(Token {
-                        token: TokenType::ClosingParenthesis,
-                        start: (0, 17),
-                        end: (0, 17),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Semicolon,
-                        start: (0, 18),
-                        end: (0, 18),
-                    }),
-                ]
-                .into_iter()
-                .peekable(),
-            )
-            .unwrap(),
-            StatementNode::VariableDeclaration {
-                name: "test".into(),
-                r#type: Type::Int,
-                value: Box::new(ExpressionNode::FunctionCall(FunctionCall {
-                    name: "abc".into(),
-                    arguments: [ExpressionNode::Operation {
-                        operator: Operator::Add,
-                        a: Box::new(ExpressionNode::Number(6.)),
-                        b: Box::new(ExpressionNode::Number(9.)),
-                    }]
-                    .into()
+                name: Localizable::irrelevant("test".into()),
+                r#type: Localizable::irrelevant(Type::Int),
+                value: Box::new(Localizable::irrelevant(ExpressionNode::Operation {
+                    operator: Localizable::irrelevant(Operator::Add),
+                    a: Box::new(Localizable::irrelevant(ExpressionNode::Number(6.))),
+                    b: Box::new(Localizable::irrelevant(ExpressionNode::Number(9.))),
                 }))
+            }
+        );
+
+        assert_eq!(
+            parse_variable_declaration(
+                &mut [
+                    Ok(Localizable::irrelevant(TokenType::Keyword(
+                        Keyword::Variable
+                    ))),
+                    Ok(Localizable::irrelevant(TokenType::Identifier(
+                        "test".into()
+                    ))),
+                    Ok(Localizable::irrelevant(TokenType::Colon,)),
+                    Ok(Localizable::irrelevant(TokenType::Identifier("int".into()),)),
+                    Ok(Localizable::irrelevant(TokenType::Equals,)),
+                    Ok(Localizable::irrelevant(TokenType::OpeningParenthesis,)),
+                    Ok(Localizable::irrelevant(TokenType::Identifier(
+                        "test2".into()
+                    ))),
+                    Ok(Localizable::irrelevant(TokenType::Operator(Operator::Add),)),
+                    Ok(Localizable::irrelevant(TokenType::Literal("9".into()),)),
+                    Ok(Localizable::irrelevant(TokenType::ClosingParenthesis,)),
+                    Ok(Localizable::irrelevant(TokenType::Semicolon,)),
+                ]
+                .into_iter()
+                .peekable(),
+            )
+            .unwrap()
+            .object,
+            StatementNode::VariableDeclaration {
+                name: Localizable::irrelevant("test".into()),
+                r#type: Localizable::irrelevant(Type::Int),
+                value: Box::new(Localizable::irrelevant(ExpressionNode::Operation {
+                    operator: Localizable::irrelevant(Operator::Add),
+                    a: Box::new(Localizable::irrelevant(ExpressionNode::VariableReference(
+                        Localizable::irrelevant("test2".into())
+                    ))),
+                    b: Box::new(Localizable::irrelevant(ExpressionNode::Number(9.))),
+                }))
+            }
+        );
+
+        assert_eq!(
+            parse_variable_declaration(
+                &mut [
+                    Ok(Localizable::irrelevant(TokenType::Keyword(
+                        Keyword::Variable
+                    ))),
+                    Ok(Localizable::irrelevant(TokenType::Identifier(
+                        "test".into()
+                    ))),
+                    Ok(Localizable::irrelevant(TokenType::Colon,)),
+                    Ok(Localizable::irrelevant(TokenType::Identifier("int".into()),)),
+                    Ok(Localizable::irrelevant(TokenType::Equals,)),
+                    Ok(Localizable::irrelevant(TokenType::Identifier("abc".into()),)),
+                    Ok(Localizable::irrelevant(TokenType::OpeningParenthesis,)),
+                    Ok(Localizable::irrelevant(TokenType::Literal("6".into()),)),
+                    Ok(Localizable::irrelevant(TokenType::Operator(Operator::Add),)),
+                    Ok(Localizable::irrelevant(TokenType::Literal("9".into()),)),
+                    Ok(Localizable::irrelevant(TokenType::ClosingParenthesis,)),
+                    Ok(Localizable::irrelevant(TokenType::Semicolon,)),
+                ]
+                .into_iter()
+                .peekable(),
+            )
+            .unwrap()
+            .object,
+            StatementNode::VariableDeclaration {
+                name: Localizable::irrelevant("test".into()),
+                r#type: Localizable::irrelevant(Type::Int),
+                value: Box::new(Localizable::irrelevant(ExpressionNode::FunctionCall(
+                    Localizable::irrelevant(FunctionCall {
+                        name: Localizable::irrelevant("abc".into()),
+                        arguments: Localizable::irrelevant(
+                            [Localizable::irrelevant(ExpressionNode::Operation {
+                                operator: Localizable::irrelevant(Operator::Add),
+                                a: Box::new(Localizable::irrelevant(ExpressionNode::Number(6.))),
+                                b: Box::new(Localizable::irrelevant(ExpressionNode::Number(9.))),
+                            })]
+                            .into()
+                        )
+                    })
+                )))
             }
         );
     }

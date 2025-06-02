@@ -1,7 +1,4 @@
-use nilang_types::{
-    nodes::Operator,
-    tokens::{Token, TokenType},
-};
+use nilang_types::{nodes::Operator, tokens::TokenType};
 
 use crate::lex;
 
@@ -10,58 +7,34 @@ fn operation() {
     let mut iter = lex("5+4");
 
     assert_eq!(
-        iter.next().unwrap().unwrap(),
-        Token {
-            token: TokenType::Literal("5".into()),
-            start: (0, 0),
-            end: (0, 0),
-        },
+        *iter.next().unwrap().unwrap(),
+        TokenType::Literal("5".into()),
     );
 
     assert_eq!(
-        iter.next().unwrap().unwrap(),
-        Token {
-            token: TokenType::Operator(Operator::Add),
-            start: (0, 1),
-            end: (0, 1),
-        },
+        *iter.next().unwrap().unwrap(),
+        TokenType::Operator(Operator::Add),
     );
 
     assert_eq!(
-        iter.next().unwrap().unwrap(),
-        Token {
-            token: TokenType::Literal("4".into()),
-            start: (0, 2),
-            end: (0, 2),
-        },
+        *iter.next().unwrap().unwrap(),
+        TokenType::Literal("4".into()),
     );
 
     let mut iter = lex("5.5 * 8");
 
     assert_eq!(
-        iter.next().unwrap().unwrap(),
-        Token {
-            token: TokenType::Literal("5.5".into()),
-            start: (0, 0,),
-            end: (0, 2),
-        },
+        *iter.next().unwrap().unwrap(),
+        TokenType::Literal("5.5".into()),
     );
 
     assert_eq!(
-        iter.next().unwrap().unwrap(),
-        Token {
-            token: TokenType::Operator(Operator::Multiply),
-            start: (0, 4),
-            end: (0, 4),
-        },
+        *iter.next().unwrap().unwrap(),
+        TokenType::Operator(Operator::Multiply),
     );
 
     assert_eq!(
-        iter.next().unwrap().unwrap(),
-        Token {
-            token: TokenType::Literal("8".into()),
-            start: (0, 6),
-            end: (0, 6),
-        },
+        *iter.next().unwrap().unwrap(),
+        TokenType::Literal("8".into()),
     );
 }

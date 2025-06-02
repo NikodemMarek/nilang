@@ -1,8 +1,5 @@
-use errors::{CodeLocation, NilangError, ParserErrors};
-use nilang_types::{
-    nodes::Parameter,
-    tokens::{Token, TokenType},
-};
+use errors::{NilangError, ParserErrors};
+use nilang_types::{nodes::Parameter, tokens::TokenType, Localizable, Location};
 
 use crate::assuming_iterator::PeekableAssumingIterator;
 
@@ -10,30 +7,37 @@ use super::type_annotation_parser::parse_type_annotation;
 
 pub fn parse_parameter_list<I: PeekableAssumingIterator>(
     tokens: &mut I,
-) -> Result<Box<[Parameter]>, NilangError> {
-    tokens.assume(TokenType::OpeningParenthesis)?;
+) -> Result<Localizable<Box<[Parameter]>>, NilangError> {
+    let start = tokens.assume(TokenType::OpeningParenthesis)?;
 
     let mut parameters = Vec::new();
 
     loop {
         match tokens.assume_next()? {
-            Token {
-                token: TokenType::Identifier(value),
-                ..
+            Localizable {
+                object: TokenType::Identifier(value),
+                location,
             } => {
-                parameters.push((value, parse_type_annotation(tokens)?));
+                let parameter_name = Localizable::new(location, value);
+                let parameter_type = parse_type_annotation(tokens)?;
+                parameters.push((parameter_name, parameter_type));
 
                 match tokens.assume_next()? {
-                    Token {
-                        token: TokenType::ClosingParenthesis,
-                        ..
-                    } => break,
-                    Token {
-                        token: TokenType::Comma,
+                    Localizable {
+                        object: TokenType::ClosingParenthesis,
+                        location: end,
+                    } => {
+                        return Ok(Localizable {
+                            location: Location::between(&start, &end),
+                            object: parameters.into(),
+                        });
+                    }
+                    Localizable {
+                        object: TokenType::Comma,
                         ..
                     } => {}
-                    Token { start, .. } => Err(NilangError {
-                        location: CodeLocation::at(start.0, start.1),
+                    Localizable { location, .. } => Err(NilangError {
+                        location,
                         error: ParserErrors::ExpectedTokens(Vec::from([
                             TokenType::Comma,
                             TokenType::ClosingParenthesis,
@@ -42,12 +46,17 @@ pub fn parse_parameter_list<I: PeekableAssumingIterator>(
                     })?,
                 }
             }
-            Token {
-                token: TokenType::ClosingParenthesis,
-                ..
-            } => break,
-            Token { start, .. } => Err(NilangError {
-                location: CodeLocation::at(start.0, start.1),
+            Localizable {
+                object: TokenType::ClosingParenthesis,
+                location: end,
+            } => {
+                return Ok(Localizable {
+                    location: Location::between(&start, &end),
+                    object: parameters.into(),
+                });
+            }
+            Localizable { location, .. } => Err(NilangError {
+                location,
                 error: ParserErrors::ExpectedTokens(Vec::from([
                     TokenType::Identifier("".into()),
                     TokenType::ClosingParenthesis,
@@ -56,16 +65,11 @@ pub fn parse_parameter_list<I: PeekableAssumingIterator>(
             })?,
         }
     }
-
-    Ok(parameters.into())
 }
 
 #[cfg(test)]
 mod test {
-    use nilang_types::{
-        nodes::Type,
-        tokens::{Token, TokenType},
-    };
+    use nilang_types::{nodes::Type, tokens::TokenType, Localizable};
 
     use crate::parsers::parameter_list_parser::parse_parameter_list;
 
@@ -74,57 +78,36 @@ mod test {
         assert_eq!(
             parse_parameter_list(
                 &mut [
-                    Ok(Token {
-                        token: TokenType::OpeningParenthesis,
-                        start: (0, 0),
-                        end: (0, 0),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Identifier("test1".into()),
-                        start: (0, 1),
-                        end: (0, 5),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Colon,
-                        start: (0, 6),
-                        end: (0, 6),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Identifier("int".into()),
-                        start: (0, 7),
-                        end: (0, 10),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Comma,
-                        start: (0, 11),
-                        end: (0, 11),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Identifier("test2".into()),
-                        start: (0, 12),
-                        end: (0, 16),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Colon,
-                        start: (0, 17),
-                        end: (0, 17),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Identifier("int".into()),
-                        start: (0, 18),
-                        end: (0, 20),
-                    }),
-                    Ok(Token {
-                        token: TokenType::ClosingParenthesis,
-                        start: (0, 21),
-                        end: (0, 21),
-                    }),
+                    Ok(Localizable::irrelevant(TokenType::OpeningParenthesis,)),
+                    Ok(Localizable::irrelevant(TokenType::Identifier(
+                        "test1".into()
+                    ),)),
+                    Ok(Localizable::irrelevant(TokenType::Colon,)),
+                    Ok(Localizable::irrelevant(TokenType::Identifier("int".into()),)),
+                    Ok(Localizable::irrelevant(TokenType::Comma,)),
+                    Ok(Localizable::irrelevant(TokenType::Identifier(
+                        "test2".into()
+                    ),)),
+                    Ok(Localizable::irrelevant(TokenType::Colon,)),
+                    Ok(Localizable::irrelevant(TokenType::Identifier("int".into()),)),
+                    Ok(Localizable::irrelevant(TokenType::ClosingParenthesis,)),
                 ]
                 .into_iter()
                 .peekable(),
             )
-            .unwrap(),
-            [("test1".into(), Type::Int), ("test2".into(), Type::Int),].into()
+            .unwrap()
+            .object,
+            [
+                (
+                    Localizable::irrelevant("test1".into()),
+                    Localizable::irrelevant(Type::Int)
+                ),
+                (
+                    Localizable::irrelevant("test2".into()),
+                    Localizable::irrelevant(Type::Int)
+                ),
+            ]
+            .into()
         );
     }
 }

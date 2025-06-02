@@ -1,16 +1,19 @@
 use errors::NilangError;
-use nilang_types::{nodes::Type, tokens::TokenType};
+use nilang_types::{nodes::Type, tokens::TokenType, Localizable};
 
 use crate::assuming_iterator::PeekableAssumingIterator;
 
 pub fn parse_type_annotation<I: PeekableAssumingIterator>(
     tokens: &mut I,
-) -> Result<Type, NilangError> {
+) -> Result<Localizable<Type>, NilangError> {
     tokens.assume(TokenType::Colon)?;
 
-    let (_, _, r#type) = tokens.assume_identifier()?;
+    let r#type = tokens.assume_identifier()?;
 
-    Ok(parse_type(&r#type))
+    Ok(Localizable::new(
+        r#type.location,
+        parse_type(&r#type.object),
+    ))
 }
 
 pub fn parse_type(r#type: &str) -> Type {
@@ -25,10 +28,7 @@ pub fn parse_type(r#type: &str) -> Type {
 
 #[cfg(test)]
 mod test {
-    use nilang_types::{
-        nodes::Type,
-        tokens::{Token, TokenType},
-    };
+    use nilang_types::{nodes::Type, tokens::TokenType, Localizable};
 
     use crate::parsers::type_annotation_parser::parse_type_annotation;
 
@@ -37,21 +37,14 @@ mod test {
         assert_eq!(
             parse_type_annotation(
                 &mut [
-                    Ok(Token {
-                        token: TokenType::Colon,
-                        start: (1, 14,),
-                        end: (1, 14,),
-                    },),
-                    Ok(Token {
-                        token: TokenType::Identifier("int".into()),
-                        start: (1, 16,),
-                        end: (1, 18,),
-                    },),
+                    Ok(Localizable::irrelevant(TokenType::Colon)),
+                    Ok(Localizable::irrelevant(TokenType::Identifier("int".into()))),
                 ]
                 .into_iter()
                 .peekable()
             )
-            .unwrap(),
+            .unwrap()
+            .object,
             Type::Int,
         );
     }

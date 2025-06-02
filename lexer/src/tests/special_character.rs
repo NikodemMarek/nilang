@@ -1,7 +1,4 @@
-use nilang_types::{
-    nodes::Operator,
-    tokens::{Token, TokenType},
-};
+use nilang_types::{nodes::Operator, tokens::TokenType};
 
 use crate::lex;
 
@@ -10,134 +7,72 @@ fn special_character() {
     let mut iter = lex(" (5)");
 
     assert_eq!(
-        iter.next().unwrap().unwrap(),
-        Token {
-            token: TokenType::OpeningParenthesis,
-            start: (0, 1),
-            end: (0, 1),
-        },
+        *iter.next().unwrap().unwrap(),
+        TokenType::OpeningParenthesis,
     );
 
     assert_eq!(
-        iter.next().unwrap().unwrap(),
-        Token {
-            token: TokenType::Literal("5".into()),
-            start: (0, 2),
-            end: (0, 2),
-        },
+        *iter.next().unwrap().unwrap(),
+        TokenType::Literal("5".into()),
     );
 
     assert_eq!(
-        iter.next().unwrap().unwrap(),
-        Token {
-            token: TokenType::ClosingParenthesis,
-            start: (0, 3),
-            end: (0, 3),
-        },
+        *iter.next().unwrap().unwrap(),
+        TokenType::ClosingParenthesis,
     );
 
     let mut iter = lex("(5 + 4)");
 
     assert_eq!(
-        iter.next().unwrap().unwrap(),
-        Token {
-            token: TokenType::OpeningParenthesis,
-            start: (0, 0),
-            end: (0, 0),
-        },
+        *iter.next().unwrap().unwrap(),
+        TokenType::OpeningParenthesis,
     );
 
     assert_eq!(
-        iter.next().unwrap().unwrap(),
-        Token {
-            token: TokenType::Literal("5".into()),
-            start: (0, 1),
-            end: (0, 1),
-        },
+        *iter.next().unwrap().unwrap(),
+        TokenType::Literal("5".into()),
     );
 
     assert_eq!(
-        iter.next().unwrap().unwrap(),
-        Token {
-            token: TokenType::Operator(Operator::Add),
-            start: (0, 3),
-            end: (0, 3),
-        },
+        *iter.next().unwrap().unwrap(),
+        TokenType::Operator(Operator::Add),
     );
 
     assert_eq!(
-        iter.next().unwrap().unwrap(),
-        Token {
-            token: TokenType::Literal("4".into()),
-            start: (0, 5),
-            end: (0, 5),
-        },
+        *iter.next().unwrap().unwrap(),
+        TokenType::Literal("4".into()),
     );
 
     assert_eq!(
-        iter.next().unwrap().unwrap(),
-        Token {
-            token: TokenType::ClosingParenthesis,
-            start: (0, 6),
-            end: (0, 6),
-        },
+        *iter.next().unwrap().unwrap(),
+        TokenType::ClosingParenthesis,
     );
 
     let mut iter = lex("a = b");
 
     assert_eq!(
-        iter.next().unwrap().unwrap(),
-        Token {
-            token: TokenType::Identifier("a".into()),
-            start: (0, 0),
-            end: (0, 0),
-        },
+        *iter.next().unwrap().unwrap(),
+        TokenType::Identifier("a".into()),
     );
 
-    assert_eq!(
-        iter.next().unwrap().unwrap(),
-        Token {
-            token: TokenType::Equals,
-            start: (0, 2),
-            end: (0, 2),
-        },
-    );
+    assert_eq!(*iter.next().unwrap().unwrap(), TokenType::Equals,);
 
     assert_eq!(
-        iter.next().unwrap().unwrap(),
-        Token {
-            token: TokenType::Identifier("b".into()),
-            start: (0, 4),
-            end: (0, 4),
-        },
+        *iter.next().unwrap().unwrap(),
+        TokenType::Identifier("b".into()),
     );
 
     let mut iter = lex("a: b");
 
     assert_eq!(
-        iter.next().unwrap().unwrap(),
-        Token {
-            token: TokenType::Identifier("a".into()),
-            start: (0, 0),
-            end: (0, 0),
-        },
+        *iter.next().unwrap().unwrap(),
+        TokenType::Identifier("a".into()),
     );
 
-    assert_eq!(
-        iter.next().unwrap().unwrap(),
-        Token {
-            token: TokenType::Colon,
-            start: (0, 1),
-            end: (0, 1),
-        },
-    );
+    assert_eq!(*iter.next().unwrap().unwrap(), TokenType::Colon,);
 
     assert_eq!(
-        iter.next().unwrap().unwrap(),
-        Token {
-            token: TokenType::Identifier("b".into()),
-            start: (0, 3),
-            end: (0, 3),
-        },
+        *iter.next().unwrap().unwrap(),
+        TokenType::Identifier("b".into()),
     );
 }

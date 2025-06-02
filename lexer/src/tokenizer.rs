@@ -1,7 +1,10 @@
 use std::iter::Peekable;
 
-use errors::{CodeLocation, LexerErrors, NilangError};
-use nilang_types::tokens::{Keyword, Token, TokenType};
+use errors::{LexerErrors, NilangError};
+use nilang_types::{
+    tokens::{Keyword, TokenType},
+    Localizable, Location,
+};
 
 pub struct Tokenizer<'a> {
     iter: Peekable<std::str::Chars<'a>>,
@@ -9,7 +12,7 @@ pub struct Tokenizer<'a> {
 }
 
 impl<'a> Iterator for Tokenizer<'a> {
-    type Item = Result<Token, NilangError>;
+    type Item = Result<Localizable<TokenType>, NilangError>;
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
@@ -45,20 +48,18 @@ impl<'a> Iterator for Tokenizer<'a> {
                         let end = self.loc;
                         self.loc.1 += 1;
 
-                        return Some(Ok(Token {
-                            token: TokenType::Literal(aggregation.into()),
-                            start,
-                            end,
+                        return Some(Ok(Localizable {
+                            location: Location(start.0, start.1, end.0, end.1),
+                            object: TokenType::Literal(aggregation.into()),
                         }));
                     }
 
                     let end = self.loc;
                     self.loc.1 += 1;
 
-                    return Some(Ok(Token {
-                        token: TokenType::Dot,
-                        start,
-                        end,
+                    return Some(Ok(Localizable {
+                        location: Location(start.0, start.1, end.0, end.1),
+                        object: TokenType::Dot,
                     }));
                 }
                 c @ '0'..='9' => {
@@ -77,10 +78,11 @@ impl<'a> Iterator for Tokenizer<'a> {
                             }
                             Some(c @ '.') => {
                                 if dot {
-                                    return Some(Ok(Token {
-                                        token: TokenType::Literal(aggregation.into()),
-                                        start,
-                                        end: self.loc,
+                                    return Some(Ok(Localizable {
+                                        location: Location(
+                                            start.0, start.1, self.loc.0, self.loc.1,
+                                        ),
+                                        object: TokenType::Literal(aggregation.into()),
                                     }));
                                 } else {
                                     self.loc.1 += 1;
@@ -94,10 +96,9 @@ impl<'a> Iterator for Tokenizer<'a> {
                                 let end = self.loc;
                                 self.loc.1 += 1;
 
-                                return Some(Ok(Token {
-                                    token: TokenType::Literal(aggregation.into()),
-                                    start,
-                                    end,
+                                return Some(Ok(Localizable {
+                                    location: Location(start.0, start.1, end.0, end.1),
+                                    object: TokenType::Literal(aggregation.into()),
                                 }));
                             }
                         }
@@ -120,16 +121,15 @@ impl<'a> Iterator for Tokenizer<'a> {
                     let end = self.loc;
                     self.loc.1 += 1;
 
-                    return Some(Ok(Token {
-                        token: match aggregation.as_str() {
+                    return Some(Ok(Localizable {
+                        location: Location(start.0, start.1, end.0, end.1),
+                        object: match aggregation.as_str() {
                             "fn" => TokenType::Keyword(Keyword::Function),
                             "vr" => TokenType::Keyword(Keyword::Variable),
                             "rt" => TokenType::Keyword(Keyword::Return),
                             "st" => TokenType::Keyword(Keyword::Structure),
                             _ => TokenType::Identifier(aggregation.into()),
                         },
-                        start,
-                        end,
                     }));
                 }
                 '"' => {
@@ -151,7 +151,7 @@ impl<'a> Iterator for Tokenizer<'a> {
                             }
                             None => {
                                 return Some(Err(NilangError {
-                                    location: CodeLocation::at(self.loc.0, self.loc.1),
+                                    location: Location::at(self.loc.0, self.loc.1),
                                     error: LexerErrors::ExpectedCharacter('"').into(),
                                 }));
                             }
@@ -161,10 +161,9 @@ impl<'a> Iterator for Tokenizer<'a> {
                     let end = self.loc;
                     self.loc.1 += 1;
 
-                    return Some(Ok(Token {
-                        token: TokenType::Literal(aggregation.into()),
-                        start,
-                        end,
+                    return Some(Ok(Localizable {
+                        location: Location(start.0, start.1, end.0, end.1),
+                        object: TokenType::Literal(aggregation.into()),
                     }));
                 }
                 '\'' => {
@@ -176,7 +175,7 @@ impl<'a> Iterator for Tokenizer<'a> {
                     if let Some(c) = self.iter.next() {
                         if c == '\'' {
                             return Some(Err(NilangError {
-                                location: CodeLocation::at(self.loc.0, self.loc.1),
+                                location: Location::at(self.loc.0, self.loc.1),
                                 error: LexerErrors::UnexpectedCharacter('\'').into(),
                             }));
                         } else {
@@ -185,7 +184,7 @@ impl<'a> Iterator for Tokenizer<'a> {
                         }
                     } else {
                         return Some(Err(NilangError {
-                            location: CodeLocation::at(self.loc.0, self.loc.1),
+                            location: Location::at(self.loc.0, self.loc.1),
                             error: LexerErrors::UnexpectedEndOfFile.into(),
                         }));
                     }
@@ -195,7 +194,7 @@ impl<'a> Iterator for Tokenizer<'a> {
                         aggregation.push('\'');
                     } else {
                         return Some(Err(NilangError {
-                            location: CodeLocation::at(self.loc.0, self.loc.1),
+                            location: Location::at(self.loc.0, self.loc.1),
                             error: LexerErrors::ExpectedCharacter('\'').into(),
                         }));
                     }
@@ -203,145 +202,131 @@ impl<'a> Iterator for Tokenizer<'a> {
                     let end = self.loc;
                     self.loc.1 += 1;
 
-                    return Some(Ok(Token {
-                        token: TokenType::Literal(aggregation.into()),
-                        start,
-                        end,
+                    return Some(Ok(Localizable {
+                        location: Location(start.0, start.1, end.0, end.1),
+                        object: TokenType::Literal(aggregation.into()),
                     }));
                 }
                 '+' => {
                     let start = self.loc;
                     self.loc.1 += 1;
                     self.iter.next();
-                    return Some(Ok(Token {
-                        token: TokenType::Operator(nilang_types::nodes::Operator::Add),
-                        start,
-                        end: start,
+                    return Some(Ok(Localizable {
+                        location: Location(start.0, start.1, start.0, start.1),
+                        object: TokenType::Operator(nilang_types::nodes::Operator::Add),
                     }));
                 }
                 '-' => {
                     let start = self.loc;
                     self.loc.1 += 1;
                     self.iter.next();
-                    return Some(Ok(Token {
-                        token: TokenType::Operator(nilang_types::nodes::Operator::Subtract),
-                        start,
-                        end: start,
+                    return Some(Ok(Localizable {
+                        location: Location(start.0, start.1, start.0, start.1),
+                        object: TokenType::Operator(nilang_types::nodes::Operator::Subtract),
                     }));
                 }
                 '*' => {
                     let start = self.loc;
                     self.loc.1 += 1;
                     self.iter.next();
-                    return Some(Ok(Token {
-                        token: TokenType::Operator(nilang_types::nodes::Operator::Multiply),
-                        start,
-                        end: start,
+                    return Some(Ok(Localizable {
+                        location: Location(start.0, start.1, start.0, start.1),
+                        object: TokenType::Operator(nilang_types::nodes::Operator::Multiply),
                     }));
                 }
                 '/' => {
                     let start = self.loc;
                     self.loc.1 += 1;
                     self.iter.next();
-                    return Some(Ok(Token {
-                        token: TokenType::Operator(nilang_types::nodes::Operator::Divide),
-                        start,
-                        end: start,
+                    return Some(Ok(Localizable {
+                        location: Location(start.0, start.1, start.0, start.1),
+                        object: TokenType::Operator(nilang_types::nodes::Operator::Divide),
                     }));
                 }
                 '%' => {
                     let start = self.loc;
                     self.loc.1 += 1;
                     self.iter.next();
-                    return Some(Ok(Token {
-                        token: TokenType::Operator(nilang_types::nodes::Operator::Modulo),
-                        start,
-                        end: start,
+                    return Some(Ok(Localizable {
+                        location: Location(start.0, start.1, start.0, start.1),
+                        object: TokenType::Operator(nilang_types::nodes::Operator::Modulo),
                     }));
                 }
                 '(' => {
                     let start = self.loc;
                     self.loc.1 += 1;
                     self.iter.next();
-                    return Some(Ok(Token {
-                        token: TokenType::OpeningParenthesis,
-                        start,
-                        end: start,
+                    return Some(Ok(Localizable {
+                        location: Location(start.0, start.1, start.0, start.1),
+                        object: TokenType::OpeningParenthesis,
                     }));
                 }
                 ')' => {
                     let start = self.loc;
                     self.loc.1 += 1;
                     self.iter.next();
-                    return Some(Ok(Token {
-                        token: TokenType::ClosingParenthesis,
-                        start,
-                        end: start,
+                    return Some(Ok(Localizable {
+                        location: Location(start.0, start.1, start.0, start.1),
+                        object: TokenType::ClosingParenthesis,
                     }));
                 }
                 '{' => {
                     let start = self.loc;
                     self.loc.1 += 1;
                     self.iter.next();
-                    return Some(Ok(Token {
-                        token: TokenType::OpeningBrace,
-                        start,
-                        end: start,
+                    return Some(Ok(Localizable {
+                        location: Location(start.0, start.1, start.0, start.1),
+                        object: TokenType::OpeningBrace,
                     }));
                 }
                 '}' => {
                     let start = self.loc;
                     self.loc.1 += 1;
                     self.iter.next();
-                    return Some(Ok(Token {
-                        token: TokenType::ClosingBrace,
-                        start,
-                        end: start,
+                    return Some(Ok(Localizable {
+                        location: Location(start.0, start.1, start.0, start.1),
+                        object: TokenType::ClosingBrace,
                     }));
                 }
                 '=' => {
                     let start = self.loc;
                     self.loc.1 += 1;
                     self.iter.next();
-                    return Some(Ok(Token {
-                        token: TokenType::Equals,
-                        start,
-                        end: start,
+                    return Some(Ok(Localizable {
+                        location: Location(start.0, start.1, start.0, start.1),
+                        object: TokenType::Equals,
                     }));
                 }
                 ';' => {
                     let start = self.loc;
                     self.loc.1 += 1;
                     self.iter.next();
-                    return Some(Ok(Token {
-                        token: TokenType::Semicolon,
-                        start,
-                        end: start,
+                    return Some(Ok(Localizable {
+                        location: Location(start.0, start.1, start.0, start.1),
+                        object: TokenType::Semicolon,
                     }));
                 }
                 ':' => {
                     let start = self.loc;
                     self.loc.1 += 1;
                     self.iter.next();
-                    return Some(Ok(Token {
-                        token: TokenType::Colon,
-                        start,
-                        end: start,
+                    return Some(Ok(Localizable {
+                        location: Location(start.0, start.1, start.0, start.1),
+                        object: TokenType::Colon,
                     }));
                 }
                 ',' => {
                     let start = self.loc;
                     self.loc.1 += 1;
                     self.iter.next();
-                    return Some(Ok(Token {
-                        token: TokenType::Comma,
-                        start,
-                        end: start,
+                    return Some(Ok(Localizable {
+                        location: Location(start.0, start.1, start.0, start.1),
+                        object: TokenType::Comma,
                     }));
                 }
                 char => {
                     return Some(Err(NilangError {
-                        location: CodeLocation::at(self.loc.0, self.loc.1),
+                        location: Location::at(self.loc.0, self.loc.1),
                         error: LexerErrors::UnexpectedCharacter(*char).into(),
                     }));
                 }
@@ -366,7 +351,7 @@ impl Tokenizer<'_> {
 mod tests {
     use nilang_types::{
         nodes::Operator,
-        tokens::{Keyword, Token, TokenType},
+        tokens::{Keyword, TokenType},
     };
 
     use crate::tokenizer::Tokenizer;
@@ -376,221 +361,120 @@ mod tests {
         let mut iter = Tokenizer::new("5 + 4");
 
         assert_eq!(
-            iter.next().unwrap().unwrap(),
-            Token {
-                token: TokenType::Literal("5".into()),
-                start: (0, 0),
-                end: (0, 0),
-            }
+            *iter.next().unwrap().unwrap(),
+            TokenType::Literal("5".into())
         );
 
         assert_eq!(
-            iter.next().unwrap().unwrap(),
-            Token {
-                token: TokenType::Operator(Operator::Add),
-                start: (0, 2),
-                end: (0, 2),
-            }
+            *iter.next().unwrap().unwrap(),
+            TokenType::Operator(Operator::Add),
         );
 
         assert_eq!(
-            iter.next().unwrap().unwrap(),
-            Token {
-                token: TokenType::Literal("4".into()),
-                start: (0, 4),
-                end: (0, 4),
-            }
+            *iter.next().unwrap().unwrap(),
+            TokenType::Literal("4".into()),
         );
 
         let mut iter = Tokenizer::new("test(123)");
 
         assert_eq!(
-            iter.next().unwrap().unwrap(),
-            Token {
-                token: TokenType::Identifier("test".into()),
-                start: (0, 0),
-                end: (0, 3),
-            }
+            *iter.next().unwrap().unwrap(),
+            TokenType::Identifier("test".into()),
         );
 
         assert_eq!(
-            iter.next().unwrap().unwrap(),
-            Token {
-                token: TokenType::OpeningParenthesis,
-                start: (0, 4),
-                end: (0, 4),
-            }
+            *iter.next().unwrap().unwrap(),
+            TokenType::OpeningParenthesis,
         );
 
         assert_eq!(
-            iter.next().unwrap().unwrap(),
-            Token {
-                token: TokenType::Literal("123".into()),
-                start: (0, 5),
-                end: (0, 7),
-            }
+            *iter.next().unwrap().unwrap(),
+            TokenType::Literal("123".into()),
         );
 
         assert_eq!(
-            iter.next().unwrap().unwrap(),
-            Token {
-                token: TokenType::ClosingParenthesis,
-                start: (0, 8),
-                end: (0, 8),
-            }
+            *iter.next().unwrap().unwrap(),
+            TokenType::ClosingParenthesis,
         );
 
         let mut iter = Tokenizer::new("fn test(abc) {\n    rt abc + 5;\n}");
 
         assert_eq!(
-            iter.next().unwrap().unwrap(),
-            Token {
-                token: TokenType::Keyword(Keyword::Function),
-                start: (0, 0),
-                end: (0, 1),
-            }
+            *iter.next().unwrap().unwrap(),
+            TokenType::Keyword(Keyword::Function),
         );
 
         assert_eq!(
-            iter.next().unwrap().unwrap(),
-            Token {
-                token: TokenType::Identifier("test".into()),
-                start: (0, 3),
-                end: (0, 6),
-            }
+            *iter.next().unwrap().unwrap(),
+            TokenType::Identifier("test".into()),
         );
 
         assert_eq!(
-            iter.next().unwrap().unwrap(),
-            Token {
-                token: TokenType::OpeningParenthesis,
-                start: (0, 7),
-                end: (0, 7),
-            }
+            *iter.next().unwrap().unwrap(),
+            TokenType::OpeningParenthesis,
         );
 
         assert_eq!(
-            iter.next().unwrap().unwrap(),
-            Token {
-                token: TokenType::Identifier("abc".into()),
-                start: (0, 8),
-                end: (0, 10),
-            }
+            *iter.next().unwrap().unwrap(),
+            TokenType::Identifier("abc".into()),
         );
 
         assert_eq!(
-            iter.next().unwrap().unwrap(),
-            Token {
-                token: TokenType::ClosingParenthesis,
-                start: (0, 11),
-                end: (0, 11),
-            }
+            *iter.next().unwrap().unwrap(),
+            TokenType::ClosingParenthesis,
+        );
+
+        assert_eq!(*iter.next().unwrap().unwrap(), TokenType::OpeningBrace);
+
+        assert_eq!(
+            *iter.next().unwrap().unwrap(),
+            TokenType::Keyword(Keyword::Return),
         );
 
         assert_eq!(
-            iter.next().unwrap().unwrap(),
-            Token {
-                token: TokenType::OpeningBrace,
-                start: (0, 13),
-                end: (0, 13),
-            }
+            *iter.next().unwrap().unwrap(),
+            TokenType::Identifier("abc".into()),
         );
 
         assert_eq!(
-            iter.next().unwrap().unwrap(),
-            Token {
-                token: TokenType::Keyword(Keyword::Return),
-                start: (1, 4),
-                end: (1, 5),
-            }
+            *iter.next().unwrap().unwrap(),
+            TokenType::Operator(Operator::Add),
         );
 
         assert_eq!(
-            iter.next().unwrap().unwrap(),
-            Token {
-                token: TokenType::Identifier("abc".into()),
-                start: (1, 7),
-                end: (1, 9),
-            }
+            *iter.next().unwrap().unwrap(),
+            TokenType::Literal("5".into()),
         );
 
-        assert_eq!(
-            iter.next().unwrap().unwrap(),
-            Token {
-                token: TokenType::Operator(Operator::Add),
-                start: (1, 11),
-                end: (1, 11),
-            }
-        );
+        assert_eq!(*iter.next().unwrap().unwrap(), TokenType::Semicolon);
 
-        assert_eq!(
-            iter.next().unwrap().unwrap(),
-            Token {
-                token: TokenType::Literal("5".into()),
-                start: (1, 13),
-                end: (1, 13),
-            }
-        );
-
-        assert_eq!(
-            iter.next().unwrap().unwrap(),
-            Token {
-                token: TokenType::Semicolon,
-                start: (1, 14),
-                end: (1, 14),
-            }
-        );
-
-        assert_eq!(
-            iter.next().unwrap().unwrap(),
-            Token {
-                token: TokenType::ClosingBrace,
-                start: (2, 0),
-                end: (2, 0),
-            }
-        );
+        assert_eq!(*iter.next().unwrap().unwrap(), TokenType::ClosingBrace);
     }
 
     #[test]
     fn test_tokenizer_literals() {
         let mut iter = Tokenizer::new("5");
         assert_eq!(
-            iter.next().unwrap().unwrap(),
-            Token {
-                token: TokenType::Literal("5".into()),
-                start: (0, 0),
-                end: (0, 0),
-            }
+            *iter.next().unwrap().unwrap(),
+            TokenType::Literal("5".into()),
         );
 
         let mut iter = Tokenizer::new("5.5");
         assert_eq!(
-            iter.next().unwrap().unwrap(),
-            Token {
-                token: TokenType::Literal("5.5".into()),
-                start: (0, 0),
-                end: (0, 2),
-            }
+            *iter.next().unwrap().unwrap(),
+            TokenType::Literal("5.5".into()),
         );
 
         let mut iter = Tokenizer::new("'t'");
         assert_eq!(
-            iter.next().unwrap().unwrap(),
-            Token {
-                token: TokenType::Literal("'t'".into()),
-                start: (0, 0),
-                end: (0, 2),
-            }
+            *iter.next().unwrap().unwrap(),
+            TokenType::Literal("'t'".into()),
         );
 
         let mut iter = Tokenizer::new("\"test\"");
         assert_eq!(
-            iter.next().unwrap().unwrap(),
-            Token {
-                token: TokenType::Literal("\"test\"".into()),
-                start: (0, 0),
-                end: (0, 5),
-            }
+            *iter.next().unwrap().unwrap(),
+            TokenType::Literal("\"test\"".into()),
         );
     }
 }

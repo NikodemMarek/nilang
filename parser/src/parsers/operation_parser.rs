@@ -1,7 +1,8 @@
-use errors::{CodeLocation, NilangError, ParserErrors};
+use errors::{NilangError, ParserErrors};
 use nilang_types::{
     nodes::{ExpressionNode, Operator},
-    tokens::{Token, TokenType},
+    tokens::TokenType,
+    Localizable, Location,
 };
 
 use crate::assuming_iterator::PeekableAssumingIterator;
@@ -10,11 +11,11 @@ use super::parse_single_expression;
 
 pub fn parse_operation_if_operator_follows<I: PeekableAssumingIterator>(
     tokens: &mut I,
-    node: ExpressionNode,
-) -> Result<ExpressionNode, NilangError> {
+    node: Localizable<ExpressionNode>,
+) -> Result<Localizable<ExpressionNode>, NilangError> {
     Ok(
-        if let Token {
-            token: TokenType::Operator(_),
+        if let Localizable {
+            object: TokenType::Operator(_),
             ..
         } = tokens.peek_valid()?
         {
@@ -28,11 +29,11 @@ pub fn parse_operation_if_operator_follows<I: PeekableAssumingIterator>(
 
 pub fn parse_operation_if_operator_follows_no_rearrange<I: PeekableAssumingIterator>(
     tokens: &mut I,
-    node: ExpressionNode,
-) -> Result<ExpressionNode, NilangError> {
+    node: Localizable<ExpressionNode>,
+) -> Result<Localizable<ExpressionNode>, NilangError> {
     Ok(
-        if let Token {
-            token: TokenType::Operator(_),
+        if let Localizable {
+            object: TokenType::Operator(_),
             ..
         } = tokens.peek_valid()?
         {
@@ -46,44 +47,64 @@ pub fn parse_operation_if_operator_follows_no_rearrange<I: PeekableAssumingItera
 
 fn parse_operation<I: PeekableAssumingIterator>(
     tokens: &mut I,
-    preceeding: ExpressionNode,
+    preceeding: Localizable<ExpressionNode>,
     rearrange: bool,
-) -> Result<ExpressionNode, NilangError> {
-    let (start, _, operator) = tokens.assume_operator()?;
+) -> Result<Localizable<ExpressionNode>, NilangError> {
+    let operator = tokens.assume_operator()?;
 
-    Ok(match preceeding {
-        a @ ExpressionNode::Number(_) => ExpressionNode::Operation {
-            operator,
-            a: Box::new(a),
-            b: Box::new(parse_single_expression(tokens)?),
-        },
-        a @ ExpressionNode::FieldAccess { .. } => ExpressionNode::Operation {
-            operator,
-            a: Box::new(a),
-            b: Box::new(parse_single_expression(tokens)?),
-        },
-        a @ ExpressionNode::VariableReference(_) | a @ ExpressionNode::FunctionCall { .. } => {
-            ExpressionNode::Operation {
-                operator,
-                a: Box::new(a),
-                b: Box::new(parse_single_expression(tokens)?),
-            }
-        }
-        a @ ExpressionNode::Operation { .. } => {
-            let following = parse_single_expression(tokens)?;
-            if rearrange {
-                extend_operation(a, operator, following)?
-            } else {
+    Ok(match preceeding.object {
+        ExpressionNode::Number(_) => {
+            let b = parse_single_expression(tokens)?;
+            Localizable::new(
+                Location::between(&preceeding.location, &b.location),
                 ExpressionNode::Operation {
                     operator,
-                    a: Box::new(a),
-                    b: Box::new(following),
-                }
-            }
+                    a: Box::new(preceeding),
+                    b: Box::new(b),
+                },
+            )
+        }
+        ExpressionNode::FieldAccess { .. } => {
+            let b = parse_single_expression(tokens)?;
+            Localizable::new(
+                Location::between(&preceeding.location, &b.location),
+                ExpressionNode::Operation {
+                    operator,
+                    a: Box::new(preceeding),
+                    b: Box::new(b),
+                },
+            )
+        }
+        ExpressionNode::VariableReference(_) | ExpressionNode::FunctionCall { .. } => {
+            let b = parse_single_expression(tokens)?;
+            Localizable::new(
+                Location::between(&preceeding.location, &b.location),
+                ExpressionNode::Operation {
+                    operator,
+                    a: Box::new(preceeding),
+                    b: Box::new(b),
+                },
+            )
+        }
+        ExpressionNode::Operation { .. } => {
+            let following = parse_single_expression(tokens)?;
+            let location = Location::between(&preceeding.location, &following.location);
+            Localizable::new(
+                location,
+                if rearrange {
+                    extend_operation(preceeding, operator, following)?
+                } else {
+                    ExpressionNode::Operation {
+                        operator,
+                        a: Box::new(preceeding),
+                        b: Box::new(following),
+                    }
+                },
+            )
         }
         ExpressionNode::Object { .. } | ExpressionNode::Char(_) | ExpressionNode::String(_) => {
             Err(NilangError {
-                location: CodeLocation::at(start.0, start.1 - 1),
+                location: preceeding.location,
                 error: ParserErrors::InvalidOperand.into(),
             })?
         }
@@ -91,61 +112,54 @@ fn parse_operation<I: PeekableAssumingIterator>(
 }
 
 fn extend_operation(
-    operation: ExpressionNode,
-    operator: Operator,
-    node: ExpressionNode,
+    preceding: Localizable<ExpressionNode>,
+    operator: Localizable<Operator>,
+    succeeding: Localizable<ExpressionNode>,
 ) -> Result<ExpressionNode, NilangError> {
     if let ExpressionNode::Operation {
-        operator: prev_operator,
-        a: prev_a,
-        b: prev_b,
-    } = operation
+        operator: preceding_operator,
+        a: preceding_a,
+        b: preceding_b,
+    } = &preceding.object
     {
-        Ok(match operator {
-            Operator::Add | Operator::Subtract => match prev_operator {
+        Ok(match operator.object {
+            Operator::Add | Operator::Subtract => match preceding_operator.object {
                 Operator::Add | Operator::Subtract => ExpressionNode::Operation {
                     operator,
-                    a: Box::new(ExpressionNode::Operation {
-                        operator: prev_operator,
-                        a: prev_a,
-                        b: prev_b,
-                    }),
-                    b: Box::new(node),
+                    a: Box::new(preceding),
+                    b: Box::new(succeeding),
                 },
                 Operator::Multiply | Operator::Divide | Operator::Modulo => {
                     ExpressionNode::Operation {
                         operator,
-                        a: Box::new(ExpressionNode::Operation {
-                            operator: prev_operator,
-                            a: prev_a,
-                            b: prev_b,
-                        }),
-                        b: Box::new(node),
+                        a: Box::new(preceding),
+                        b: Box::new(succeeding),
                     }
                 }
             },
-            Operator::Multiply | Operator::Divide | Operator::Modulo => match prev_operator {
-                Operator::Add | Operator::Subtract => ExpressionNode::Operation {
-                    operator: prev_operator,
-                    a: prev_a,
-                    b: Box::new(ExpressionNode::Operation {
-                        operator,
-                        a: prev_b,
-                        b: Box::new(node),
-                    }),
-                },
-                Operator::Multiply | Operator::Divide | Operator::Modulo => {
-                    ExpressionNode::Operation {
-                        operator,
-                        a: Box::new(ExpressionNode::Operation {
-                            operator: prev_operator,
-                            a: prev_a,
-                            b: prev_b,
-                        }),
-                        b: Box::new(node),
+            Operator::Multiply | Operator::Divide | Operator::Modulo => {
+                match preceding_operator.object {
+                    Operator::Add | Operator::Subtract => ExpressionNode::Operation {
+                        operator: preceding_operator.clone(),
+                        a: preceding_a.clone(),
+                        b: Box::new(Localizable::new(
+                            Location::between(&preceding_b.location, &succeeding.location),
+                            ExpressionNode::Operation {
+                                operator,
+                                a: preceding_b.clone(),
+                                b: Box::new(succeeding),
+                            },
+                        )),
+                    },
+                    Operator::Multiply | Operator::Divide | Operator::Modulo => {
+                        ExpressionNode::Operation {
+                            operator,
+                            a: Box::new(preceding),
+                            b: Box::new(succeeding),
+                        }
                     }
                 }
-            },
+            }
         })
     } else {
         unreachable!()
@@ -156,7 +170,8 @@ fn extend_operation(
 mod tests {
     use nilang_types::{
         nodes::{ExpressionNode, Operator},
-        tokens::{Token, TokenType},
+        tokens::TokenType,
+        Localizable,
     };
 
     use crate::parsers::operation_parser::{
@@ -168,45 +183,26 @@ mod tests {
         assert_eq!(
             parse_operation_if_operator_follows(
                 &mut [
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Add),
-                        start: (0, 1),
-                        end: (0, 1),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("9".into()),
-                        start: (0, 2),
-                        end: (0, 2),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Add),
-                        start: (0, 3),
-                        end: (0, 3),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("5".into()),
-                        start: (0, 4),
-                        end: (0, 4),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Semicolon,
-                        start: (0, 5),
-                        end: (0, 5),
-                    })
+                    Ok(Localizable::irrelevant(TokenType::Operator(Operator::Add),)),
+                    Ok(Localizable::irrelevant(TokenType::Literal("9".into()),)),
+                    Ok(Localizable::irrelevant(TokenType::Operator(Operator::Add),)),
+                    Ok(Localizable::irrelevant(TokenType::Literal("5".into()),)),
+                    Ok(Localizable::irrelevant(TokenType::Semicolon,))
                 ]
                 .into_iter()
                 .peekable(),
-                ExpressionNode::Number(6.)
+                Localizable::irrelevant(ExpressionNode::Number(6.))
             )
-            .unwrap(),
+            .unwrap()
+            .object,
             ExpressionNode::Operation {
-                operator: Operator::Add,
-                a: Box::new(ExpressionNode::Operation {
-                    operator: Operator::Add,
-                    a: Box::new(ExpressionNode::Number(6.)),
-                    b: Box::new(ExpressionNode::Number(9.)),
-                }),
-                b: Box::new(ExpressionNode::Number(5.)),
+                operator: Localizable::irrelevant(Operator::Add),
+                a: Box::new(Localizable::irrelevant(ExpressionNode::Operation {
+                    operator: Localizable::irrelevant(Operator::Add),
+                    a: Box::new(Localizable::irrelevant(ExpressionNode::Number(6.))),
+                    b: Box::new(Localizable::irrelevant(ExpressionNode::Number(9.))),
+                })),
+                b: Box::new(Localizable::irrelevant(ExpressionNode::Number(5.))),
             }
         );
     }
@@ -216,160 +212,113 @@ mod tests {
         assert_eq!(
             parse_operation(
                 &mut [
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Add),
-                        start: (0, 1),
-                        end: (0, 1),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("9".into()),
-                        start: (0, 2),
-                        end: (0, 2),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Semicolon,
-                        start: (0, 3),
-                        end: (0, 3),
-                    })
+                    Ok(Localizable::irrelevant(TokenType::Operator(Operator::Add),)),
+                    Ok(Localizable::irrelevant(TokenType::Literal("9".into()),)),
+                    Ok(Localizable::irrelevant(TokenType::Semicolon,))
                 ]
                 .into_iter()
                 .peekable(),
-                ExpressionNode::Number(6.),
+                Localizable::irrelevant(ExpressionNode::Number(6.)),
                 true
             )
-            .unwrap(),
+            .unwrap()
+            .object,
             ExpressionNode::Operation {
-                operator: Operator::Add,
-                a: Box::new(ExpressionNode::Number(6.)),
-                b: Box::new(ExpressionNode::Number(9.)),
+                operator: Localizable::irrelevant(Operator::Add),
+                a: Box::new(Localizable::irrelevant(ExpressionNode::Number(6.))),
+                b: Box::new(Localizable::irrelevant(ExpressionNode::Number(9.))),
             }
         );
 
         assert_eq!(
             parse_operation(
                 &mut [
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Subtract),
-                        start: (0, 1),
-                        end: (0, 1),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("7.5".into()),
-                        start: (0, 2),
-                        end: (0, 4),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Semicolon,
-                        start: (0, 5),
-                        end: (0, 5),
-                    })
+                    Ok(Localizable::irrelevant(TokenType::Operator(
+                        Operator::Subtract
+                    ),)),
+                    Ok(Localizable::irrelevant(TokenType::Literal("7.5".into()),)),
+                    Ok(Localizable::irrelevant(TokenType::Semicolon,))
                 ]
                 .into_iter()
                 .peekable(),
-                ExpressionNode::Number(5.),
+                Localizable::irrelevant(ExpressionNode::Number(5.)),
                 true
             )
-            .unwrap(),
+            .unwrap()
+            .object,
             ExpressionNode::Operation {
-                operator: Operator::Subtract,
-                a: Box::new(ExpressionNode::Number(5.)),
-                b: Box::new(ExpressionNode::Number(7.5)),
+                operator: Localizable::irrelevant(Operator::Subtract),
+                a: Box::new(Localizable::irrelevant(ExpressionNode::Number(5.))),
+                b: Box::new(Localizable::irrelevant(ExpressionNode::Number(7.5))),
             }
         );
 
         assert_eq!(
             parse_operation(
                 &mut [
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Multiply),
-                        start: (0, 1),
-                        end: (0, 1),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("4".into()),
-                        start: (0, 4),
-                        end: (0, 4),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Semicolon,
-                        start: (0, 5),
-                        end: (0, 5),
-                    })
+                    Ok(Localizable::irrelevant(TokenType::Operator(
+                        Operator::Multiply
+                    ),)),
+                    Ok(Localizable::irrelevant(TokenType::Literal("4".into()),)),
+                    Ok(Localizable::irrelevant(TokenType::Semicolon,))
                 ]
                 .into_iter()
                 .peekable(),
-                ExpressionNode::Number(0.3),
+                Localizable::irrelevant(ExpressionNode::Number(0.3)),
                 true
             )
-            .unwrap(),
+            .unwrap()
+            .object,
             ExpressionNode::Operation {
-                operator: Operator::Multiply,
-                a: Box::new(ExpressionNode::Number(0.3)),
-                b: Box::new(ExpressionNode::Number(4.)),
+                operator: Localizable::irrelevant(Operator::Multiply),
+                a: Box::new(Localizable::irrelevant(ExpressionNode::Number(0.3))),
+                b: Box::new(Localizable::irrelevant(ExpressionNode::Number(4.))),
             }
         );
 
         assert_eq!(
             parse_operation(
                 &mut [
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Divide),
-                        start: (0, 1),
-                        end: (0, 1),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("1".into()),
-                        start: (0, 2),
-                        end: (0, 2),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Semicolon,
-                        start: (0, 3),
-                        end: (0, 3),
-                    })
+                    Ok(Localizable::irrelevant(TokenType::Operator(
+                        Operator::Divide
+                    ),)),
+                    Ok(Localizable::irrelevant(TokenType::Literal("1".into()),)),
+                    Ok(Localizable::irrelevant(TokenType::Semicolon,))
                 ]
                 .into_iter()
                 .peekable(),
-                ExpressionNode::Number(2.),
+                Localizable::irrelevant(ExpressionNode::Number(2.)),
                 true
             )
-            .unwrap(),
+            .unwrap()
+            .object,
             ExpressionNode::Operation {
-                operator: Operator::Divide,
-                a: Box::new(ExpressionNode::Number(2.)),
-                b: Box::new(ExpressionNode::Number(1.)),
+                operator: Localizable::irrelevant(Operator::Divide),
+                a: Box::new(Localizable::irrelevant(ExpressionNode::Number(2.))),
+                b: Box::new(Localizable::irrelevant(ExpressionNode::Number(1.))),
             }
         );
 
         assert_eq!(
             parse_operation(
                 &mut [
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Modulo),
-                        start: (0, 1),
-                        end: (0, 1),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("1.5".into()),
-                        start: (0, 2),
-                        end: (0, 4),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Semicolon,
-                        start: (0, 5),
-                        end: (0, 5),
-                    })
+                    Ok(Localizable::irrelevant(TokenType::Operator(
+                        Operator::Modulo
+                    ),)),
+                    Ok(Localizable::irrelevant(TokenType::Literal("1.5".into()),)),
+                    Ok(Localizable::irrelevant(TokenType::Semicolon,))
                 ]
                 .into_iter()
                 .peekable(),
-                ExpressionNode::Number(5.),
+                Localizable::irrelevant(ExpressionNode::Number(5.)),
                 true
             )
-            .unwrap(),
+            .unwrap()
+            .object,
             ExpressionNode::Operation {
-                operator: Operator::Modulo,
-                a: Box::new(ExpressionNode::Number(5.)),
-                b: Box::new(ExpressionNode::Number(1.5)),
+                operator: Localizable::irrelevant(Operator::Modulo),
+                a: Box::new(Localizable::irrelevant(ExpressionNode::Number(5.))),
+                b: Box::new(Localizable::irrelevant(ExpressionNode::Number(1.5))),
             }
         );
     }
@@ -379,343 +328,214 @@ mod tests {
         assert_eq!(
             parse_operation_if_operator_follows(
                 &mut [
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Add),
-                        start: (0, 1),
-                        end: (0, 1),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("9".into()),
-                        start: (0, 2),
-                        end: (0, 2),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Add),
-                        start: (0, 3),
-                        end: (0, 3),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("5".into()),
-                        start: (0, 4),
-                        end: (0, 4),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Semicolon,
-                        start: (0, 5),
-                        end: (0, 5),
-                    })
+                    Ok(Localizable::irrelevant(TokenType::Operator(Operator::Add),)),
+                    Ok(Localizable::irrelevant(TokenType::Literal("9".into()),)),
+                    Ok(Localizable::irrelevant(TokenType::Operator(Operator::Add),)),
+                    Ok(Localizable::irrelevant(TokenType::Literal("5".into()),)),
+                    Ok(Localizable::irrelevant(TokenType::Semicolon,))
                 ]
                 .into_iter()
                 .peekable(),
-                ExpressionNode::Number(6.),
+                Localizable::irrelevant(ExpressionNode::Number(6.)),
             )
-            .unwrap(),
+            .unwrap()
+            .object,
             ExpressionNode::Operation {
-                operator: Operator::Add,
-                a: Box::new(ExpressionNode::Operation {
-                    operator: Operator::Add,
-                    a: Box::new(ExpressionNode::Number(6.)),
-                    b: Box::new(ExpressionNode::Number(9.)),
-                }),
-                b: Box::new(ExpressionNode::Number(5.)),
+                operator: Localizable::irrelevant(Operator::Add),
+                a: Box::new(Localizable::irrelevant(ExpressionNode::Operation {
+                    operator: Localizable::irrelevant(Operator::Add),
+                    a: Box::new(Localizable::irrelevant(ExpressionNode::Number(6.))),
+                    b: Box::new(Localizable::irrelevant(ExpressionNode::Number(9.))),
+                })),
+                b: Box::new(Localizable::irrelevant(ExpressionNode::Number(5.))),
             }
         );
 
         assert_eq!(
             parse_operation_if_operator_follows(
                 &mut [
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Add),
-                        start: (0, 1),
-                        end: (0, 1),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("9".into()),
-                        start: (0, 2),
-                        end: (0, 2),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Subtract),
-                        start: (0, 3),
-                        end: (0, 3),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("5".into()),
-                        start: (0, 4),
-                        end: (0, 4),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Semicolon,
-                        start: (0, 5),
-                        end: (0, 5),
-                    })
+                    Ok(Localizable::irrelevant(TokenType::Operator(Operator::Add),)),
+                    Ok(Localizable::irrelevant(TokenType::Literal("9".into()),)),
+                    Ok(Localizable::irrelevant(TokenType::Operator(
+                        Operator::Subtract
+                    ),)),
+                    Ok(Localizable::irrelevant(TokenType::Literal("5".into()),)),
+                    Ok(Localizable::irrelevant(TokenType::Semicolon,))
                 ]
                 .into_iter()
                 .peekable(),
-                ExpressionNode::Number(6.),
+                Localizable::irrelevant(ExpressionNode::Number(6.)),
             )
-            .unwrap(),
+            .unwrap()
+            .object,
             ExpressionNode::Operation {
-                operator: Operator::Subtract,
-                a: Box::new(ExpressionNode::Operation {
-                    operator: Operator::Add,
-                    a: Box::new(ExpressionNode::Number(6.)),
-                    b: Box::new(ExpressionNode::Number(9.)),
-                }),
-                b: Box::new(ExpressionNode::Number(5.)),
+                operator: Localizable::irrelevant(Operator::Subtract),
+                a: Box::new(Localizable::irrelevant(ExpressionNode::Operation {
+                    operator: Localizable::irrelevant(Operator::Add),
+                    a: Box::new(Localizable::irrelevant(ExpressionNode::Number(6.))),
+                    b: Box::new(Localizable::irrelevant(ExpressionNode::Number(9.))),
+                })),
+                b: Box::new(Localizable::irrelevant(ExpressionNode::Number(5.))),
             }
         );
 
         assert_eq!(
             parse_operation_if_operator_follows(
                 &mut [
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Multiply),
-                        start: (0, 1),
-                        end: (0, 1),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal(".5".into()),
-                        start: (0, 2),
-                        end: (0, 3),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Multiply),
-                        start: (0, 4),
-                        end: (0, 4),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("7".into()),
-                        start: (0, 5),
-                        end: (0, 5),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Semicolon,
-                        start: (0, 8),
-                        end: (0, 8),
-                    })
+                    Ok(Localizable::irrelevant(TokenType::Operator(
+                        Operator::Multiply
+                    ),)),
+                    Ok(Localizable::irrelevant(TokenType::Literal(".5".into()),)),
+                    Ok(Localizable::irrelevant(TokenType::Operator(
+                        Operator::Multiply
+                    ),)),
+                    Ok(Localizable::irrelevant(TokenType::Literal("7".into()),)),
+                    Ok(Localizable::irrelevant(TokenType::Semicolon,))
                 ]
                 .into_iter()
                 .peekable(),
-                ExpressionNode::Number(6.),
+                Localizable::irrelevant(ExpressionNode::Number(6.)),
             )
-            .unwrap(),
+            .unwrap()
+            .object,
             ExpressionNode::Operation {
-                operator: Operator::Multiply,
-                a: Box::new(ExpressionNode::Operation {
-                    operator: Operator::Multiply,
-                    a: Box::new(ExpressionNode::Number(6.)),
-                    b: Box::new(ExpressionNode::Number(0.5)),
-                }),
-                b: Box::new(ExpressionNode::Number(7.)),
+                operator: Localizable::irrelevant(Operator::Multiply),
+                a: Box::new(Localizable::irrelevant(ExpressionNode::Operation {
+                    operator: Localizable::irrelevant(Operator::Multiply),
+                    a: Box::new(Localizable::irrelevant(ExpressionNode::Number(6.))),
+                    b: Box::new(Localizable::irrelevant(ExpressionNode::Number(0.5))),
+                })),
+                b: Box::new(Localizable::irrelevant(ExpressionNode::Number(7.))),
             }
         );
 
         assert_eq!(
             parse_operation_if_operator_follows(
                 &mut [
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Multiply),
-                        start: (0, 1),
-                        end: (0, 1),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal(".5".into()),
-                        start: (0, 2),
-                        end: (0, 3),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Divide),
-                        start: (0, 4),
-                        end: (0, 4),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("7".into()),
-                        start: (0, 5),
-                        end: (0, 5),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Semicolon,
-                        start: (0, 6),
-                        end: (0, 6),
-                    })
+                    Ok(Localizable::irrelevant(TokenType::Operator(
+                        Operator::Multiply
+                    ),)),
+                    Ok(Localizable::irrelevant(TokenType::Literal(".5".into()),)),
+                    Ok(Localizable::irrelevant(TokenType::Operator(
+                        Operator::Divide
+                    ),)),
+                    Ok(Localizable::irrelevant(TokenType::Literal("7".into()),)),
+                    Ok(Localizable::irrelevant(TokenType::Semicolon,))
                 ]
                 .into_iter()
                 .peekable(),
-                ExpressionNode::Number(6.),
+                Localizable::irrelevant(ExpressionNode::Number(6.)),
             )
-            .unwrap(),
+            .unwrap()
+            .object,
             ExpressionNode::Operation {
-                operator: Operator::Divide,
-                a: Box::new(ExpressionNode::Operation {
-                    operator: Operator::Multiply,
-                    a: Box::new(ExpressionNode::Number(6.)),
-                    b: Box::new(ExpressionNode::Number(0.5)),
-                }),
-                b: Box::new(ExpressionNode::Number(7.0)),
+                operator: Localizable::irrelevant(Operator::Divide),
+                a: Box::new(Localizable::irrelevant(ExpressionNode::Operation {
+                    operator: Localizable::irrelevant(Operator::Multiply),
+                    a: Box::new(Localizable::irrelevant(ExpressionNode::Number(6.))),
+                    b: Box::new(Localizable::irrelevant(ExpressionNode::Number(0.5))),
+                })),
+                b: Box::new(Localizable::irrelevant(ExpressionNode::Number(7.0))),
             }
         );
 
         assert_eq!(
             parse_operation_if_operator_follows(
                 &mut [
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Multiply),
-                        start: (0, 1),
-                        end: (0, 1),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal(".5".into()),
-                        start: (0, 2),
-                        end: (0, 3),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Add),
-                        start: (0, 4),
-                        end: (0, 4),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("7".into()),
-                        start: (0, 5),
-                        end: (0, 5),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Semicolon,
-                        start: (0, 6),
-                        end: (0, 6),
-                    })
+                    Ok(Localizable::irrelevant(TokenType::Operator(
+                        Operator::Multiply
+                    ),)),
+                    Ok(Localizable::irrelevant(TokenType::Literal(".5".into()),)),
+                    Ok(Localizable::irrelevant(TokenType::Operator(Operator::Add),)),
+                    Ok(Localizable::irrelevant(TokenType::Literal("7".into()),)),
+                    Ok(Localizable::irrelevant(TokenType::Semicolon,))
                 ]
                 .into_iter()
                 .peekable(),
-                ExpressionNode::Number(6.),
+                Localizable::irrelevant(ExpressionNode::Number(6.)),
             )
-            .unwrap(),
+            .unwrap()
+            .object,
             ExpressionNode::Operation {
-                operator: Operator::Add,
-                a: Box::new(ExpressionNode::Operation {
-                    operator: Operator::Multiply,
-                    a: Box::new(ExpressionNode::Number(6.)),
-                    b: Box::new(ExpressionNode::Number(0.5)),
-                }),
-                b: Box::new(ExpressionNode::Number(7.)),
+                operator: Localizable::irrelevant(Operator::Add),
+                a: Box::new(Localizable::irrelevant(ExpressionNode::Operation {
+                    operator: Localizable::irrelevant(Operator::Multiply),
+                    a: Box::new(Localizable::irrelevant(ExpressionNode::Number(6.))),
+                    b: Box::new(Localizable::irrelevant(ExpressionNode::Number(0.5))),
+                })),
+                b: Box::new(Localizable::irrelevant(ExpressionNode::Number(7.))),
             }
         );
 
         assert_eq!(
             parse_operation_if_operator_follows(
                 &mut [
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Divide),
-                        start: (0, 1),
-                        end: (0, 1),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal(".5".into()),
-                        start: (0, 2),
-                        end: (0, 3),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Add),
-                        start: (0, 4),
-                        end: (0, 4),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("7".into()),
-                        start: (0, 5),
-                        end: (0, 5),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Multiply),
-                        start: (0, 6),
-                        end: (0, 6),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("3".into()),
-                        start: (0, 7),
-                        end: (0, 7),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Semicolon,
-                        start: (0, 8),
-                        end: (0, 8),
-                    })
+                    Ok(Localizable::irrelevant(TokenType::Operator(
+                        Operator::Divide
+                    ),)),
+                    Ok(Localizable::irrelevant(TokenType::Literal(".5".into()),)),
+                    Ok(Localizable::irrelevant(TokenType::Operator(Operator::Add),)),
+                    Ok(Localizable::irrelevant(TokenType::Literal("7".into()),)),
+                    Ok(Localizable::irrelevant(TokenType::Operator(
+                        Operator::Multiply
+                    ),)),
+                    Ok(Localizable::irrelevant(TokenType::Literal("3".into()),)),
+                    Ok(Localizable::irrelevant(TokenType::Semicolon,))
                 ]
                 .into_iter()
                 .peekable(),
-                ExpressionNode::Number(6.),
+                Localizable::irrelevant(ExpressionNode::Number(6.)),
             )
-            .unwrap(),
+            .unwrap()
+            .object,
             ExpressionNode::Operation {
-                operator: Operator::Add,
-                a: Box::new(ExpressionNode::Operation {
-                    operator: Operator::Divide,
-                    a: Box::new(ExpressionNode::Number(6.)),
-                    b: Box::new(ExpressionNode::Number(0.5)),
-                }),
-                b: Box::new(ExpressionNode::Operation {
-                    operator: Operator::Multiply,
-                    a: Box::new(ExpressionNode::Number(7.)),
-                    b: Box::new(ExpressionNode::Number(3.)),
-                }),
+                operator: Localizable::irrelevant(Operator::Add),
+                a: Box::new(Localizable::irrelevant(ExpressionNode::Operation {
+                    operator: Localizable::irrelevant(Operator::Divide),
+                    a: Box::new(Localizable::irrelevant(ExpressionNode::Number(6.))),
+                    b: Box::new(Localizable::irrelevant(ExpressionNode::Number(0.5))),
+                })),
+                b: Box::new(Localizable::irrelevant(ExpressionNode::Operation {
+                    operator: Localizable::irrelevant(Operator::Multiply),
+                    a: Box::new(Localizable::irrelevant(ExpressionNode::Number(7.))),
+                    b: Box::new(Localizable::irrelevant(ExpressionNode::Number(3.))),
+                })),
             }
         );
 
         assert_eq!(
             parse_operation_if_operator_follows(
                 &mut [
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Subtract),
-                        start: (0, 2),
-                        end: (0, 2),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("5.5".into()),
-                        start: (0, 3),
-                        end: (0, 5),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Multiply),
-                        start: (0, 6),
-                        end: (0, 6),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("8".into()),
-                        start: (0, 7),
-                        end: (0, 7),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Add),
-                        start: (0, 8),
-                        end: (0, 8),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal(".7".into()),
-                        start: (0, 9),
-                        end: (0, 11),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Semicolon,
-                        start: (0, 12),
-                        end: (0, 12),
-                    })
+                    Ok(Localizable::irrelevant(TokenType::Operator(
+                        Operator::Subtract
+                    ),)),
+                    Ok(Localizable::irrelevant(TokenType::Literal("5.5".into()),)),
+                    Ok(Localizable::irrelevant(TokenType::Operator(
+                        Operator::Multiply
+                    ),)),
+                    Ok(Localizable::irrelevant(TokenType::Literal("8".into()),)),
+                    Ok(Localizable::irrelevant(TokenType::Operator(Operator::Add),)),
+                    Ok(Localizable::irrelevant(TokenType::Literal(".7".into()),)),
+                    Ok(Localizable::irrelevant(TokenType::Semicolon,))
                 ]
                 .into_iter()
                 .peekable(),
-                ExpressionNode::Number(0.2),
+                Localizable::irrelevant(ExpressionNode::Number(0.2)),
             )
-            .unwrap(),
+            .unwrap()
+            .object,
             ExpressionNode::Operation {
-                operator: Operator::Add,
-                a: Box::new(ExpressionNode::Operation {
-                    operator: Operator::Subtract,
-                    a: Box::new(ExpressionNode::Number(0.2)),
-                    b: Box::new(ExpressionNode::Operation {
-                        operator: Operator::Multiply,
-                        a: Box::new(ExpressionNode::Number(5.5)),
-                        b: Box::new(ExpressionNode::Number(8.)),
-                    }),
-                }),
-                b: Box::new(ExpressionNode::Number(0.7)),
+                operator: Localizable::irrelevant(Operator::Add),
+                a: Box::new(Localizable::irrelevant(ExpressionNode::Operation {
+                    operator: Localizable::irrelevant(Operator::Subtract),
+                    a: Box::new(Localizable::irrelevant(ExpressionNode::Number(0.2))),
+                    b: Box::new(Localizable::irrelevant(ExpressionNode::Operation {
+                        operator: Localizable::irrelevant(Operator::Multiply),
+                        a: Box::new(Localizable::irrelevant(ExpressionNode::Number(5.5))),
+                        b: Box::new(Localizable::irrelevant(ExpressionNode::Number(8.))),
+                    })),
+                })),
+                b: Box::new(Localizable::irrelevant(ExpressionNode::Number(0.7))),
             }
         );
     }
@@ -724,89 +544,89 @@ mod tests {
     fn test_extend_complex_operation() {
         assert_eq!(
             extend_operation(
-                ExpressionNode::Operation {
-                    operator: Operator::Add,
-                    a: Box::new(ExpressionNode::Number(6.)),
-                    b: Box::new(ExpressionNode::Number(8.))
-                },
-                Operator::Add,
-                ExpressionNode::Number(4.)
+                Localizable::irrelevant(ExpressionNode::Operation {
+                    operator: Localizable::irrelevant(Operator::Add),
+                    a: Box::new(Localizable::irrelevant(ExpressionNode::Number(6.))),
+                    b: Box::new(Localizable::irrelevant(ExpressionNode::Number(8.)))
+                }),
+                Localizable::irrelevant(Operator::Add),
+                Localizable::irrelevant(ExpressionNode::Number(4.))
             )
             .unwrap(),
             ExpressionNode::Operation {
-                operator: Operator::Add,
-                a: Box::new(ExpressionNode::Operation {
-                    operator: Operator::Add,
-                    a: Box::new(ExpressionNode::Number(6.)),
-                    b: Box::new(ExpressionNode::Number(8.))
-                }),
-                b: Box::new(ExpressionNode::Number(4.))
+                operator: Localizable::irrelevant(Operator::Add),
+                a: Box::new(Localizable::irrelevant(ExpressionNode::Operation {
+                    operator: Localizable::irrelevant(Operator::Add),
+                    a: Box::new(Localizable::irrelevant(ExpressionNode::Number(6.))),
+                    b: Box::new(Localizable::irrelevant(ExpressionNode::Number(8.)))
+                })),
+                b: Box::new(Localizable::irrelevant(ExpressionNode::Number(4.)))
             }
         );
 
         assert_eq!(
             extend_operation(
-                ExpressionNode::Operation {
-                    operator: Operator::Add,
-                    a: Box::new(ExpressionNode::Number(6.)),
-                    b: Box::new(ExpressionNode::Number(8.))
-                },
-                Operator::Multiply,
-                ExpressionNode::Number(4.)
+                Localizable::irrelevant(ExpressionNode::Operation {
+                    operator: Localizable::irrelevant(Operator::Add),
+                    a: Box::new(Localizable::irrelevant(ExpressionNode::Number(6.))),
+                    b: Box::new(Localizable::irrelevant(ExpressionNode::Number(8.)))
+                }),
+                Localizable::irrelevant(Operator::Multiply),
+                Localizable::irrelevant(ExpressionNode::Number(4.))
             )
             .unwrap(),
             ExpressionNode::Operation {
-                operator: Operator::Add,
-                a: Box::new(ExpressionNode::Number(6.)),
-                b: Box::new(ExpressionNode::Operation {
-                    operator: Operator::Multiply,
-                    a: Box::new(ExpressionNode::Number(8.)),
-                    b: Box::new(ExpressionNode::Number(4.))
-                })
+                operator: Localizable::irrelevant(Operator::Add),
+                a: Box::new(Localizable::irrelevant(ExpressionNode::Number(6.))),
+                b: Box::new(Localizable::irrelevant(ExpressionNode::Operation {
+                    operator: Localizable::irrelevant(Operator::Multiply),
+                    a: Box::new(Localizable::irrelevant(ExpressionNode::Number(8.))),
+                    b: Box::new(Localizable::irrelevant(ExpressionNode::Number(4.)))
+                }))
             }
         );
 
         assert_eq!(
             extend_operation(
-                ExpressionNode::Operation {
-                    operator: Operator::Multiply,
-                    a: Box::new(ExpressionNode::Number(6.)),
-                    b: Box::new(ExpressionNode::Number(8.))
-                },
-                Operator::Add,
-                ExpressionNode::Number(4.)
+                Localizable::irrelevant(ExpressionNode::Operation {
+                    operator: Localizable::irrelevant(Operator::Multiply),
+                    a: Box::new(Localizable::irrelevant(ExpressionNode::Number(6.))),
+                    b: Box::new(Localizable::irrelevant(ExpressionNode::Number(8.)))
+                }),
+                Localizable::irrelevant(Operator::Add),
+                Localizable::irrelevant(ExpressionNode::Number(4.))
             )
             .unwrap(),
             ExpressionNode::Operation {
-                operator: Operator::Add,
-                a: Box::new(ExpressionNode::Operation {
-                    operator: Operator::Multiply,
-                    a: Box::new(ExpressionNode::Number(6.)),
-                    b: Box::new(ExpressionNode::Number(8.))
-                }),
-                b: Box::new(ExpressionNode::Number(4.))
+                operator: Localizable::irrelevant(Operator::Add),
+                a: Box::new(Localizable::irrelevant(ExpressionNode::Operation {
+                    operator: Localizable::irrelevant(Operator::Multiply),
+                    a: Box::new(Localizable::irrelevant(ExpressionNode::Number(6.))),
+                    b: Box::new(Localizable::irrelevant(ExpressionNode::Number(8.)))
+                })),
+                b: Box::new(Localizable::irrelevant(ExpressionNode::Number(4.)))
             }
         );
 
         assert_eq!(
             extend_operation(
-                ExpressionNode::Operation {
-                    operator: Operator::Multiply,
-                    a: Box::new(ExpressionNode::Number(6.)),
-                    b: Box::new(ExpressionNode::Number(8.))
-                },
-                Operator::Multiply,
-                ExpressionNode::Number(4.)
+                Localizable::irrelevant(ExpressionNode::Operation {
+                    operator: Localizable::irrelevant(Operator::Multiply),
+                    a: Box::new(Localizable::irrelevant(ExpressionNode::Number(6.))),
+                    b: Box::new(Localizable::irrelevant(ExpressionNode::Number(8.)))
+                }),
+                Localizable::irrelevant(Operator::Multiply),
+                Localizable::irrelevant(ExpressionNode::Number(4.))
             )
             .unwrap(),
             ExpressionNode::Operation {
-                operator: Operator::Multiply,
-                a: Box::new(ExpressionNode::Operation {
-                    operator: Operator::Multiply,
-                    a: Box::new(ExpressionNode::Number(6.)),
-                    b: Box::new(ExpressionNode::Number(8.))
-                }),
-                b: Box::new(ExpressionNode::Number(4.))
+                operator: Localizable::irrelevant(Operator::Multiply),
+                a: Box::new(Localizable::irrelevant(ExpressionNode::Operation {
+                    operator: Localizable::irrelevant(Operator::Multiply),
+                    a: Box::new(Localizable::irrelevant(ExpressionNode::Number(6.))),
+                    b: Box::new(Localizable::irrelevant(ExpressionNode::Number(8.)))
+                })),
+                b: Box::new(Localizable::irrelevant(ExpressionNode::Number(4.)))
             }
         );
     }

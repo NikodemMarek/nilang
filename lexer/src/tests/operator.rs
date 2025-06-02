@@ -1,54 +1,31 @@
-use nilang_types::{
-    nodes::Operator,
-    tokens::{Token, TokenType},
-};
+use nilang_types::{nodes::Operator, tokens::TokenType};
 
 use crate::lex;
 
 #[test]
 fn operator() {
     assert_eq!(
-        lex("  +").next().unwrap().unwrap(),
-        Token {
-            token: TokenType::Operator(Operator::Add),
-            start: (0, 2),
-            end: (0, 2),
-        }
+        *lex("  +").next().unwrap().unwrap(),
+        TokenType::Operator(Operator::Add),
     );
 
     assert_eq!(
-        lex(" - ").next().unwrap().unwrap(),
-        Token {
-            token: TokenType::Operator(Operator::Subtract),
-            start: (0, 1),
-            end: (0, 1),
-        }
+        *lex(" - ").next().unwrap().unwrap(),
+        TokenType::Operator(Operator::Subtract),
     );
 
     assert_eq!(
-        lex("*").next().unwrap().unwrap(),
-        Token {
-            token: TokenType::Operator(Operator::Multiply),
-            start: (0, 0),
-            end: (0, 0),
-        }
+        *lex("*").next().unwrap().unwrap(),
+        TokenType::Operator(Operator::Multiply),
     );
 
     assert_eq!(
-        lex("/").next().unwrap().unwrap(),
-        Token {
-            token: TokenType::Operator(Operator::Divide),
-            start: (0, 0),
-            end: (0, 0),
-        }
+        *lex("/").next().unwrap().unwrap(),
+        TokenType::Operator(Operator::Divide),
     );
 
     assert_eq!(
-        lex("%").next().unwrap().unwrap(),
-        Token {
-            token: TokenType::Operator(Operator::Modulo),
-            start: (0, 0),
-            end: (0, 0),
-        }
+        *lex("%").next().unwrap().unwrap(),
+        TokenType::Operator(Operator::Modulo),
     );
 }

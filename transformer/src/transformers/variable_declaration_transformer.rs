@@ -1,7 +1,7 @@
 use std::iter::once;
 
 use errors::TransformerErrors;
-use nilang_types::nodes::ExpressionNode;
+use nilang_types::{nodes::ExpressionNode, Localizable};
 
 use crate::{Context, Instruction, InstructionsIterator, Type};
 
@@ -10,11 +10,11 @@ use super::transform_expression;
 pub fn transform_variable_declaration<'a>(
     context @ Context { temporaries, .. }: &'a Context,
 
-    name: Box<str>,
+    name: Localizable<Box<str>>,
     r#type: &Type,
     node: ExpressionNode,
 ) -> InstructionsIterator<'a> {
-    temporaries.declare_named(name.clone(), r#type.clone());
+    temporaries.declare_named(name.object.clone(), r#type.clone());
 
     let Ok(_) = temporaries.access(&name) else {
         return Box::new(once(Err(TransformerErrors::TemporaryNotFound {

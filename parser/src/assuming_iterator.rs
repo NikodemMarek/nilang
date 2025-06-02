@@ -1,59 +1,58 @@
 use std::iter::Peekable;
 
-use errors::{CodeLocation, NilangError, ParserErrors};
+use errors::{NilangError, ParserErrors};
 use nilang_types::{
     nodes::Operator,
-    tokens::{Keyword, Token, TokenType},
+    tokens::{Keyword, TokenType},
+    Localizable, Location,
 };
 
-type Loc = (usize, usize);
-
 pub trait AssumingIterator: Iterator {
-    fn assume_next(&mut self) -> Result<Token, NilangError>;
+    fn assume_next(&mut self) -> Result<Localizable<TokenType>, NilangError>;
 
-    fn assume(&mut self, token: TokenType) -> Result<Loc, NilangError>;
-    fn assume_literal(&mut self) -> Result<(Loc, Loc, Box<str>), NilangError>;
-    fn assume_identifier(&mut self) -> Result<(Loc, Loc, Box<str>), NilangError>;
-    fn assume_keyword(&mut self, keyword: Keyword) -> Result<(Loc, Loc), NilangError>;
-    fn assume_operator(&mut self) -> Result<(Loc, Loc, Operator), NilangError>;
+    fn assume(&mut self, token: TokenType) -> Result<Location, NilangError>;
+    fn assume_literal(&mut self) -> Result<Localizable<Box<str>>, NilangError>;
+    fn assume_identifier(&mut self) -> Result<Localizable<Box<str>>, NilangError>;
+    fn assume_keyword(&mut self, keyword: Keyword) -> Result<Location, NilangError>;
+    fn assume_operator(&mut self) -> Result<Localizable<Operator>, NilangError>;
 }
 
-impl<I: Iterator<Item = Result<Token, NilangError>>> AssumingIterator for I {
+impl<I: Iterator<Item = Result<Localizable<TokenType>, NilangError>>> AssumingIterator for I {
     #[inline]
-    fn assume(&mut self, token: TokenType) -> Result<Loc, NilangError> {
+    fn assume(&mut self, token: TokenType) -> Result<Location, NilangError> {
         match self.assume_next()? {
-            Token {
-                start, token: t, ..
-            } if t == token => Ok(start),
-            Token { start, .. } => Err(NilangError {
-                location: CodeLocation::at(start.0, start.1),
+            Localizable {
+                location,
+                object: t,
+            } if t == token => Ok(location),
+            Localizable { location, .. } => Err(NilangError {
+                location,
                 error: ParserErrors::ExpectedTokens(Vec::from([token])).into(),
             }),
         }
     }
 
     #[inline]
-    fn assume_next(&mut self) -> Result<Token, NilangError> {
+    fn assume_next(&mut self) -> Result<Localizable<TokenType>, NilangError> {
         match self.next() {
             Some(Ok(token)) => Ok(token),
             Some(Err(e)) => Err(e.clone()),
             None => Err(NilangError {
-                location: CodeLocation::at(usize::MAX, usize::MAX),
+                location: Location::at(usize::MAX, usize::MAX),
                 error: ParserErrors::EndOfInput.into(),
             }),
         }
     }
 
     #[inline]
-    fn assume_literal(&mut self) -> Result<(Loc, Loc, Box<str>), NilangError> {
+    fn assume_literal(&mut self) -> Result<Localizable<Box<str>>, NilangError> {
         match self.assume_next()? {
-            Token {
-                start,
-                end,
-                token: TokenType::Literal(value),
-            } => Ok((start, end, value)),
-            Token { start, .. } => Err(NilangError {
-                location: CodeLocation::at(start.0, start.1),
+            Localizable {
+                object: TokenType::Literal(value),
+                location,
+            } => Ok(Localizable::new(location, value)),
+            Localizable { location, .. } => Err(NilangError {
+                location,
                 error: ParserErrors::ExpectedTokens(Vec::from([TokenType::Literal("".into())]))
                     .into(),
             }),
@@ -61,15 +60,14 @@ impl<I: Iterator<Item = Result<Token, NilangError>>> AssumingIterator for I {
     }
 
     #[inline]
-    fn assume_identifier(&mut self) -> Result<(Loc, Loc, Box<str>), NilangError> {
+    fn assume_identifier(&mut self) -> Result<Localizable<Box<str>>, NilangError> {
         match self.assume_next()? {
-            Token {
-                start,
-                end,
-                token: TokenType::Identifier(value),
-            } => Ok((start, end, value)),
-            Token { start, .. } => Err(NilangError {
-                location: CodeLocation::at(start.0, start.1),
+            Localizable {
+                object: TokenType::Identifier(value),
+                location,
+            } => Ok(Localizable::new(location, value)),
+            Localizable { location, .. } => Err(NilangError {
+                location,
                 error: ParserErrors::ExpectedTokens(Vec::from([TokenType::Identifier("".into())]))
                     .into(),
             }),
@@ -77,16 +75,15 @@ impl<I: Iterator<Item = Result<Token, NilangError>>> AssumingIterator for I {
     }
 
     #[inline]
-    fn assume_keyword(&mut self, keyword: Keyword) -> Result<(Loc, Loc), NilangError> {
+    fn assume_keyword(&mut self, keyword: Keyword) -> Result<Location, NilangError> {
         match self.assume_next()? {
-            Token {
-                start,
-                end,
-                token: TokenType::Keyword(value),
+            Localizable {
+                object: TokenType::Keyword(value),
+                location,
             } => {
                 if value != keyword {
                     Err(NilangError {
-                        location: CodeLocation::at(0, 1),
+                        location: Location::at(0, 1),
                         error: ParserErrors::ExpectedTokens(Vec::from([TokenType::Keyword(
                             keyword,
                         )]))
@@ -94,10 +91,10 @@ impl<I: Iterator<Item = Result<Token, NilangError>>> AssumingIterator for I {
                     })?
                 }
 
-                Ok((start, end))
+                Ok(location)
             }
-            Token { start, .. } => Err(NilangError {
-                location: CodeLocation::at(start.0, start.1),
+            Localizable { location, .. } => Err(NilangError {
+                location,
                 error: ParserErrors::ExpectedTokens(Vec::from([TokenType::Keyword(keyword)]))
                     .into(),
             }),
@@ -105,15 +102,14 @@ impl<I: Iterator<Item = Result<Token, NilangError>>> AssumingIterator for I {
     }
 
     #[inline]
-    fn assume_operator(&mut self) -> Result<(Loc, Loc, Operator), NilangError> {
+    fn assume_operator(&mut self) -> Result<Localizable<Operator>, NilangError> {
         match self.assume_next()? {
-            Token {
-                start,
-                end,
-                token: TokenType::Operator(operator),
-            } => Ok((start, end, operator)),
-            Token { start, .. } => Err(NilangError {
-                location: CodeLocation::at(start.0, start.1),
+            Localizable {
+                object: TokenType::Operator(operator),
+                location,
+            } => Ok(Localizable::new(location, operator)),
+            Localizable { location, .. } => Err(NilangError {
+                location,
                 error: ParserErrors::ExpectedTokens(Vec::from([TokenType::OpeningParenthesis]))
                     .into(),
             }),
@@ -122,17 +118,19 @@ impl<I: Iterator<Item = Result<Token, NilangError>>> AssumingIterator for I {
 }
 
 pub trait PeekableAssumingIterator: AssumingIterator {
-    fn peek_valid(&mut self) -> Result<&Token, NilangError>;
+    fn peek_valid(&mut self) -> Result<&Localizable<TokenType>, NilangError>;
 }
 
-impl<I: Iterator<Item = Result<Token, NilangError>>> PeekableAssumingIterator for Peekable<I> {
+impl<I: Iterator<Item = Result<Localizable<TokenType>, NilangError>>> PeekableAssumingIterator
+    for Peekable<I>
+{
     #[inline]
-    fn peek_valid(&mut self) -> Result<&Token, NilangError> {
+    fn peek_valid(&mut self) -> Result<&Localizable<TokenType>, NilangError> {
         match self.peek() {
             Some(Ok(token)) => Ok(token),
             Some(Err(e)) => Err(e.clone()),
             None => Err(NilangError {
-                location: CodeLocation::at(usize::MAX, usize::MAX),
+                location: Location::at(usize::MAX, usize::MAX),
                 error: ParserErrors::EndOfInput.into(),
             }),
         }

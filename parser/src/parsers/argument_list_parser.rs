@@ -1,8 +1,5 @@
-use errors::{CodeLocation, NilangError, ParserErrors};
-use nilang_types::{
-    nodes::ExpressionNode,
-    tokens::{Token, TokenType},
-};
+use errors::{NilangError, ParserErrors};
+use nilang_types::{nodes::ExpressionNode, tokens::TokenType, Localizable, Location};
 
 use crate::assuming_iterator::PeekableAssumingIterator;
 
@@ -10,31 +7,36 @@ use super::parse_expression;
 
 pub fn parse_argument_list<I: PeekableAssumingIterator>(
     tokens: &mut I,
-) -> Result<Box<[ExpressionNode]>, NilangError> {
-    tokens.assume(TokenType::OpeningParenthesis)?;
+) -> Result<Localizable<Box<[Localizable<ExpressionNode>]>>, NilangError> {
+    let start = tokens.assume(TokenType::OpeningParenthesis)?;
 
     let mut arguments = Vec::new();
 
     loop {
         match tokens.peek_valid()? {
-            Token {
-                token:
+            Localizable {
+                object:
                     TokenType::Literal(_) | TokenType::Identifier(_) | TokenType::OpeningParenthesis,
                 ..
             } => {
                 arguments.push(parse_expression(tokens)?);
 
                 match tokens.assume_next()? {
-                    Token {
-                        token: TokenType::ClosingParenthesis,
-                        ..
-                    } => break,
-                    Token {
-                        token: TokenType::Comma,
+                    Localizable {
+                        object: TokenType::ClosingParenthesis,
+                        location: end,
+                    } => {
+                        return Ok(Localizable::new(
+                            Location::between(&start, &end),
+                            arguments.into(),
+                        ));
+                    }
+                    Localizable {
+                        object: TokenType::Comma,
                         ..
                     } => {}
-                    Token { start, .. } => Err(NilangError {
-                        location: CodeLocation::at(start.0, start.1),
+                    Localizable { location, .. } => Err(NilangError {
+                        location,
                         error: ParserErrors::ExpectedTokens(Vec::from([
                             TokenType::Comma,
                             TokenType::ClosingParenthesis,
@@ -43,15 +45,18 @@ pub fn parse_argument_list<I: PeekableAssumingIterator>(
                     })?,
                 }
             }
-            Token {
-                token: TokenType::ClosingParenthesis,
+            Localizable {
+                object: TokenType::ClosingParenthesis,
                 ..
             } => {
-                tokens.next();
-                break;
+                let end = tokens.assume(TokenType::ClosingParenthesis)?;
+                return Ok(Localizable::new(
+                    Location::between(&start, &end),
+                    arguments.into(),
+                ));
             }
-            Token { start, .. } => Err(NilangError {
-                location: CodeLocation::at(start.0, start.1),
+            Localizable { location, .. } => Err(NilangError {
+                location: *location,
                 error: ParserErrors::ExpectedTokens(Vec::from([
                     TokenType::Identifier("".into()),
                     TokenType::Literal("".into()),
@@ -62,15 +67,14 @@ pub fn parse_argument_list<I: PeekableAssumingIterator>(
             })?,
         }
     }
-
-    Ok(arguments.into())
 }
 
 #[cfg(test)]
 mod tests {
     use nilang_types::{
         nodes::{ExpressionNode, Operator},
-        tokens::{Token, TokenType},
+        tokens::TokenType,
+        Localizable,
     };
 
     use crate::parsers::argument_list_parser::parse_argument_list;
@@ -80,39 +84,22 @@ mod tests {
         assert_eq!(
             parse_argument_list(
                 &mut [
-                    Ok(Token {
-                        token: TokenType::OpeningParenthesis,
-                        start: (0, 0),
-                        end: (0, 0),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("5".into()),
-                        start: (0, 1),
-                        end: (0, 1),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Comma,
-                        start: (0, 2),
-                        end: (0, 2),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Identifier("x".into()),
-                        start: (0, 3),
-                        end: (0, 3),
-                    }),
-                    Ok(Token {
-                        token: TokenType::ClosingParenthesis,
-                        start: (0, 4),
-                        end: (0, 4),
-                    }),
+                    Ok(Localizable::irrelevant(TokenType::OpeningParenthesis,)),
+                    Ok(Localizable::irrelevant(TokenType::Literal("5".into()),)),
+                    Ok(Localizable::irrelevant(TokenType::Comma,)),
+                    Ok(Localizable::irrelevant(TokenType::Identifier("x".into()),)),
+                    Ok(Localizable::irrelevant(TokenType::ClosingParenthesis,)),
                 ]
                 .into_iter()
                 .peekable()
             )
-            .unwrap(),
+            .unwrap()
+            .object,
             [
-                ExpressionNode::Number(5.),
-                ExpressionNode::VariableReference("x".into())
+                Localizable::irrelevant(ExpressionNode::Number(5.)),
+                Localizable::irrelevant(ExpressionNode::VariableReference(
+                    Localizable::irrelevant("x".into())
+                ))
             ]
             .into()
         );
@@ -120,41 +107,24 @@ mod tests {
         assert_eq!(
             parse_argument_list(
                 &mut [
-                    Ok(Token {
-                        token: TokenType::OpeningParenthesis,
-                        start: (0, 0),
-                        end: (0, 0),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Identifier("x".into()),
-                        start: (0, 1),
-                        end: (0, 1),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Add),
-                        start: (0, 2),
-                        end: (0, 2),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("4".into()),
-                        start: (0, 3),
-                        end: (0, 3),
-                    }),
-                    Ok(Token {
-                        token: TokenType::ClosingParenthesis,
-                        start: (0, 4),
-                        end: (0, 4),
-                    }),
+                    Ok(Localizable::irrelevant(TokenType::OpeningParenthesis,)),
+                    Ok(Localizable::irrelevant(TokenType::Identifier("x".into()),)),
+                    Ok(Localizable::irrelevant(TokenType::Operator(Operator::Add),)),
+                    Ok(Localizable::irrelevant(TokenType::Literal("4".into()),)),
+                    Ok(Localizable::irrelevant(TokenType::ClosingParenthesis,)),
                 ]
                 .into_iter()
                 .peekable()
             )
-            .unwrap(),
-            [ExpressionNode::Operation {
-                operator: Operator::Add,
-                a: Box::new(ExpressionNode::VariableReference("x".into())),
-                b: Box::new(ExpressionNode::Number(4.)),
-            }]
+            .unwrap()
+            .object,
+            [Localizable::irrelevant(ExpressionNode::Operation {
+                operator: Localizable::irrelevant(Operator::Add),
+                a: Box::new(Localizable::irrelevant(ExpressionNode::VariableReference(
+                    Localizable::irrelevant("x".into())
+                ))),
+                b: Box::new(Localizable::irrelevant(ExpressionNode::Number(4.))),
+            })]
             .into()
         );
     }

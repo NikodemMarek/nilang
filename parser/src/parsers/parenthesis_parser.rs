@@ -1,8 +1,5 @@
-use errors::{CodeLocation, NilangError, ParserErrors};
-use nilang_types::{
-    nodes::ExpressionNode,
-    tokens::{Token, TokenType},
-};
+use errors::{NilangError, ParserErrors};
+use nilang_types::{nodes::ExpressionNode, tokens::TokenType, Localizable};
 
 use crate::assuming_iterator::PeekableAssumingIterator;
 
@@ -13,42 +10,41 @@ use super::{
 
 pub fn parse_parenthesis<I: PeekableAssumingIterator>(
     tokens: &mut I,
-) -> Result<ExpressionNode, NilangError> {
-    let start = tokens.assume(TokenType::OpeningParenthesis)?;
+) -> Result<Localizable<ExpressionNode>, NilangError> {
+    let _ = tokens.assume(TokenType::OpeningParenthesis)?;
 
     let content = match tokens.peek_valid()? {
-        Token {
-            token: TokenType::Literal(_),
+        Localizable {
+            object: TokenType::Literal(_),
             ..
         } => {
             let literal = parse_literal(tokens)?;
             parse_operation_if_operator_follows_no_rearrange(tokens, literal)?
         }
-        Token {
-            token: TokenType::Identifier(_),
+        Localizable {
+            object: TokenType::Identifier(_),
             ..
         } => {
             let identifier = parse_identifier(tokens)?;
             parse_operation_if_operator_follows_no_rearrange(tokens, identifier)?
         }
-        Token {
-            token: TokenType::OpeningParenthesis,
+        Localizable {
+            object: TokenType::OpeningParenthesis,
             ..
         } => {
             let parenthesis = parse_parenthesis(tokens)?;
             parse_operation_if_operator_follows_no_rearrange(tokens, parenthesis)?
         }
-        Token {
-            token: TokenType::ClosingParenthesis,
-            end,
-            ..
+        Localizable {
+            object: TokenType::ClosingParenthesis,
+            location,
         } => Err(NilangError {
-            location: CodeLocation::range(start.0, start.1, end.0, end.1),
+            location: *location,
             error: ParserErrors::EmptyParenthesis.into(),
         })?,
-        Token { token, start, .. } => Err(NilangError {
-            location: CodeLocation::at(start.0, start.1),
-            error: ParserErrors::UnexpectedToken(token.clone()).into(),
+        Localizable { object, location } => Err(NilangError {
+            location: *location,
+            error: ParserErrors::UnexpectedToken(object.clone()).into(),
         })?,
     };
 
@@ -61,7 +57,8 @@ pub fn parse_parenthesis<I: PeekableAssumingIterator>(
 mod tests {
     use nilang_types::{
         nodes::{ExpressionNode, Operator},
-        tokens::{Token, TokenType},
+        tokens::TokenType,
+        Localizable,
     };
 
     use crate::parsers::parenthesis_parser::parse_parenthesis;
@@ -71,260 +68,128 @@ mod tests {
         assert_eq!(
             parse_parenthesis(
                 &mut [
-                    Ok(Token {
-                        token: TokenType::OpeningParenthesis,
-                        start: (0, 0),
-                        end: (0, 0),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("6".into()),
-                        start: (0, 1),
-                        end: (0, 1),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Add),
-                        start: (0, 2),
-                        end: (0, 2),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("9".into()),
-                        start: (0, 3),
-                        end: (0, 3),
-                    }),
-                    Ok(Token {
-                        token: TokenType::ClosingParenthesis,
-                        start: (0, 4),
-                        end: (0, 4),
-                    }),
+                    Ok(Localizable::irrelevant(TokenType::OpeningParenthesis)),
+                    Ok(Localizable::irrelevant(TokenType::Literal("6".into()))),
+                    Ok(Localizable::irrelevant(TokenType::Operator(Operator::Add))),
+                    Ok(Localizable::irrelevant(TokenType::Literal("9".into()))),
+                    Ok(Localizable::irrelevant(TokenType::ClosingParenthesis)),
                 ]
                 .into_iter()
                 .peekable()
             )
-            .unwrap(),
+            .unwrap()
+            .object,
             ExpressionNode::Operation {
-                operator: Operator::Add,
-                a: Box::new(ExpressionNode::Number(6.)),
-                b: Box::new(ExpressionNode::Number(9.)),
+                operator: Localizable::irrelevant(Operator::Add),
+                a: Box::new(Localizable::irrelevant(ExpressionNode::Number(6.))),
+                b: Box::new(Localizable::irrelevant(ExpressionNode::Number(9.))),
             }
         );
 
         assert_eq!(
             parse_parenthesis(
                 &mut [
-                    Ok(Token {
-                        token: TokenType::OpeningParenthesis,
-                        start: (0, 0),
-                        end: (0, 0),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("6".into()),
-                        start: (0, 1),
-                        end: (0, 1),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Multiply),
-                        start: (0, 2),
-                        end: (0, 2),
-                    }),
-                    Ok(Token {
-                        token: TokenType::OpeningParenthesis,
-                        start: (0, 3),
-                        end: (0, 3),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("9".into()),
-                        start: (0, 4),
-                        end: (0, 4),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Add),
-                        start: (0, 5),
-                        end: (0, 5),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("5".into()),
-                        start: (0, 6),
-                        end: (0, 6),
-                    }),
-                    Ok(Token {
-                        token: TokenType::ClosingParenthesis,
-                        start: (0, 7),
-                        end: (0, 7),
-                    }),
-                    Ok(Token {
-                        token: TokenType::ClosingParenthesis,
-                        start: (0, 8),
-                        end: (0, 8),
-                    }),
+                    Ok(Localizable::irrelevant(TokenType::OpeningParenthesis,)),
+                    Ok(Localizable::irrelevant(TokenType::Literal("6".into()),)),
+                    Ok(Localizable::irrelevant(TokenType::Operator(
+                        Operator::Multiply
+                    ),)),
+                    Ok(Localizable::irrelevant(TokenType::OpeningParenthesis,)),
+                    Ok(Localizable::irrelevant(TokenType::Literal("9".into()),)),
+                    Ok(Localizable::irrelevant(TokenType::Operator(Operator::Add))),
+                    Ok(Localizable::irrelevant(TokenType::Literal("5".into()))),
+                    Ok(Localizable::irrelevant(TokenType::ClosingParenthesis)),
+                    Ok(Localizable::irrelevant(TokenType::ClosingParenthesis)),
                 ]
                 .into_iter()
                 .peekable()
             )
-            .unwrap(),
+            .unwrap()
+            .object,
             ExpressionNode::Operation {
-                operator: Operator::Multiply,
-                a: Box::new(ExpressionNode::Number(6.)),
-                b: Box::new(ExpressionNode::Operation {
-                    operator: Operator::Add,
-                    a: Box::new(ExpressionNode::Number(9.)),
-                    b: Box::new(ExpressionNode::Number(5.)),
-                }),
+                operator: Localizable::irrelevant(Operator::Multiply),
+                a: Box::new(Localizable::irrelevant(ExpressionNode::Number(6.))),
+                b: Box::new(Localizable::irrelevant(ExpressionNode::Operation {
+                    operator: Localizable::irrelevant(Operator::Add),
+                    a: Box::new(Localizable::irrelevant(ExpressionNode::Number(9.))),
+                    b: Box::new(Localizable::irrelevant(ExpressionNode::Number(5.))),
+                })),
             }
         );
 
         assert_eq!(
             parse_parenthesis(
                 &mut [
-                    Ok(Token {
-                        token: TokenType::OpeningParenthesis,
-                        start: (0, 0),
-                        end: (0, 0),
-                    }),
-                    Ok(Token {
-                        token: TokenType::OpeningParenthesis,
-                        start: (0, 1),
-                        end: (0, 1),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("4".into()),
-                        start: (0, 2),
-                        end: (0, 2),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Add),
-                        start: (0, 3),
-                        end: (0, 3),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("9".into()),
-                        start: (0, 4),
-                        end: (0, 4),
-                    }),
-                    Ok(Token {
-                        token: TokenType::ClosingParenthesis,
-                        start: (0, 5),
-                        end: (0, 5),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Multiply),
-                        start: (0, 6),
-                        end: (0, 6),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("1".into()),
-                        start: (0, 7),
-                        end: (0, 7),
-                    }),
-                    Ok(Token {
-                        token: TokenType::ClosingParenthesis,
-                        start: (0, 8),
-                        end: (0, 8),
-                    }),
+                    Ok(Localizable::irrelevant(TokenType::OpeningParenthesis,)),
+                    Ok(Localizable::irrelevant(TokenType::OpeningParenthesis,)),
+                    Ok(Localizable::irrelevant(TokenType::Literal("4".into()),)),
+                    Ok(Localizable::irrelevant(TokenType::Operator(Operator::Add),)),
+                    Ok(Localizable::irrelevant(TokenType::Literal("9".into()),)),
+                    Ok(Localizable::irrelevant(TokenType::ClosingParenthesis,)),
+                    Ok(Localizable::irrelevant(TokenType::Operator(
+                        Operator::Multiply
+                    ),)),
+                    Ok(Localizable::irrelevant(TokenType::Literal("1".into()),)),
+                    Ok(Localizable::irrelevant(TokenType::ClosingParenthesis,)),
                 ]
                 .into_iter()
                 .peekable()
             )
-            .unwrap(),
+            .unwrap()
+            .object,
             ExpressionNode::Operation {
-                operator: Operator::Multiply,
-                a: Box::new(ExpressionNode::Operation {
-                    operator: Operator::Add,
-                    a: Box::new(ExpressionNode::Number(4.)),
-                    b: Box::new(ExpressionNode::Number(9.)),
-                }),
-                b: Box::new(ExpressionNode::Number(1.)),
+                operator: Localizable::irrelevant(Operator::Multiply),
+                a: Box::new(Localizable::irrelevant(ExpressionNode::Operation {
+                    operator: Localizable::irrelevant(Operator::Add),
+                    a: Box::new(Localizable::irrelevant(ExpressionNode::Number(4.))),
+                    b: Box::new(Localizable::irrelevant(ExpressionNode::Number(9.))),
+                })),
+                b: Box::new(Localizable::irrelevant(ExpressionNode::Number(1.))),
             }
         );
 
         assert_eq!(
             parse_parenthesis(
                 &mut [
-                    Ok(Token {
-                        token: TokenType::OpeningParenthesis,
-                        start: (0, 0),
-                        end: (0, 0),
-                    }),
-                    Ok(Token {
-                        token: TokenType::OpeningParenthesis,
-                        start: (0, 1),
-                        end: (0, 1),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("4".into()),
-                        start: (0, 2),
-                        end: (0, 2),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Add),
-                        start: (0, 3),
-                        end: (0, 3),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("9".into()),
-                        start: (0, 4),
-                        end: (0, 4),
-                    }),
-                    Ok(Token {
-                        token: TokenType::ClosingParenthesis,
-                        start: (0, 5),
-                        end: (0, 5),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Multiply),
-                        start: (0, 6),
-                        end: (0, 6),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("1".into()),
-                        start: (0, 7),
-                        end: (0, 7),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Add),
-                        start: (0, 8),
-                        end: (0, 8),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("6".into()),
-                        start: (0, 9),
-                        end: (0, 9),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Multiply),
-                        start: (0, 10),
-                        end: (0, 10),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("2".into()),
-                        start: (0, 11),
-                        end: (0, 11),
-                    }),
-                    Ok(Token {
-                        token: TokenType::ClosingParenthesis,
-                        start: (0, 12),
-                        end: (0, 12),
-                    }),
+                    Ok(Localizable::irrelevant(TokenType::OpeningParenthesis,)),
+                    Ok(Localizable::irrelevant(TokenType::OpeningParenthesis,)),
+                    Ok(Localizable::irrelevant(TokenType::Literal("4".into()),)),
+                    Ok(Localizable::irrelevant(TokenType::Operator(Operator::Add),)),
+                    Ok(Localizable::irrelevant(TokenType::Literal("9".into()),)),
+                    Ok(Localizable::irrelevant(TokenType::ClosingParenthesis,)),
+                    Ok(Localizable::irrelevant(TokenType::Operator(
+                        Operator::Multiply
+                    ),)),
+                    Ok(Localizable::irrelevant(TokenType::Literal("1".into()),)),
+                    Ok(Localizable::irrelevant(TokenType::Operator(Operator::Add),)),
+                    Ok(Localizable::irrelevant(TokenType::Literal("6".into()),)),
+                    Ok(Localizable::irrelevant(TokenType::Operator(
+                        Operator::Multiply
+                    ),)),
+                    Ok(Localizable::irrelevant(TokenType::Literal("2".into()),)),
+                    Ok(Localizable::irrelevant(TokenType::ClosingParenthesis,)),
                 ]
                 .into_iter()
                 .peekable()
             )
-            .unwrap(),
+            .unwrap()
+            .object,
             ExpressionNode::Operation {
-                operator: Operator::Add,
-                a: Box::new(ExpressionNode::Operation {
-                    operator: Operator::Multiply,
-                    a: Box::new(ExpressionNode::Operation {
-                        operator: Operator::Add,
-                        a: Box::new(ExpressionNode::Number(4.)),
-                        b: Box::new(ExpressionNode::Number(9.)),
-                    }),
-                    b: Box::new(ExpressionNode::Number(1.)),
-                }),
-                b: Box::new(ExpressionNode::Operation {
-                    operator: Operator::Multiply,
-                    a: Box::new(ExpressionNode::Number(6.)),
-                    b: Box::new(ExpressionNode::Number(2.)),
-                }),
+                operator: Localizable::irrelevant(Operator::Add),
+                a: Box::new(Localizable::irrelevant(ExpressionNode::Operation {
+                    operator: Localizable::irrelevant(Operator::Multiply),
+                    a: Box::new(Localizable::irrelevant(ExpressionNode::Operation {
+                        operator: Localizable::irrelevant(Operator::Add),
+                        a: Box::new(Localizable::irrelevant(ExpressionNode::Number(4.))),
+                        b: Box::new(Localizable::irrelevant(ExpressionNode::Number(9.))),
+                    })),
+                    b: Box::new(Localizable::irrelevant(ExpressionNode::Number(1.))),
+                })),
+                b: Box::new(Localizable::irrelevant(ExpressionNode::Operation {
+                    operator: Localizable::irrelevant(Operator::Multiply),
+                    a: Box::new(Localizable::irrelevant(ExpressionNode::Number(6.))),
+                    b: Box::new(Localizable::irrelevant(ExpressionNode::Number(2.))),
+                })),
             }
         );
     }
