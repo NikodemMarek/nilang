@@ -13,7 +13,13 @@ mod parsers;
 
 pub fn parse(
     tokens: impl Iterator<Item = Result<Localizable<TokenType>, NilangError>>,
-) -> Result<(Vec<FunctionDeclaration>, Vec<StructureDeclaration>), NilangError> {
+) -> Result<
+    (
+        Vec<Localizable<FunctionDeclaration>>,
+        Vec<Localizable<StructureDeclaration>>,
+    ),
+    NilangError,
+> {
     let mut tokens = tokens.peekable();
 
     let mut structures = Vec::new();

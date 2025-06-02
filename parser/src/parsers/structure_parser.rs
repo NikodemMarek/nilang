@@ -13,7 +13,7 @@ use super::type_annotation_parser::parse_type_annotation;
 
 pub fn parse_structure<I: PeekableAssumingIterator>(
     tokens: &mut I,
-) -> Result<StructureDeclaration, NilangError> {
+) -> Result<Localizable<StructureDeclaration>, NilangError> {
     tokens.assume_keyword(Keyword::Structure)?;
 
     let name = tokens.assume_identifier()?;
@@ -63,7 +63,10 @@ pub fn parse_structure<I: PeekableAssumingIterator>(
     let end = tokens.assume(TokenType::ClosingBrace)?;
 
     let fields = Localizable::new(Location::between(&start, &end), fields);
-    Ok(StructureDeclaration { name, fields })
+    Ok(Localizable::new(
+        Location::between(&name.location, &end),
+        StructureDeclaration { name, fields },
+    ))
 }
 
 #[cfg(test)]
@@ -104,7 +107,8 @@ mod test {
                 .into_iter()
                 .peekable()
             )
-            .unwrap(),
+            .unwrap()
+            .object,
             StructureDeclaration {
                 name: Localizable::irrelevant("Test".into()),
                 fields: Localizable::irrelevant(
@@ -144,7 +148,8 @@ mod test {
                 .into_iter()
                 .peekable()
             )
-            .unwrap(),
+            .unwrap()
+            .object,
             StructureDeclaration {
                 name: Localizable::irrelevant("Test".into()),
                 fields: Localizable::irrelevant(

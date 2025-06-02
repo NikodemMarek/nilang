@@ -1,4 +1,4 @@
-use std::{fmt::Display, ops::Deref};
+use std::ops::Deref;
 
 pub mod instructions;
 pub mod nodes;
@@ -37,7 +37,7 @@ impl<T: Sized + Clone> Localizable<T> {
     }
 }
 
-impl<T: Sized + Clone + Display> Deref for Localizable<T> {
+impl<T: Sized + Clone> Deref for Localizable<T> {
     type Target = T;
     fn deref(&self) -> &Self::Target {
         &self.object

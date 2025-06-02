@@ -14,7 +14,7 @@ use super::{
 
 pub fn parse_function_definition<I: PeekableAssumingIterator>(
     tokens: &mut I,
-) -> Result<FunctionDeclaration, NilangError> {
+) -> Result<Localizable<FunctionDeclaration>, NilangError> {
     tokens.assume_keyword(Keyword::Function)?;
 
     let name = tokens.assume_identifier()?;
@@ -39,12 +39,15 @@ pub fn parse_function_definition<I: PeekableAssumingIterator>(
 
                     tokens.assume(TokenType::ClosingBrace)?;
 
-                    return Ok(FunctionDeclaration {
-                        name,
-                        parameters,
-                        return_type,
-                        body,
-                    });
+                    return Ok(Localizable::new(
+                        Location::between(&name.location, &body.location),
+                        FunctionDeclaration {
+                            name,
+                            parameters,
+                            return_type,
+                            body,
+                        },
+                    ));
                 }
                 Localizable { .. } => {
                     program.push(parse_statement(tokens)?);
@@ -88,7 +91,8 @@ mod tests {
                 .into_iter()
                 .peekable(),
             )
-            .unwrap(),
+            .unwrap()
+            .object,
             FunctionDeclaration {
                 name: Localizable::irrelevant("main".into()),
                 parameters: Localizable::irrelevant([].into()),
