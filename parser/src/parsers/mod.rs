@@ -5,7 +5,7 @@ use literal_parser::parse_literal;
 use nilang_types::{
     nodes::{ExpressionNode, StatementNode},
     tokens::{Keyword, TokenType},
-    Localizable,
+    Localizable as L,
 };
 
 use operation_parser::parse_operation_if_operator_follows;
@@ -15,24 +15,26 @@ use variable_declaration_parser::parse_variable_declaration;
 
 use crate::assuming_iterator::PeekableAssumingIterator;
 
-mod argument_list_parser;
+mod arguments_parser;
 mod field_access_parser;
 mod function_call_parser;
 pub mod function_definition_parser;
 mod identifier_parser;
 mod literal_parser;
+mod object_fields_parser;
 mod object_parser;
 mod operation_parser;
-mod parameter_list_parser;
+mod parameters_parser;
 mod parenthesis_parser;
 mod return_parser;
 pub mod structure_parser;
 mod type_annotation_parser;
+mod typed_identifier_list_parser;
 mod variable_declaration_parser;
 
 pub fn parse_statement<I: PeekableAssumingIterator>(
     tokens: &mut I,
-) -> Result<Localizable<StatementNode>, NilangError> {
+) -> Result<L<StatementNode>, NilangError> {
     let peek_valid = tokens.peek_valid()?;
 
     Ok(match &peek_valid.object {
@@ -71,14 +73,14 @@ pub fn parse_statement<I: PeekableAssumingIterator>(
 
 pub fn parse_expression<I: PeekableAssumingIterator>(
     tokens: &mut I,
-) -> Result<Localizable<ExpressionNode>, NilangError> {
+) -> Result<L<ExpressionNode>, NilangError> {
     let expression_node = parse_single_expression(tokens)?;
     parse_operation_if_operator_follows(tokens, expression_node)
 }
 
 pub fn parse_single_expression<I: PeekableAssumingIterator>(
     tokens: &mut I,
-) -> Result<Localizable<ExpressionNode>, NilangError> {
+) -> Result<L<ExpressionNode>, NilangError> {
     let peek_valid = tokens.peek_valid()?;
 
     Ok(match peek_valid.object {

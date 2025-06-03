@@ -1,5 +1,5 @@
 use errors::NilangError;
-use nilang_types::{nodes::ExpressionNode, tokens::TokenType, Localizable};
+use nilang_types::{nodes::ExpressionNode, tokens::TokenType, Localizable as L};
 
 use crate::assuming_iterator::PeekableAssumingIterator;
 
@@ -10,33 +10,33 @@ use super::{
 
 pub fn parse_identifier<I: PeekableAssumingIterator>(
     tokens: &mut I,
-) -> Result<Localizable<ExpressionNode>, NilangError> {
+) -> Result<L<ExpressionNode>, NilangError> {
     let name = tokens.assume_identifier()?;
 
     let expression = match tokens.peek_valid()? {
-        Localizable {
+        L {
             object: TokenType::OpeningParenthesis,
             ..
         } => parse_function_call_expression(tokens, name)?,
-        Localizable {
+        L {
             object: TokenType::Operator(_),
             ..
         } => parse_operation_if_operator_follows(
             tokens,
-            Localizable::new(
+            L::new(
                 name.location,
                 ExpressionNode::VariableReference(name.object),
             ),
         )?,
-        Localizable {
+        L {
             object: TokenType::OpeningBrace,
             ..
         } => parse_object(tokens, name)?,
-        Localizable {
+        L {
             object: TokenType::Dot,
             ..
         } => parse_field_access(tokens, name)?,
-        Localizable { .. } => Localizable::new(
+        L { .. } => L::new(
             name.location,
             ExpressionNode::VariableReference(name.object),
         ),
@@ -48,15 +48,15 @@ pub fn parse_identifier<I: PeekableAssumingIterator>(
 #[cfg(test)]
 mod tests {
     use crate::parsers::identifier_parser::parse_identifier;
-    use nilang_types::{nodes::ExpressionNode, tokens::TokenType, Localizable};
+    use nilang_types::{nodes::ExpressionNode, tokens::TokenType, Localizable as L};
 
     #[test]
     fn test_parse_identifier() {
         assert_eq!(
             parse_identifier(
                 &mut [
-                    Ok(Localizable::irrelevant(TokenType::Identifier("x".into()),)),
-                    Ok(Localizable::irrelevant(TokenType::Semicolon,))
+                    Ok(L::irrelevant(TokenType::Identifier("x".into()),)),
+                    Ok(L::irrelevant(TokenType::Semicolon,))
                 ]
                 .into_iter()
                 .peekable()

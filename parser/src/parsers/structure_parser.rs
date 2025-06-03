@@ -2,71 +2,61 @@ use std::collections::HashMap;
 
 use errors::{NilangError, ParserErrors};
 use nilang_types::{
-    nodes::StructureDeclaration,
+    nodes::{StructureDeclaration, StructureFields},
     tokens::{Keyword, TokenType},
-    Localizable, Location,
+    Localizable as L, Location,
 };
 
 use crate::assuming_iterator::PeekableAssumingIterator;
 
-use super::type_annotation_parser::parse_type_annotation;
+use super::typed_identifier_list_parser::parse_typed_identifier_list;
 
 pub fn parse_structure<I: PeekableAssumingIterator>(
     tokens: &mut I,
-) -> Result<Localizable<StructureDeclaration>, NilangError> {
+) -> Result<L<StructureDeclaration>, NilangError> {
     tokens.assume_keyword(Keyword::Structure)?;
 
     let name = tokens.assume_identifier()?;
 
-    let start = tokens.assume(TokenType::OpeningBrace)?;
+    let fields = parse_structure_fields(tokens)?;
 
-    let mut fields = HashMap::new();
-
-    loop {
-        let name = tokens.assume_identifier()?;
-        let r#type = parse_type_annotation(tokens)?;
-
-        fields.insert(name, r#type);
-
-        match tokens.peek_valid()? {
-            Localizable {
-                object: TokenType::Comma,
-                ..
-            } => {
-                let _ = tokens.assume(TokenType::Comma);
-
-                if let Localizable {
-                    object: TokenType::ClosingBrace,
-                    ..
-                } = tokens.peek_valid()?
-                {
-                    break;
-                }
-            }
-            Localizable {
-                object: TokenType::ClosingBrace,
-                ..
-            } => break,
-            Localizable { location, .. } => {
-                return Err(NilangError {
-                    location: *location,
-                    error: ParserErrors::ExpectedTokens(vec![
-                        TokenType::Comma,
-                        TokenType::ClosingBrace,
-                    ])
-                    .into(),
-                });
-            }
-        }
-    }
-
-    let end = tokens.assume(TokenType::ClosingBrace)?;
-
-    let fields = Localizable::new(Location::between(&start, &end), fields);
-    Ok(Localizable::new(
-        Location::between(&name.location, &end),
+    Ok(L::new(
+        Location::between(&name.location, &fields.location),
         StructureDeclaration { name, fields },
     ))
+}
+
+pub fn parse_structure_fields<I: PeekableAssumingIterator>(
+    tokens: &mut I,
+) -> Result<L<StructureFields>, NilangError> {
+    let start = tokens.assume(TokenType::OpeningBrace)?;
+
+    let fields = parse_typed_identifier_list(tokens)?
+        .object
+        .iter()
+        .map(|(name, r#type)| (name.to_owned(), r#type.to_owned()))
+        .collect::<HashMap<_, _>>();
+
+    let L { object, location } = tokens.assume_next()?;
+    if object == TokenType::ClosingBrace {
+        Ok(L {
+            location: Location::between(&start, &location),
+            object: fields,
+        })
+    } else {
+        Err(NilangError {
+            location,
+            error: ParserErrors::ExpectedTokens(Vec::from([
+                if fields.is_empty() {
+                    TokenType::Identifier("".into())
+                } else {
+                    TokenType::Comma
+                },
+                TokenType::ClosingBrace,
+            ]))
+            .into(),
+        })
+    }
 }
 
 #[cfg(test)]
@@ -74,7 +64,7 @@ mod test {
     use nilang_types::{
         nodes::{StructureDeclaration, Type},
         tokens::{Keyword, TokenType},
-        Localizable,
+        Localizable as L,
     };
 
     use crate::parsers::structure_parser::parse_structure;
@@ -84,25 +74,17 @@ mod test {
         assert_eq!(
             parse_structure(
                 &mut [
-                    Ok(Localizable::irrelevant(TokenType::Keyword(
-                        Keyword::Structure,
-                    ))),
-                    Ok(Localizable::irrelevant(TokenType::Identifier(
-                        "Test".into(),
-                    ))),
-                    Ok(Localizable::irrelevant(TokenType::OpeningBrace)),
-                    Ok(Localizable::irrelevant(TokenType::Identifier(
-                        "test_field".into(),
-                    ))),
-                    Ok(Localizable::irrelevant(TokenType::Colon)),
-                    Ok(Localizable::irrelevant(TokenType::Identifier("int".into()),)),
-                    Ok(Localizable::irrelevant(TokenType::Comma)),
-                    Ok(Localizable::irrelevant(TokenType::Identifier(
-                        "test_field2".into(),
-                    ))),
-                    Ok(Localizable::irrelevant(TokenType::Colon)),
-                    Ok(Localizable::irrelevant(TokenType::Identifier("int".into()),)),
-                    Ok(Localizable::irrelevant(TokenType::ClosingBrace)),
+                    Ok(L::irrelevant(TokenType::Keyword(Keyword::Structure,))),
+                    Ok(L::irrelevant(TokenType::Identifier("Test".into(),))),
+                    Ok(L::irrelevant(TokenType::OpeningBrace)),
+                    Ok(L::irrelevant(TokenType::Identifier("test_field".into(),))),
+                    Ok(L::irrelevant(TokenType::Colon)),
+                    Ok(L::irrelevant(TokenType::Identifier("int".into()),)),
+                    Ok(L::irrelevant(TokenType::Comma)),
+                    Ok(L::irrelevant(TokenType::Identifier("test_field2".into(),))),
+                    Ok(L::irrelevant(TokenType::Colon)),
+                    Ok(L::irrelevant(TokenType::Identifier("int".into()),)),
+                    Ok(L::irrelevant(TokenType::ClosingBrace)),
                 ]
                 .into_iter()
                 .peekable()
@@ -110,16 +92,13 @@ mod test {
             .unwrap()
             .object,
             StructureDeclaration {
-                name: Localizable::irrelevant("Test".into()),
-                fields: Localizable::irrelevant(
+                name: L::irrelevant("Test".into()),
+                fields: L::irrelevant(
                     [
+                        (L::irrelevant("test_field".into()), L::irrelevant(Type::Int)),
                         (
-                            Localizable::irrelevant("test_field".into()),
-                            Localizable::irrelevant(Type::Int)
-                        ),
-                        (
-                            Localizable::irrelevant("test_field2".into()),
-                            Localizable::irrelevant(Type::Int)
+                            L::irrelevant("test_field2".into()),
+                            L::irrelevant(Type::Int)
                         ),
                     ]
                     .into()
@@ -130,20 +109,14 @@ mod test {
         assert_eq!(
             parse_structure(
                 &mut [
-                    Ok(Localizable::irrelevant(TokenType::Keyword(
-                        Keyword::Structure,
-                    ))),
-                    Ok(Localizable::irrelevant(TokenType::Identifier(
-                        "Test".into()
-                    ))),
-                    Ok(Localizable::irrelevant(TokenType::OpeningBrace)),
-                    Ok(Localizable::irrelevant(TokenType::Identifier(
-                        "test_field".into()
-                    ))),
-                    Ok(Localizable::irrelevant(TokenType::Colon)),
-                    Ok(Localizable::irrelevant(TokenType::Identifier("int".into()))),
-                    Ok(Localizable::irrelevant(TokenType::Comma)),
-                    Ok(Localizable::irrelevant(TokenType::ClosingBrace)),
+                    Ok(L::irrelevant(TokenType::Keyword(Keyword::Structure,))),
+                    Ok(L::irrelevant(TokenType::Identifier("Test".into()))),
+                    Ok(L::irrelevant(TokenType::OpeningBrace)),
+                    Ok(L::irrelevant(TokenType::Identifier("test_field".into()))),
+                    Ok(L::irrelevant(TokenType::Colon)),
+                    Ok(L::irrelevant(TokenType::Identifier("int".into()))),
+                    Ok(L::irrelevant(TokenType::Comma)),
+                    Ok(L::irrelevant(TokenType::ClosingBrace)),
                 ]
                 .into_iter()
                 .peekable()
@@ -151,13 +124,9 @@ mod test {
             .unwrap()
             .object,
             StructureDeclaration {
-                name: Localizable::irrelevant("Test".into()),
-                fields: Localizable::irrelevant(
-                    [(
-                        Localizable::irrelevant("test_field".into()),
-                        Localizable::irrelevant(Type::Int)
-                    )]
-                    .into()
+                name: L::irrelevant("Test".into()),
+                fields: L::irrelevant(
+                    [(L::irrelevant("test_field".into()), L::irrelevant(Type::Int))].into()
                 ),
             },
         );

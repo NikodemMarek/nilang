@@ -2,15 +2,15 @@ use std::collections::HashMap;
 
 use errors::TransformerErrors;
 use nilang_types::{
-    nodes::{FunctionDeclaration, Parameter, Type},
+    nodes::{FunctionDeclaration, Type, TypedIdentifier},
     Localizable,
 };
 
 #[derive(Debug, Default)]
-pub struct FunctionsRef(HashMap<Box<str>, (Type, Box<[Parameter]>)>);
+pub struct FunctionsRef(HashMap<Box<str>, (Type, Box<[TypedIdentifier]>)>);
 
 impl FunctionsRef {
-    pub fn get_parameters(&self, name: &str) -> Result<&[Parameter], TransformerErrors> {
+    pub fn get_parameters(&self, name: &str) -> Result<&[TypedIdentifier], TransformerErrors> {
         self.0
             .get(name)
             .map(|(_, parameters)| parameters.as_ref())
@@ -27,7 +27,7 @@ impl From<&[Localizable<FunctionDeclaration>]> for FunctionsRef {
                 name,
                 ..
             }: &FunctionDeclaration,
-        ) -> (Box<str>, (Type, Box<[Parameter]>)) {
+        ) -> (Box<str>, (Type, Box<[TypedIdentifier]>)) {
             (
                 (**name).clone(),
                 (

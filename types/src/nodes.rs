@@ -1,41 +1,50 @@
 use std::{collections::HashMap, fmt::Debug};
 
-use crate::Localizable;
+use crate::Localizable as L;
 
-pub type Parameter = (Localizable<Box<str>>, Localizable<Type>);
+pub type Str = Box<str>;
+
+pub type TypedIdentifier = (L<Str>, L<Type>);
+pub type Parameters = Box<[TypedIdentifier]>;
+
+pub type FunctionBody = Box<[L<StatementNode>]>;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FunctionDeclaration {
-    pub name: Localizable<Box<str>>,
-    pub parameters: Localizable<Box<[Parameter]>>,
-    pub return_type: Localizable<Type>,
-    pub body: Localizable<Box<[Localizable<StatementNode>]>>,
+    pub name: L<Str>,
+    pub parameters: L<Parameters>,
+    pub return_type: L<Type>,
+    pub body: L<FunctionBody>,
 }
+
+pub type StructureFields = HashMap<L<Str>, L<Type>>;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct StructureDeclaration {
-    pub name: Localizable<Box<str>>,
-    pub fields: Localizable<HashMap<Localizable<Box<str>>, Localizable<Type>>>,
+    pub name: L<Str>,
+    pub fields: L<StructureFields>,
 }
+
+pub type ObjectFields = HashMap<L<Str>, L<ExpressionNode>>;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ExpressionNode {
     Number(f64),
     Char(char),
-    String(Box<str>),
+    String(Str),
     Object {
-        r#type: Localizable<Type>,
-        fields: Localizable<HashMap<Localizable<Box<str>>, Localizable<ExpressionNode>>>,
+        r#type: L<Type>,
+        fields: L<ObjectFields>,
     },
     Operation {
-        operator: Localizable<Operator>,
-        a: Box<Localizable<ExpressionNode>>,
-        b: Box<Localizable<ExpressionNode>>,
+        operator: L<Operator>,
+        a: Box<L<ExpressionNode>>,
+        b: Box<L<ExpressionNode>>,
     },
-    VariableReference(Box<str>),
+    VariableReference(Str),
     FieldAccess {
-        structure: Box<Localizable<ExpressionNode>>,
-        field: Localizable<Box<str>>,
+        structure: Box<L<ExpressionNode>>,
+        field: L<Str>,
     },
     FunctionCall(FunctionCall),
 }
@@ -43,18 +52,20 @@ pub enum ExpressionNode {
 #[derive(Debug, Clone, PartialEq)]
 pub enum StatementNode {
     VariableDeclaration {
-        name: Localizable<Box<str>>,
-        r#type: Localizable<Type>,
-        value: Box<Localizable<ExpressionNode>>,
+        name: L<Str>,
+        r#type: L<Type>,
+        value: Box<L<ExpressionNode>>,
     },
-    Return(Box<Localizable<ExpressionNode>>),
+    Return(Box<L<ExpressionNode>>),
     FunctionCall(FunctionCall),
 }
 
+pub type Arguments = Box<[L<ExpressionNode>]>;
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct FunctionCall {
-    pub name: Localizable<Box<str>>,
-    pub arguments: Localizable<Box<[Localizable<ExpressionNode>]>>,
+    pub name: L<Str>,
+    pub arguments: L<Arguments>,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -72,5 +83,5 @@ pub enum Type {
     Int,
     Char,
     String,
-    Object(Box<str>),
+    Object(Str),
 }

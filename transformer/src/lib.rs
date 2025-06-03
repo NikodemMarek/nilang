@@ -9,7 +9,7 @@ use errors::NilangError;
 pub use functions_ref::FunctionsRef;
 use nilang_types::{
     instructions::Instruction,
-    nodes::{FunctionDeclaration, Parameter, StatementNode, Type},
+    nodes::{FunctionDeclaration, StatementNode, Type, TypedIdentifier},
     Localizable,
 };
 pub use structures_ref::StructuresRef;
@@ -77,7 +77,7 @@ fn transform_body<'a>(
 fn transform_parameters<'a>(
     context: &StructuresRef,
     temporaries: &Temporaries,
-    parameters: &[Parameter],
+    parameters: &[TypedIdentifier],
 ) -> InstructionsIterator<'a> {
     let mut instructions = Vec::new();
     let mut i = 0;

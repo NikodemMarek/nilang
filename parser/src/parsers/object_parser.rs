@@ -1,88 +1,27 @@
-use std::collections::HashMap;
-
-use errors::{NilangError, ParserErrors};
-use nilang_types::{nodes::ExpressionNode, tokens::TokenType, Localizable, Location};
+use errors::NilangError;
+use nilang_types::{
+    nodes::{ExpressionNode, Type},
+    tokens::TokenType,
+    Localizable as L, Location,
+};
 
 use crate::assuming_iterator::PeekableAssumingIterator;
 
-use super::{parse_expression, type_annotation_parser::parse_type};
+use super::object_fields_parser::parse_object_fields;
 
 pub fn parse_object<I: PeekableAssumingIterator>(
     tokens: &mut I,
-    name: Localizable<Box<str>>,
-) -> Result<Localizable<ExpressionNode>, NilangError> {
+    name: L<Box<str>>,
+) -> Result<L<ExpressionNode>, NilangError> {
     let start = tokens.assume(TokenType::OpeningBrace)?;
 
-    let mut fields = HashMap::new();
+    let fields = parse_object_fields(tokens)?;
 
-    loop {
-        match tokens.assume_next()? {
-            Localizable {
-                object: TokenType::Identifier(field_name),
-                location,
-            } => {
-                tokens.assume(TokenType::Colon)?;
+    let end = tokens.assume(TokenType::ClosingBrace)?;
 
-                if fields
-                    .insert(
-                        Localizable::new(location, field_name.clone()),
-                        parse_expression(tokens)?,
-                    )
-                    .is_some()
-                {
-                    return Err(NilangError {
-                        location,
-                        error: ParserErrors::DuplicateField(field_name).into(),
-                    });
-                };
-
-                match tokens.assume_next()? {
-                    Localizable {
-                        object: TokenType::Comma,
-                        ..
-                    } => {}
-                    Localizable {
-                        object: TokenType::ClosingBrace,
-                        location: end,
-                    } => {
-                        return Ok(Localizable::new(
-                            Location::between(&name.location, &end),
-                            ExpressionNode::Object {
-                                r#type: Localizable::new(name.location, parse_type(&field_name)),
-                                fields: Localizable::new(Location::between(&start, &end), fields),
-                            },
-                        ));
-                    }
-                    Localizable { location, .. } => Err(NilangError {
-                        location,
-                        error: ParserErrors::ExpectedTokens(Vec::from([
-                            TokenType::Comma,
-                            TokenType::ClosingBrace,
-                        ]))
-                        .into(),
-                    })?,
-                }
-            }
-            Localizable {
-                object: TokenType::ClosingBrace,
-                location: end,
-            } => {
-                return Ok(Localizable::new(
-                    Location::between(&name.location, &end),
-                    ExpressionNode::Object {
-                        r#type: Localizable::new(name.location, parse_type(&name)),
-                        fields: Localizable::new(Location::between(&start, &end), fields),
-                    },
-                ));
-            }
-            Localizable { location, .. } => Err(NilangError {
-                location,
-                error: ParserErrors::ExpectedTokens(Vec::from([
-                    TokenType::Identifier("".into()),
-                    TokenType::ClosingBrace,
-                ]))
-                .into(),
-            })?,
-        }
-    }
+    let r#type = L::new(name.location, Type::Object((*name).clone()));
+    Ok(L::new(
+        Location::between(&start, &end),
+        ExpressionNode::Object { r#type, fields },
+    ))
 }

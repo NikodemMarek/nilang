@@ -2,7 +2,7 @@ use errors::NilangError;
 use nilang_types::{
     nodes::StatementNode,
     tokens::{Keyword, TokenType},
-    Localizable, Location,
+    Localizable as L, Location,
 };
 
 use crate::assuming_iterator::PeekableAssumingIterator;
@@ -11,7 +11,7 @@ use super::{parse_expression, type_annotation_parser::parse_type_annotation};
 
 pub fn parse_variable_declaration<I: PeekableAssumingIterator>(
     tokens: &mut I,
-) -> Result<Localizable<StatementNode>, NilangError> {
+) -> Result<L<StatementNode>, NilangError> {
     let start = tokens.assume_keyword(Keyword::Variable)?;
 
     let name = tokens.assume_identifier()?;
@@ -24,7 +24,7 @@ pub fn parse_variable_declaration<I: PeekableAssumingIterator>(
 
     let end = tokens.assume(TokenType::Semicolon)?;
 
-    Ok(Localizable::new(
+    Ok(L::new(
         Location::between(&start, &end),
         StatementNode::VariableDeclaration {
             name,
@@ -39,7 +39,7 @@ mod tests {
     use nilang_types::{
         nodes::{ExpressionNode, FunctionCall, Operator, StatementNode, Type},
         tokens::{Keyword, TokenType},
-        Localizable,
+        Localizable as L,
     };
 
     use crate::parsers::variable_declaration_parser::parse_variable_declaration;
@@ -49,17 +49,13 @@ mod tests {
         assert_eq!(
             parse_variable_declaration(
                 &mut [
-                    Ok(Localizable::irrelevant(TokenType::Keyword(
-                        Keyword::Variable
-                    ))),
-                    Ok(Localizable::irrelevant(TokenType::Identifier(
-                        "test".into()
-                    ))),
-                    Ok(Localizable::irrelevant(TokenType::Colon,)),
-                    Ok(Localizable::irrelevant(TokenType::Identifier("int".into()),)),
-                    Ok(Localizable::irrelevant(TokenType::Equals,)),
-                    Ok(Localizable::irrelevant(TokenType::Literal("9".into()),)),
-                    Ok(Localizable::irrelevant(TokenType::Semicolon,)),
+                    Ok(L::irrelevant(TokenType::Keyword(Keyword::Variable))),
+                    Ok(L::irrelevant(TokenType::Identifier("test".into()))),
+                    Ok(L::irrelevant(TokenType::Colon,)),
+                    Ok(L::irrelevant(TokenType::Identifier("int".into()),)),
+                    Ok(L::irrelevant(TokenType::Equals,)),
+                    Ok(L::irrelevant(TokenType::Literal("9".into()),)),
+                    Ok(L::irrelevant(TokenType::Semicolon,)),
                 ]
                 .into_iter()
                 .peekable(),
@@ -67,28 +63,22 @@ mod tests {
             .unwrap()
             .object,
             StatementNode::VariableDeclaration {
-                name: Localizable::irrelevant("test".into()),
-                r#type: Localizable::irrelevant(Type::Int),
-                value: Box::new(Localizable::irrelevant(ExpressionNode::Number(9.)))
+                name: L::irrelevant("test".into()),
+                r#type: L::irrelevant(Type::Int),
+                value: Box::new(L::irrelevant(ExpressionNode::Number(9.)))
             }
         );
 
         assert_eq!(
             parse_variable_declaration(
                 &mut [
-                    Ok(Localizable::irrelevant(TokenType::Keyword(
-                        Keyword::Variable
-                    ))),
-                    Ok(Localizable::irrelevant(TokenType::Identifier(
-                        "test".into()
-                    ))),
-                    Ok(Localizable::irrelevant(TokenType::Colon,)),
-                    Ok(Localizable::irrelevant(TokenType::Identifier("int".into()),)),
-                    Ok(Localizable::irrelevant(TokenType::Equals,)),
-                    Ok(Localizable::irrelevant(TokenType::Identifier(
-                        "test2".into()
-                    ))),
-                    Ok(Localizable::irrelevant(TokenType::Semicolon,)),
+                    Ok(L::irrelevant(TokenType::Keyword(Keyword::Variable))),
+                    Ok(L::irrelevant(TokenType::Identifier("test".into()))),
+                    Ok(L::irrelevant(TokenType::Colon,)),
+                    Ok(L::irrelevant(TokenType::Identifier("int".into()),)),
+                    Ok(L::irrelevant(TokenType::Equals,)),
+                    Ok(L::irrelevant(TokenType::Identifier("test2".into()))),
+                    Ok(L::irrelevant(TokenType::Semicolon,)),
                 ]
                 .into_iter()
                 .peekable(),
@@ -96,9 +86,9 @@ mod tests {
             .unwrap()
             .object,
             StatementNode::VariableDeclaration {
-                name: Localizable::irrelevant("test".into()),
-                r#type: Localizable::irrelevant(Type::Int),
-                value: Box::new(Localizable::irrelevant(ExpressionNode::VariableReference(
+                name: L::irrelevant("test".into()),
+                r#type: L::irrelevant(Type::Int),
+                value: Box::new(L::irrelevant(ExpressionNode::VariableReference(
                     "test2".into()
                 )))
             }
@@ -107,21 +97,17 @@ mod tests {
         assert_eq!(
             parse_variable_declaration(
                 &mut [
-                    Ok(Localizable::irrelevant(TokenType::Keyword(
-                        Keyword::Variable
-                    ))),
-                    Ok(Localizable::irrelevant(TokenType::Identifier(
-                        "test".into()
-                    ))),
-                    Ok(Localizable::irrelevant(TokenType::Colon,)),
-                    Ok(Localizable::irrelevant(TokenType::Identifier("int".into()),)),
-                    Ok(Localizable::irrelevant(TokenType::Equals,)),
-                    Ok(Localizable::irrelevant(TokenType::OpeningParenthesis,)),
-                    Ok(Localizable::irrelevant(TokenType::Literal("6".into()),)),
-                    Ok(Localizable::irrelevant(TokenType::Operator(Operator::Add),)),
-                    Ok(Localizable::irrelevant(TokenType::Literal("9".into()),)),
-                    Ok(Localizable::irrelevant(TokenType::ClosingParenthesis,)),
-                    Ok(Localizable::irrelevant(TokenType::Semicolon,)),
+                    Ok(L::irrelevant(TokenType::Keyword(Keyword::Variable))),
+                    Ok(L::irrelevant(TokenType::Identifier("test".into()))),
+                    Ok(L::irrelevant(TokenType::Colon,)),
+                    Ok(L::irrelevant(TokenType::Identifier("int".into()),)),
+                    Ok(L::irrelevant(TokenType::Equals,)),
+                    Ok(L::irrelevant(TokenType::OpeningParenthesis,)),
+                    Ok(L::irrelevant(TokenType::Literal("6".into()),)),
+                    Ok(L::irrelevant(TokenType::Operator(Operator::Add),)),
+                    Ok(L::irrelevant(TokenType::Literal("9".into()),)),
+                    Ok(L::irrelevant(TokenType::ClosingParenthesis,)),
+                    Ok(L::irrelevant(TokenType::Semicolon,)),
                 ]
                 .into_iter()
                 .peekable(),
@@ -129,12 +115,12 @@ mod tests {
             .unwrap()
             .object,
             StatementNode::VariableDeclaration {
-                name: Localizable::irrelevant("test".into()),
-                r#type: Localizable::irrelevant(Type::Int),
-                value: Box::new(Localizable::irrelevant(ExpressionNode::Operation {
-                    operator: Localizable::irrelevant(Operator::Add),
-                    a: Box::new(Localizable::irrelevant(ExpressionNode::Number(6.))),
-                    b: Box::new(Localizable::irrelevant(ExpressionNode::Number(9.))),
+                name: L::irrelevant("test".into()),
+                r#type: L::irrelevant(Type::Int),
+                value: Box::new(L::irrelevant(ExpressionNode::Operation {
+                    operator: L::irrelevant(Operator::Add),
+                    a: Box::new(L::irrelevant(ExpressionNode::Number(6.))),
+                    b: Box::new(L::irrelevant(ExpressionNode::Number(9.))),
                 }))
             }
         );
@@ -142,23 +128,17 @@ mod tests {
         assert_eq!(
             parse_variable_declaration(
                 &mut [
-                    Ok(Localizable::irrelevant(TokenType::Keyword(
-                        Keyword::Variable
-                    ))),
-                    Ok(Localizable::irrelevant(TokenType::Identifier(
-                        "test".into()
-                    ))),
-                    Ok(Localizable::irrelevant(TokenType::Colon,)),
-                    Ok(Localizable::irrelevant(TokenType::Identifier("int".into()),)),
-                    Ok(Localizable::irrelevant(TokenType::Equals,)),
-                    Ok(Localizable::irrelevant(TokenType::OpeningParenthesis,)),
-                    Ok(Localizable::irrelevant(TokenType::Identifier(
-                        "test2".into()
-                    ))),
-                    Ok(Localizable::irrelevant(TokenType::Operator(Operator::Add),)),
-                    Ok(Localizable::irrelevant(TokenType::Literal("9".into()),)),
-                    Ok(Localizable::irrelevant(TokenType::ClosingParenthesis,)),
-                    Ok(Localizable::irrelevant(TokenType::Semicolon,)),
+                    Ok(L::irrelevant(TokenType::Keyword(Keyword::Variable))),
+                    Ok(L::irrelevant(TokenType::Identifier("test".into()))),
+                    Ok(L::irrelevant(TokenType::Colon,)),
+                    Ok(L::irrelevant(TokenType::Identifier("int".into()),)),
+                    Ok(L::irrelevant(TokenType::Equals,)),
+                    Ok(L::irrelevant(TokenType::OpeningParenthesis,)),
+                    Ok(L::irrelevant(TokenType::Identifier("test2".into()))),
+                    Ok(L::irrelevant(TokenType::Operator(Operator::Add),)),
+                    Ok(L::irrelevant(TokenType::Literal("9".into()),)),
+                    Ok(L::irrelevant(TokenType::ClosingParenthesis,)),
+                    Ok(L::irrelevant(TokenType::Semicolon,)),
                 ]
                 .into_iter()
                 .peekable(),
@@ -166,14 +146,14 @@ mod tests {
             .unwrap()
             .object,
             StatementNode::VariableDeclaration {
-                name: Localizable::irrelevant("test".into()),
-                r#type: Localizable::irrelevant(Type::Int),
-                value: Box::new(Localizable::irrelevant(ExpressionNode::Operation {
-                    operator: Localizable::irrelevant(Operator::Add),
-                    a: Box::new(Localizable::irrelevant(ExpressionNode::VariableReference(
+                name: L::irrelevant("test".into()),
+                r#type: L::irrelevant(Type::Int),
+                value: Box::new(L::irrelevant(ExpressionNode::Operation {
+                    operator: L::irrelevant(Operator::Add),
+                    a: Box::new(L::irrelevant(ExpressionNode::VariableReference(
                         "test2".into()
                     ))),
-                    b: Box::new(Localizable::irrelevant(ExpressionNode::Number(9.))),
+                    b: Box::new(L::irrelevant(ExpressionNode::Number(9.))),
                 }))
             }
         );
@@ -181,22 +161,18 @@ mod tests {
         assert_eq!(
             parse_variable_declaration(
                 &mut [
-                    Ok(Localizable::irrelevant(TokenType::Keyword(
-                        Keyword::Variable
-                    ))),
-                    Ok(Localizable::irrelevant(TokenType::Identifier(
-                        "test".into()
-                    ))),
-                    Ok(Localizable::irrelevant(TokenType::Colon,)),
-                    Ok(Localizable::irrelevant(TokenType::Identifier("int".into()),)),
-                    Ok(Localizable::irrelevant(TokenType::Equals,)),
-                    Ok(Localizable::irrelevant(TokenType::Identifier("abc".into()),)),
-                    Ok(Localizable::irrelevant(TokenType::OpeningParenthesis,)),
-                    Ok(Localizable::irrelevant(TokenType::Literal("6".into()),)),
-                    Ok(Localizable::irrelevant(TokenType::Operator(Operator::Add),)),
-                    Ok(Localizable::irrelevant(TokenType::Literal("9".into()),)),
-                    Ok(Localizable::irrelevant(TokenType::ClosingParenthesis,)),
-                    Ok(Localizable::irrelevant(TokenType::Semicolon,)),
+                    Ok(L::irrelevant(TokenType::Keyword(Keyword::Variable))),
+                    Ok(L::irrelevant(TokenType::Identifier("test".into()))),
+                    Ok(L::irrelevant(TokenType::Colon,)),
+                    Ok(L::irrelevant(TokenType::Identifier("int".into()),)),
+                    Ok(L::irrelevant(TokenType::Equals,)),
+                    Ok(L::irrelevant(TokenType::Identifier("abc".into()),)),
+                    Ok(L::irrelevant(TokenType::OpeningParenthesis,)),
+                    Ok(L::irrelevant(TokenType::Literal("6".into()),)),
+                    Ok(L::irrelevant(TokenType::Operator(Operator::Add),)),
+                    Ok(L::irrelevant(TokenType::Literal("9".into()),)),
+                    Ok(L::irrelevant(TokenType::ClosingParenthesis,)),
+                    Ok(L::irrelevant(TokenType::Semicolon,)),
                 ]
                 .into_iter()
                 .peekable(),
@@ -204,21 +180,19 @@ mod tests {
             .unwrap()
             .object,
             StatementNode::VariableDeclaration {
-                name: Localizable::irrelevant("test".into()),
-                r#type: Localizable::irrelevant(Type::Int),
-                value: Box::new(Localizable::irrelevant(ExpressionNode::FunctionCall(
-                    FunctionCall {
-                        name: Localizable::irrelevant("abc".into()),
-                        arguments: Localizable::irrelevant(
-                            [Localizable::irrelevant(ExpressionNode::Operation {
-                                operator: Localizable::irrelevant(Operator::Add),
-                                a: Box::new(Localizable::irrelevant(ExpressionNode::Number(6.))),
-                                b: Box::new(Localizable::irrelevant(ExpressionNode::Number(9.))),
-                            })]
-                            .into()
-                        )
-                    }
-                )))
+                name: L::irrelevant("test".into()),
+                r#type: L::irrelevant(Type::Int),
+                value: Box::new(L::irrelevant(ExpressionNode::FunctionCall(FunctionCall {
+                    name: L::irrelevant("abc".into()),
+                    arguments: L::irrelevant(
+                        [L::irrelevant(ExpressionNode::Operation {
+                            operator: L::irrelevant(Operator::Add),
+                            a: Box::new(L::irrelevant(ExpressionNode::Number(6.))),
+                            b: Box::new(L::irrelevant(ExpressionNode::Number(9.))),
+                        })]
+                        .into()
+                    )
+                })))
             }
         );
     }

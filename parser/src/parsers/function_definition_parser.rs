@@ -1,60 +1,61 @@
 use errors::NilangError;
 use nilang_types::{
-    nodes::FunctionDeclaration,
+    nodes::{FunctionBody, FunctionDeclaration},
     tokens::{Keyword, TokenType},
-    Localizable, Location,
+    Localizable as L, Location,
 };
 
 use crate::assuming_iterator::PeekableAssumingIterator;
 
 use super::{
-    parameter_list_parser::parse_parameter_list, parse_statement,
+    parameters_parser::parse_parameters, parse_statement,
     type_annotation_parser::parse_type_annotation,
 };
 
 pub fn parse_function_definition<I: PeekableAssumingIterator>(
     tokens: &mut I,
-) -> Result<Localizable<FunctionDeclaration>, NilangError> {
+) -> Result<L<FunctionDeclaration>, NilangError> {
     tokens.assume_keyword(Keyword::Function)?;
 
     let name = tokens.assume_identifier()?;
 
-    let parameters = parse_parameter_list(tokens)?;
+    let parameters = parse_parameters(tokens)?;
 
     let return_type = parse_type_annotation(tokens)?;
 
+    let body = parse_function_body(tokens)?;
+
+    Ok(L::new(
+        Location::between(&name.location, &body.location),
+        FunctionDeclaration {
+            name,
+            parameters,
+            return_type,
+            body,
+        },
+    ))
+}
+
+fn parse_function_body<I: PeekableAssumingIterator>(
+    tokens: &mut I,
+) -> Result<L<FunctionBody>, NilangError> {
     let start = tokens.assume(TokenType::OpeningBrace)?;
 
+    let mut body = Vec::new();
+    while let L {
+        object: TokenType::Keyword(_) | TokenType::Identifier(_),
+        ..
+    } = tokens.peek_valid()?
     {
-        let mut program = Vec::new();
-
-        loop {
-            match tokens.peek_valid()? {
-                Localizable {
-                    object: TokenType::ClosingBrace,
-                    location: end,
-                } => {
-                    let location = Location::between(&start, end);
-                    let body = Localizable::new(location, program.into_boxed_slice());
-
-                    tokens.assume(TokenType::ClosingBrace)?;
-
-                    return Ok(Localizable::new(
-                        Location::between(&name.location, &body.location),
-                        FunctionDeclaration {
-                            name,
-                            parameters,
-                            return_type,
-                            body,
-                        },
-                    ));
-                }
-                Localizable { .. } => {
-                    program.push(parse_statement(tokens)?);
-                }
-            }
-        }
+        body.push(parse_statement(tokens)?);
     }
+
+    let end = tokens.assume(TokenType::ClosingBrace)?;
+
+    Ok(L::new(
+        Location::between(&start, &end),
+        body.into_boxed_slice(),
+    ))
 }
 
 #[cfg(test)]
@@ -62,7 +63,7 @@ mod tests {
     use nilang_types::{
         nodes::{ExpressionNode, FunctionDeclaration, StatementNode, Type},
         tokens::{Keyword, TokenType},
-        Localizable,
+        Localizable as L,
     };
 
     use super::parse_function_definition;
@@ -72,21 +73,17 @@ mod tests {
         assert_eq!(
             parse_function_definition(
                 &mut [
-                    Ok(Localizable::irrelevant(TokenType::Keyword(
-                        Keyword::Function
-                    ),)),
-                    Ok(Localizable::irrelevant(TokenType::Identifier(
-                        "main".into()
-                    ),)),
-                    Ok(Localizable::irrelevant(TokenType::OpeningParenthesis,)),
-                    Ok(Localizable::irrelevant(TokenType::ClosingParenthesis,)),
-                    Ok(Localizable::irrelevant(TokenType::Colon,)),
-                    Ok(Localizable::irrelevant(TokenType::Identifier("int".into()),)),
-                    Ok(Localizable::irrelevant(TokenType::OpeningBrace,)),
-                    Ok(Localizable::irrelevant(TokenType::Keyword(Keyword::Return),)),
-                    Ok(Localizable::irrelevant(TokenType::Literal("6".into()),)),
-                    Ok(Localizable::irrelevant(TokenType::Semicolon,)),
-                    Ok(Localizable::irrelevant(TokenType::ClosingBrace,))
+                    Ok(L::irrelevant(TokenType::Keyword(Keyword::Function),)),
+                    Ok(L::irrelevant(TokenType::Identifier("main".into()),)),
+                    Ok(L::irrelevant(TokenType::OpeningParenthesis,)),
+                    Ok(L::irrelevant(TokenType::ClosingParenthesis,)),
+                    Ok(L::irrelevant(TokenType::Colon,)),
+                    Ok(L::irrelevant(TokenType::Identifier("int".into()),)),
+                    Ok(L::irrelevant(TokenType::OpeningBrace,)),
+                    Ok(L::irrelevant(TokenType::Keyword(Keyword::Return),)),
+                    Ok(L::irrelevant(TokenType::Literal("6".into()),)),
+                    Ok(L::irrelevant(TokenType::Semicolon,)),
+                    Ok(L::irrelevant(TokenType::ClosingBrace,))
                 ]
                 .into_iter()
                 .peekable(),
@@ -94,14 +91,12 @@ mod tests {
             .unwrap()
             .object,
             FunctionDeclaration {
-                name: Localizable::irrelevant("main".into()),
-                parameters: Localizable::irrelevant([].into()),
-                return_type: Localizable::irrelevant(Type::Int),
-                body: Localizable::irrelevant(Box::new([Localizable::irrelevant(
-                    StatementNode::Return(Box::new(Localizable::irrelevant(
-                        ExpressionNode::Number(6.)
-                    )))
-                )])),
+                name: L::irrelevant("main".into()),
+                parameters: L::irrelevant([].into()),
+                return_type: L::irrelevant(Type::Int),
+                body: L::irrelevant(Box::new([L::irrelevant(StatementNode::Return(Box::new(
+                    L::irrelevant(ExpressionNode::Number(6.))
+                )))])),
             }
         );
     }

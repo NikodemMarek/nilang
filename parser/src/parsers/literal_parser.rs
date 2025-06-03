@@ -1,11 +1,11 @@
 use errors::{NilangError, ParserErrors};
-use nilang_types::{nodes::ExpressionNode, Localizable};
+use nilang_types::{nodes::ExpressionNode, Localizable as L};
 
 use crate::assuming_iterator::PeekableAssumingIterator;
 
 pub fn parse_literal<I: PeekableAssumingIterator>(
     tokens: &mut I,
-) -> Result<Localizable<ExpressionNode>, NilangError> {
+) -> Result<L<ExpressionNode>, NilangError> {
     let value = tokens.assume_literal()?;
 
     if value.starts_with('\'') && value.ends_with('\'') {
@@ -15,21 +15,21 @@ pub fn parse_literal<I: PeekableAssumingIterator>(
                 error: ParserErrors::InvalidLiteral.into(),
             });
         }
-        return Ok(Localizable::new(
+        return Ok(L::new(
             value.location,
             ExpressionNode::Char(value.chars().nth(1).unwrap()),
         ));
     }
 
     if value.starts_with('"') && value.ends_with('"') {
-        return Ok(Localizable::new(
+        return Ok(L::new(
             value.location,
             ExpressionNode::String(value[1..value.len() - 1].into()),
         ));
     }
 
     Ok(match value.parse() {
-        Ok(parsed) => Localizable::new(value.location, ExpressionNode::Number(parsed)),
+        Ok(parsed) => L::new(value.location, ExpressionNode::Number(parsed)),
         Err(_) => Err(NilangError {
             location: value.location,
             error: ParserErrors::InvalidLiteral.into(),
@@ -39,7 +39,7 @@ pub fn parse_literal<I: PeekableAssumingIterator>(
 
 #[cfg(test)]
 mod tests {
-    use nilang_types::{nodes::ExpressionNode, tokens::TokenType, Localizable};
+    use nilang_types::{nodes::ExpressionNode, tokens::TokenType, Localizable as L};
 
     use crate::parsers::literal_parser::parse_literal;
 
@@ -47,11 +47,9 @@ mod tests {
     fn test_parse_numbers() {
         assert_eq!(
             parse_literal(
-                &mut [Ok(
-                    Localizable::irrelevant(TokenType::Literal("54".into()),)
-                )]
-                .into_iter()
-                .peekable()
+                &mut [Ok(L::irrelevant(TokenType::Literal("54".into()),))]
+                    .into_iter()
+                    .peekable()
             )
             .unwrap()
             .object,
@@ -59,11 +57,9 @@ mod tests {
         );
         assert_eq!(
             parse_literal(
-                &mut [Ok(
-                    Localizable::irrelevant(TokenType::Literal("6.".into()),)
-                )]
-                .into_iter()
-                .peekable()
+                &mut [Ok(L::irrelevant(TokenType::Literal("6.".into()),))]
+                    .into_iter()
+                    .peekable()
             )
             .unwrap()
             .object,
@@ -71,11 +67,9 @@ mod tests {
         );
         assert_eq!(
             parse_literal(
-                &mut [Ok(
-                    Localizable::irrelevant(TokenType::Literal(".2".into()),)
-                )]
-                .into_iter()
-                .peekable()
+                &mut [Ok(L::irrelevant(TokenType::Literal(".2".into()),))]
+                    .into_iter()
+                    .peekable()
             )
             .unwrap()
             .object,
@@ -83,11 +77,9 @@ mod tests {
         );
         assert_eq!(
             parse_literal(
-                &mut [Ok(Localizable::irrelevant(TokenType::Literal(
-                    "8.5".into()
-                ),))]
-                .into_iter()
-                .peekable()
+                &mut [Ok(L::irrelevant(TokenType::Literal("8.5".into()),))]
+                    .into_iter()
+                    .peekable()
             )
             .unwrap()
             .object,
