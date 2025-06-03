@@ -8,6 +8,7 @@ use std::{
 use errors::TransformerErrors;
 use nilang_generator::options::{AtAndTFlavour, SystemVAmd64Abi, X86Registers};
 use nilang_transformer::{FunctionsRef, StructuresRef};
+use nilang_types::Localizable;
 
 fn main() {
     let code = read_to_string("test.ni").unwrap();
@@ -46,7 +47,7 @@ fn compile(code: &str) -> Box<str> {
 
     let generated = transformed.map(|(name, instructions)| {
         nilang_generator::generate_function::<X86Registers, SystemVAmd64Abi, AtAndTFlavour>(
-            name,
+            (*name).clone(),
             &data
                 .borrow()
                 .iter()
@@ -75,8 +76,8 @@ fn compile(code: &str) -> Box<str> {
 }
 
 fn create_transformer_context(
-    functions: &[nilang_types::nodes::FunctionDeclaration],
-    structures: &[nilang_types::nodes::StructureDeclaration],
+    functions: &[Localizable<nilang_types::nodes::FunctionDeclaration>],
+    structures: &[Localizable<nilang_types::nodes::StructureDeclaration>],
 ) -> Result<(FunctionsRef, StructuresRef), TransformerErrors> {
-    structures.try_into().map(|s| (functions.into(), s))
+    TryInto::try_into(structures).map(|s| (functions.into(), s))
 }

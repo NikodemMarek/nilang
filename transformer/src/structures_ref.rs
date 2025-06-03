@@ -28,11 +28,11 @@ impl StructuresRef {
     }
 }
 
-impl TryFrom<&[StructureDeclaration]> for StructuresRef {
+impl TryFrom<&[Localizable<StructureDeclaration>]> for StructuresRef {
     type Error = TransformerErrors;
 
     fn try_from(
-        structures: &[StructureDeclaration],
+        structures: &[Localizable<StructureDeclaration>],
     ) -> Result<StructuresRef, errors::TransformerErrors> {
         fn parse_structure_unnested(
             StructureDeclaration { name, fields }: &StructureDeclaration,
@@ -47,7 +47,7 @@ impl TryFrom<&[StructureDeclaration]> for StructuresRef {
 
         let nested_structures = structures
             .iter()
-            .map(parse_structure_unnested)
+            .map(|s| parse_structure_unnested(s))
             .collect::<HashMap<_, _>>();
         let flattened_structures = nested_structures
             .keys()
@@ -166,7 +166,7 @@ pub mod tests {
     pub fn test_structures_ref() -> StructuresRef {
         StructuresRef::try_from(
             [
-                StructureDeclaration {
+                Localizable::irrelevant(StructureDeclaration {
                     name: Localizable::irrelevant("Point".into()),
                     fields: Localizable::irrelevant(HashMap::from([
                         (
@@ -178,8 +178,8 @@ pub mod tests {
                             Localizable::irrelevant(Type::Int),
                         ),
                     ])),
-                },
-                StructureDeclaration {
+                }),
+                Localizable::irrelevant(StructureDeclaration {
                     name: Localizable::irrelevant("Rect".into()),
                     fields: Localizable::irrelevant(HashMap::from([
                         (
@@ -191,8 +191,8 @@ pub mod tests {
                             Localizable::irrelevant(Type::Object("Point".into())),
                         ),
                     ])),
-                },
-                StructureDeclaration {
+                }),
+                Localizable::irrelevant(StructureDeclaration {
                     name: Localizable::irrelevant("Label".into()),
                     fields: Localizable::irrelevant(HashMap::from([
                         (
@@ -204,7 +204,7 @@ pub mod tests {
                             Localizable::irrelevant(Type::Object("Point".into())),
                         ),
                     ])),
-                },
+                }),
             ]
             .as_ref(),
         )

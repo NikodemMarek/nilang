@@ -18,8 +18,8 @@ impl FunctionsRef {
     }
 }
 
-impl From<&[FunctionDeclaration]> for FunctionsRef {
-    fn from(functions: &[FunctionDeclaration]) -> Self {
+impl From<&[Localizable<FunctionDeclaration>]> for FunctionsRef {
+    fn from(functions: &[Localizable<FunctionDeclaration>]) -> Self {
         fn parse_function(
             FunctionDeclaration {
                 return_type,
@@ -40,7 +40,7 @@ impl From<&[FunctionDeclaration]> for FunctionsRef {
             )
         }
 
-        let mut functions = FunctionsRef(functions.iter().map(parse_function).collect());
+        let mut functions = FunctionsRef(functions.iter().map(|f| parse_function(f)).collect());
 
         functions.0.insert(
             "printi".into(),
