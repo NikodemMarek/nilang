@@ -12,7 +12,7 @@ pub fn parse_arguments<I: PeekableAssumingIterator>(
 
     let mut arguments = Vec::new();
     while let L {
-        object: TokenType::Identifier(_),
+        object: TokenType::Identifier(_) | TokenType::Literal(_) | TokenType::OpeningParenthesis,
         ..
     } = tokens.peek_valid()?
     {
