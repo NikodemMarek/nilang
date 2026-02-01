@@ -99,6 +99,12 @@ fn builtin_functions<C: CallingConvention>(
     _return_temporary: Option<Box<str>>,
 ) -> Option<Result<Vec<FullInstruction<C::Registers>>, GeneratorErrors>> {
     match name {
+        "printb" => Some(C::generate_function_call(
+            mm,
+            "printf",
+            &["printi_format".into(), arguments.first().unwrap().clone()],
+            None,
+        )),
         "printi" => Some(C::generate_function_call(
             mm,
             "printf",

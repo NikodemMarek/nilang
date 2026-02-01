@@ -47,6 +47,9 @@ pub fn transform_expression<'a>(
     r#type: &Type,
 ) -> InstructionsIterator<'a> {
     match node {
+        ExpressionNode::Boolean(boolean) => {
+            Box::new(once(Ok(Instruction::LoadBoolean(result, boolean))))
+        }
         ExpressionNode::Number(number) => {
             Box::new(once(Ok(Instruction::LoadNumber(result, number))))
         }

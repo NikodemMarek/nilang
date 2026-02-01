@@ -16,6 +16,7 @@ pub fn parse_type_annotation<I: PeekableAssumingIterator>(
 pub fn parse_type(r#type: &str) -> Type {
     match r#type.to_string().as_str() {
         "void" => Type::Void,
+        "bool" => Type::Bool,
         "int" => Type::Int,
         "char" => Type::Char,
         "string" => Type::String,

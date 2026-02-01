@@ -49,6 +49,17 @@ pub trait CallingConvention: Sized {
 
                 Self::generate_function_call(mm, &name, &arguments, return_temporary)?
             }
+            Instruction::LoadBoolean(temporary, boolean) => {
+                let location = mm.get_location_or_err(&temporary)?;
+                vec![(
+                    AssemblyInstruction::Move,
+                    vec![
+                        location.into(),
+                        AssemblyInstructionParameter::Number(if boolean { 1.0 } else { 0.0 }),
+                    ],
+                    format!("Load boolean '{boolean}' into `{temporary}`").into(),
+                )]
+            }
             Instruction::LoadNumber(temporary, number) => {
                 let location = mm.get_location_or_err(&temporary)?;
                 vec![(

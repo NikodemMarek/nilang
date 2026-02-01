@@ -126,6 +126,7 @@ impl<'a> Iterator for Tokenizer<'a> {
                             "vr" => TokenType::Keyword(Keyword::Variable),
                             "rt" => TokenType::Keyword(Keyword::Return),
                             "st" => TokenType::Keyword(Keyword::Structure),
+                            "true" | "false" => TokenType::Literal(aggregation.into()),
                             _ => TokenType::Identifier(aggregation.into()),
                         },
                         start,
@@ -553,6 +554,26 @@ mod tests {
 
     #[test]
     fn test_tokenizer_literals() {
+        let mut iter = Tokenizer::new("true");
+        assert_eq!(
+            iter.next().unwrap().unwrap(),
+            Token {
+                token: TokenType::Literal("true".into()),
+                start: (0, 0),
+                end: (0, 3),
+            }
+        );
+
+        let mut iter = Tokenizer::new("false");
+        assert_eq!(
+            iter.next().unwrap().unwrap(),
+            Token {
+                token: TokenType::Literal("false".into()),
+                start: (0, 0),
+                end: (0, 4),
+            }
+        );
+
         let mut iter = Tokenizer::new("5");
         assert_eq!(
             iter.next().unwrap().unwrap(),

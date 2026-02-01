@@ -22,6 +22,13 @@ pub fn parse_literal<I: PeekableAssumingIterator>(
         return Ok(ExpressionNode::String(value[1..value.len() - 1].into()));
     }
 
+    if &*value == "true" {
+        return Ok(ExpressionNode::Boolean(true));
+    }
+    if &*value == "false" {
+        return Ok(ExpressionNode::Boolean(false));
+    }
+
     Ok(match value.parse() {
         Ok(parsed) => ExpressionNode::Number(parsed),
         Err(_) => Err(NilangError {
@@ -39,6 +46,36 @@ mod tests {
     };
 
     use crate::parsers::literal_parser::parse_literal;
+
+    #[test]
+    fn test_parse_booleans() {
+        assert_eq!(
+            parse_literal(
+                &mut [Ok(Token {
+                    token: TokenType::Literal("true".into()),
+                    start: (0, 0),
+                    end: (0, 3),
+                })]
+                .into_iter()
+                .peekable()
+            )
+            .unwrap(),
+            ExpressionNode::Boolean(true)
+        );
+        assert_eq!(
+            parse_literal(
+                &mut [Ok(Token {
+                    token: TokenType::Literal("false".into()),
+                    start: (0, 0),
+                    end: (0, 4),
+                })]
+                .into_iter()
+                .peekable()
+            )
+            .unwrap(),
+            ExpressionNode::Boolean(false)
+        )
+    }
 
     #[test]
     fn test_parse_numbers() {

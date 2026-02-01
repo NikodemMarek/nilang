@@ -1,4 +1,5 @@
 type Temporary = Box<str>;
+type Boolean = bool;
 type Number = f64;
 type Char = char;
 type Function = Box<str>;
@@ -12,6 +13,7 @@ pub enum Instruction {
 
     ReturnVariable(Temporary),
 
+    LoadBoolean(Temporary, Boolean),
     LoadNumber(Temporary, Number),
     LoadChar(Temporary, Char),
     LoadStringLocation(Temporary, Temporary),

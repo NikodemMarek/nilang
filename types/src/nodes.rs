@@ -18,6 +18,7 @@ pub struct StructureDeclaration {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ExpressionNode {
+    Boolean(bool),
     Number(f64),
     Char(char),
     String(Box<str>),
@@ -67,6 +68,7 @@ pub enum Operator {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Type {
     Void,
+    Bool,
     Int,
     Char,
     String,

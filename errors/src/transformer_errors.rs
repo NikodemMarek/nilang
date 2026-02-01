@@ -40,6 +40,7 @@ impl std::fmt::Display for TransformerErrors {
                     format!(
                         "Type mismatch: expected `{}`, found `{}`",
                         match expected {
+                            Type::Bool => "bool",
                             Type::Int => "int",
                             Type::Void => "void",
                             Type::Char => "char",
@@ -47,6 +48,7 @@ impl std::fmt::Display for TransformerErrors {
                             Type::Object(name) => name,
                         },
                         match found {
+                            Type::Bool => "bool",
                             Type::Int => "int",
                             Type::Void => "void",
                             Type::Char => "char",

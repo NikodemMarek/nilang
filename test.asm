@@ -19,14 +19,16 @@ main:
     # Prologue
     pushq %rbp
     movq %rsp, %rbp
-    movq $12, %rbx                # Load number '12' into `temp_0`
-    movq $string__text, %rax      # Load 'string__text' string pointer into `text`
-    movq %rax, %rcx               # Copy `text` into `temp_1`
-    movq $print_format, %rdi      # Load `print_format` as argument 0
-    movq %rcx, %rsi               # Load `temp_1` as argument 1
+    movq $0, %rax                 # Load boolean 'false' into `is_true`
+    movq $12, %rcx                # Load number '12' into `temp_0`
+    movq $string__text, %rbx      # Load 'string__text' string pointer into `text`
+    movq %rax, %rdx               # Copy `is_true` into `temp_1`
+    xchgq %rdi, %rsi              # Swap @swap_temp_1 and @swap_temp_0
+    movq $printi_format, %rdi     # Load `printi_format` as argument 0
+    movq %rdx, %rsi               # Load `temp_1` as argument 1
     call printf                   # Call function `printf`
-    movq $0, %rdx                 # Load number '0' into `temp_2`
-    movq %rdx, %rax               # Return `temp_2`
+    movq $0, %rsi                 # Load number '0' into `temp_2`
+    movq %rsi, %rax               # Return `temp_2`
     # Epilogue
     # leave
     movq %rbp, %rsp

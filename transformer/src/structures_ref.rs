@@ -116,7 +116,7 @@ pub fn copy_all_fields<'a>(
     let object_type = match object_type {
         Type::Object(object_type) => object_type,
         Type::Void => return Box::new(empty()),
-        Type::Int | Type::Char | Type::String => {
+        Type::Bool | Type::Int | Type::Char | Type::String => {
             return Box::new(once(Ok(Instruction::Copy(destination, source))));
         }
     };

@@ -81,12 +81,13 @@ fn parse_operation<I: PeekableAssumingIterator>(
                 }
             }
         }
-        ExpressionNode::Object { .. } | ExpressionNode::Char(_) | ExpressionNode::String(_) => {
-            Err(NilangError {
-                location: CodeLocation::at(start.0, start.1 - 1),
-                error: ParserErrors::InvalidOperand.into(),
-            })?
-        }
+        ExpressionNode::Object { .. }
+        | ExpressionNode::Boolean(_)
+        | ExpressionNode::Char(_)
+        | ExpressionNode::String(_) => Err(NilangError {
+            location: CodeLocation::at(start.0, start.1 - 1),
+            error: ParserErrors::InvalidOperand.into(),
+        })?,
     })
 }
 

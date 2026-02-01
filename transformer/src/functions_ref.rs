@@ -43,6 +43,10 @@ impl From<&[FunctionDeclaration]> for FunctionsRef {
         );
 
         functions.0.insert(
+            "printb".into(),
+            (Type::Void, Box::new([("value".into(), Type::Bool)])),
+        );
+        functions.0.insert(
             "printi".into(),
             (Type::Void, Box::new([("value".into(), Type::Int)])),
         );
