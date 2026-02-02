@@ -28,6 +28,7 @@ mod operation_parser;
 mod parameter_list_parser;
 mod parenthesis_parser;
 mod return_parser;
+mod scope_parser;
 pub mod structure_parser;
 mod type_annotation_parser;
 mod variable_declaration_parser;

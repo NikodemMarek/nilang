@@ -1,10 +1,10 @@
 use errors::NilangError;
 use nilang_types::{
     nodes::{Conditional, StatementNode},
-    tokens::{Keyword, TokenType},
+    tokens::Keyword,
 };
 
-use crate::{assuming_iterator::PeekableAssumingIterator, parsers::parse_statement};
+use crate::{assuming_iterator::PeekableAssumingIterator, parsers::scope_parser::parse_scope};
 
 use super::parse_expression;
 
@@ -14,27 +14,15 @@ pub fn parse_conditional<I: PeekableAssumingIterator>(
     tokens.assume_keyword(Keyword::If)?;
 
     let condition = parse_expression(tokens)?;
+    let body = parse_scope(tokens)?;
 
-    tokens.assume(TokenType::OpeningBrace)?;
-
-    // TODO: Extract to scope parser
-    let mut body = Vec::new();
-    while tokens.peek_valid()?.token != TokenType::ClosingBrace {
-        body.push(parse_statement(tokens)?);
-    }
-
-    tokens.assume(TokenType::ClosingBrace)?;
-
-    Ok(StatementNode::Conditional(Conditional {
-        condition,
-        body: body.into(),
-    }))
+    Ok(StatementNode::Conditional(Conditional { condition, body }))
 }
 
 #[cfg(test)]
 mod tests {
     use nilang_types::{
-        nodes::{Conditional, ExpressionNode, FunctionCall, StatementNode},
+        nodes::{Conditional, ExpressionNode, StatementNode},
         tokens::{Keyword, Token, TokenType},
     };
 
@@ -73,66 +61,6 @@ mod tests {
             StatementNode::Conditional(Conditional {
                 condition: ExpressionNode::Boolean(true),
                 body: Box::new([])
-            })
-        );
-    }
-
-    #[test]
-    fn test_parse_conditional_with_body() {
-        assert_eq!(
-            parse_conditional(
-                &mut [
-                    Ok(Token {
-                        token: TokenType::Keyword(Keyword::If),
-                        start: (0, 0),
-                        end: (0, 1),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("false".into()),
-                        start: (0, 3),
-                        end: (0, 3),
-                    }),
-                    Ok(Token {
-                        token: TokenType::OpeningBrace,
-                        start: (0, 4),
-                        end: (0, 4),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Identifier("test".into()),
-                        start: (0, 5),
-                        end: (0, 5),
-                    }),
-                    Ok(Token {
-                        token: TokenType::OpeningParenthesis,
-                        start: (0, 4),
-                        end: (0, 4),
-                    }),
-                    Ok(Token {
-                        token: TokenType::ClosingParenthesis,
-                        start: (0, 4),
-                        end: (0, 4),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Semicolon,
-                        start: (0, 4),
-                        end: (0, 4),
-                    }),
-                    Ok(Token {
-                        token: TokenType::ClosingBrace,
-                        start: (0, 5),
-                        end: (0, 5),
-                    }),
-                ]
-                .into_iter()
-                .peekable(),
-            )
-            .unwrap(),
-            StatementNode::Conditional(Conditional {
-                condition: ExpressionNode::Boolean(false),
-                body: Box::new([StatementNode::FunctionCall(FunctionCall {
-                    name: "test".into(),
-                    arguments: [].into()
-                })])
             })
         );
     }

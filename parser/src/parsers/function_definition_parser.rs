@@ -1,14 +1,10 @@
 use errors::NilangError;
-use nilang_types::{
-    nodes::FunctionDeclaration,
-    tokens::{Keyword, Token, TokenType},
-};
+use nilang_types::{nodes::FunctionDeclaration, tokens::Keyword};
 
-use crate::assuming_iterator::PeekableAssumingIterator;
+use crate::{assuming_iterator::PeekableAssumingIterator, parsers::scope_parser::parse_scope};
 
 use super::{
-    parameter_list_parser::parse_parameter_list, parse_statement,
-    type_annotation_parser::parse_type_annotation,
+    parameter_list_parser::parse_parameter_list, type_annotation_parser::parse_type_annotation,
 };
 
 pub fn parse_function_definition<I: PeekableAssumingIterator>(
@@ -17,39 +13,15 @@ pub fn parse_function_definition<I: PeekableAssumingIterator>(
     tokens.assume_keyword(Keyword::Function)?;
 
     let (_, _, name) = tokens.assume_identifier()?;
-
     let parameters = parse_parameter_list(tokens)?;
-
     let return_type = parse_type_annotation(tokens)?;
-
-    tokens.assume(TokenType::OpeningBrace)?;
-
-    let body = {
-        let mut program = Vec::new();
-
-        loop {
-            match tokens.peek_valid()? {
-                Token {
-                    token: TokenType::ClosingBrace,
-                    ..
-                } => {
-                    tokens.next();
-                    break;
-                }
-                Token { .. } => {
-                    program.push(parse_statement(tokens)?);
-                }
-            }
-        }
-
-        program
-    };
+    let body = parse_scope(tokens)?;
 
     Ok(FunctionDeclaration {
         name,
         parameters,
         return_type,
-        body: body.into(),
+        body,
     })
 }
 
