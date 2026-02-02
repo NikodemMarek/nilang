@@ -35,8 +35,6 @@ impl Registers for X86Registers {
             X86Registers::Rdx,
             X86Registers::Rsi,
             X86Registers::Rdi,
-            X86Registers::Rbp,
-            X86Registers::Rsp,
             X86Registers::R8,
             X86Registers::R9,
             X86Registers::R10,
