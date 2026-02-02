@@ -179,6 +179,13 @@ pub trait CallingConvention: Sized {
                     format!("Create label `{label}`").into(),
                 )]
             }
+            Instruction::Jump(label) => {
+                vec![(
+                    AssemblyInstruction::Jmp,
+                    vec![AssemblyInstructionParameter::Label(label.clone())],
+                    format!("Jump to label `{label}`").into(),
+                )]
+            }
             Instruction::ConditionalJump(check, label) => {
                 let check_loc = mm.get_location_or_err(&check)?;
                 vec![

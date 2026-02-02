@@ -45,6 +45,7 @@ impl<R: Registers> AssemblyFlavour<R> for AtAndTFlavour {
 
         let instruction = match instruction {
             AssemblyInstruction::Label => format!("{}:", parameters[0]).into(),
+            AssemblyInstruction::Jmp => instruction_with_arguments("jmp", &[&parameters[0]]),
             AssemblyInstruction::Je => instruction_with_arguments("je", &[&parameters[0]]),
             AssemblyInstruction::Test => {
                 instruction_with_arguments("testq", &[&parameters[1], &parameters[0]])
@@ -146,6 +147,7 @@ pub type FullInstruction<R> = (
 #[derive(Debug, Clone, PartialEq)]
 pub enum AssemblyInstruction {
     Label, // label
+    Jmp,   // label
     Je,    // label
     Test,  // a, b
     Move,  // destination, source

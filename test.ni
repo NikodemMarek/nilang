@@ -1,11 +1,12 @@
 fn main(): int {
-    vr is_true: bool = true;
-    vr text: string = "Hello World!";
+    vr is_true: bool = false;
 
-    print(text);
     if (is_true) {
         vr bye: string = "Bye World!";
         print(bye);
+    } el {
+        vr text: string = "Hello World!";
+        print(text);
     }
 
     rt 0;

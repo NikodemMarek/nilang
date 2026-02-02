@@ -30,7 +30,7 @@ pub fn parse(
                     let structure = parsers::structure_parser::parse_structure(&mut tokens)?;
                     structures.push(structure);
                 }
-                Keyword::Return | Keyword::Variable | Keyword::If => {
+                Keyword::Return | Keyword::Variable | Keyword::If | Keyword::Else => {
                     return Err(NilangError {
                         location: CodeLocation::at(usize::MAX, usize::MAX),
                         error: ParserErrors::ExpectedTokens(

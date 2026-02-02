@@ -8,6 +8,7 @@ type Function = Box<str>;
 #[derive(Debug, Clone, PartialEq)]
 pub enum Instruction {
     Label(Label),
+    Jump(Label),
     ConditionalJump(Temporary, Label),
 
     Declare(Temporary),

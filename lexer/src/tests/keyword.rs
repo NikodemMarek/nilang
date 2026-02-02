@@ -30,4 +30,22 @@ fn keyword() {
             end: (0, 1),
         }
     );
+
+    assert_eq!(
+        lex("if").next().unwrap().unwrap(),
+        Token {
+            token: TokenType::Keyword(Keyword::If),
+            start: (0, 0),
+            end: (0, 1),
+        }
+    );
+
+    assert_eq!(
+        lex("el").next().unwrap().unwrap(),
+        Token {
+            token: TokenType::Keyword(Keyword::Else),
+            start: (0, 0),
+            end: (0, 1),
+        }
+    );
 }

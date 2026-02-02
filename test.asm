@@ -1,6 +1,6 @@
 .data
-string__text: .asciz "Hello World!"
 string__bye: .asciz "Bye World!"
+string__text: .asciz "Hello World!"
 
 .data
 printi_format: .asciz "%d\n"
@@ -20,28 +20,34 @@ main:
     # Prologue
     pushq %rbp
     movq %rsp, %rbp
-    movq $1, %rax                 # Load boolean 'true' into `is_true`
-    movq $12, %rcx                # Load number '12' into `temp_0`
-    movq $string__text, %rbx      # Load 'string__text' string pointer into `text`
-    movq %rbx, %rdx               # Copy `text` into `temp_1`
-    xchgq %rdi, %rsi              # Swap @swap_temp_1 and @swap_temp_0
+    movq $0, %rax                 # Load boolean 'false' into `is_true`
+    movq %rax, %rbx               # Copy `is_true` into `temp_0`
+    testq %rbx, %rbx              # Test if `temp_0` is `0`
+    je .label_0                   # Jump to label `label_0` if `temp_0` test passed
+    movq $10, %rdx                # Load number '10' into `temp_1`
+    movq $string__bye, %rcx       # Load 'string__bye' string pointer into `bye`
+    movq %rcx, %rsi               # Copy `bye` into `temp_2`
+    xchgq %rsi, %r8               # Swap temp_2 and @swap_temp_1
     movq $print_format, %rdi      # Load `print_format` as argument 0
-    movq %rdx, %rsi               # Load `temp_1` as argument 1
+    movq %r8, %rsi                # Load `temp_2` as argument 1
     call printf                   # Call function `printf`
-    movq %rax, %rsi               # Copy `is_true` into `temp_2`
-    testq %rsi, %rsi              # Test if `temp_2` is `0`
-    je .label_0                   # Jump to label `label_0` if `temp_2` test passed
-    movq $10, %r8                 # Load number '10' into `temp_3`
-    movq $string__bye, %rdi       # Load 'string__bye' string pointer into `bye`
-    movq %rdi, %r9                # Copy `bye` into `temp_4`
-    xchgq %rdi, %r10              # Swap bye and @swap_temp_0
-    xchgq %rsi, %r11              # Swap temp_2 and @swap_temp_1
-    movq $print_format, %rdi      # Load `print_format` as argument 0
-    movq %r9, %rsi                # Load `temp_4` as argument 1
-    call printf                   # Call function `printf`
+    jmp .label_1                  # Jump to label `label_1`
     .label_0:                     # Create label `label_0`
-    movq $0, %rsi                 # Load number '0' into `temp_5`
-    movq %rsi, %rax               # Return `temp_5`
+    movq $1, %rsi                 # Load boolean 'true' into `temp_3`
+    testq %rsi, %rsi              # Test if `temp_3` is `0`
+    je .label_2                   # Jump to label `label_2` if `temp_3` test passed
+    movq $12, %r9                 # Load number '12' into `temp_4`
+    movq $string__text, %rdi      # Load 'string__text' string pointer into `text`
+    movq %rdi, %r10               # Copy `text` into `temp_5`
+    xchgq %rdi, %r11              # Swap text and @swap_temp_0
+    xchgq %rsi, %r12              # Swap temp_3 and @swap_temp_1
+    movq $print_format, %rdi      # Load `print_format` as argument 0
+    movq %r10, %rsi               # Load `temp_5` as argument 1
+    call printf                   # Call function `printf`
+    .label_2:                     # Create label `label_2`
+    .label_1:                     # Create label `label_1`
+    movq $0, %rsi                 # Load number '0' into `temp_6`
+    movq %rsi, %rax               # Return `temp_6`
     # Epilogue
     # leave
     movq %rbp, %rsp

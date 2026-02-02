@@ -61,6 +61,7 @@ pub struct FunctionCall {
 pub struct Conditional {
     pub condition: ExpressionNode,
     pub body: Box<[StatementNode]>,
+    pub chained: Option<Box<Conditional>>,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
