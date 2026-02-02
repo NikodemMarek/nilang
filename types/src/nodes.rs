@@ -49,6 +49,10 @@ pub enum StatementNode {
     Return(Box<ExpressionNode>),
     FunctionCall(FunctionCall),
     Conditional(Conditional),
+    WhileLoop {
+        condition: ExpressionNode,
+        body: Box<[StatementNode]>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]

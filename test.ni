@@ -1,14 +1,8 @@
 fn main(): int {
-    vr is_true: bool = false;
+    vr is_true: bool = true;
+    vr text: string = "Hello World!";
 
-    if (is_true) {
-        vr bye: string = "Bye World!";
-        print(bye);
-    } ef (true) {
-        vr wait: string = "I'm also here!";
-        print(wait);
-    } el {
-        vr text: string = "Hello World!";
+    wl (is_true) {
         print(text);
     }
 

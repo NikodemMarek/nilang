@@ -129,6 +129,7 @@ impl<'a> Iterator for Tokenizer<'a> {
                             "if" => TokenType::Keyword(Keyword::If),
                             "ef" => TokenType::Keyword(Keyword::ElseIf),
                             "el" => TokenType::Keyword(Keyword::Else),
+                            "wl" => TokenType::Keyword(Keyword::While),
                             "true" | "false" => TokenType::Literal(aggregation.into()),
                             _ => TokenType::Identifier(aggregation.into()),
                         },

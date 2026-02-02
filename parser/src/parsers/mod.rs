@@ -13,7 +13,8 @@ use return_parser::parse_return;
 use variable_declaration_parser::parse_variable_declaration;
 
 use crate::{
-    assuming_iterator::PeekableAssumingIterator, parsers::conditional_parser::parse_conditional,
+    assuming_iterator::PeekableAssumingIterator,
+    parsers::{conditional_parser::parse_conditional, while_loop_parser::parse_while_loop},
 };
 
 mod argument_list_parser;
@@ -32,6 +33,7 @@ mod scope_parser;
 pub mod structure_parser;
 mod type_annotation_parser;
 mod variable_declaration_parser;
+mod while_loop_parser;
 
 pub fn parse_statement<I: PeekableAssumingIterator>(
     tokens: &mut I,
@@ -43,6 +45,7 @@ pub fn parse_statement<I: PeekableAssumingIterator>(
             Keyword::Variable => parse_variable_declaration(tokens)?,
             Keyword::Return => parse_return(tokens)?,
             Keyword::If => StatementNode::Conditional(parse_conditional(tokens)?),
+            Keyword::While => parse_while_loop(tokens)?,
             Keyword::ElseIf | Keyword::Else | Keyword::Function | Keyword::Structure => {
                 return Err(NilangError {
                     location: CodeLocation::at(peek_valid.start.0, peek_valid.start.1),

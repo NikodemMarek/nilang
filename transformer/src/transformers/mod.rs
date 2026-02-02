@@ -6,6 +6,7 @@ mod operation_transformer;
 mod return_transformer;
 mod variable_declaration_transformer;
 mod variable_reference_transformer;
+mod while_loop_transformer;
 
 use std::iter::once;
 
@@ -19,8 +20,11 @@ use variable_declaration_transformer::transform_variable_declaration;
 use variable_reference_transformer::transform_variable_reference;
 
 use crate::{
-    transformers::conditional_transformer::transform_conditional, Context, Instruction,
-    InstructionsIterator, Type,
+    transformers::{
+        conditional_transformer::transform_conditional,
+        while_loop_transformer::transform_while_loop,
+    },
+    Context, Instruction, InstructionsIterator, Type,
 };
 
 pub fn transform_statement<'a>(
@@ -40,6 +44,9 @@ pub fn transform_statement<'a>(
             transform_function_call(context, name, &arguments, "".into(), &Type::Void)
         }
         StatementNode::Conditional(conditional) => transform_conditional(context, conditional),
+        StatementNode::WhileLoop { condition, body } => {
+            transform_while_loop(context, condition, &body)
+        }
     }
 }
 

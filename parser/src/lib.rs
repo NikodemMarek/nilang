@@ -34,7 +34,8 @@ pub fn parse(
                 | Keyword::Variable
                 | Keyword::If
                 | Keyword::ElseIf
-                | Keyword::Else => {
+                | Keyword::Else
+                | Keyword::While => {
                     return Err(NilangError {
                         location: CodeLocation::at(usize::MAX, usize::MAX),
                         error: ParserErrors::ExpectedTokens(

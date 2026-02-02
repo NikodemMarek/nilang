@@ -56,6 +56,7 @@ pub enum Keyword {
     If,
     ElseIf,
     Else,
+    While,
 }
 
 impl Debug for Keyword {
@@ -69,6 +70,7 @@ impl Debug for Keyword {
             Keyword::If => write!(f, "If"),
             Keyword::ElseIf => write!(f, "ElseIf"),
             Keyword::Else => write!(f, "Else"),
+            Keyword::While => write!(f, "While"),
         }
     }
 }
