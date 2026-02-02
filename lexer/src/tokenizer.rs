@@ -126,6 +126,7 @@ impl<'a> Iterator for Tokenizer<'a> {
                             "vr" => TokenType::Keyword(Keyword::Variable),
                             "rt" => TokenType::Keyword(Keyword::Return),
                             "st" => TokenType::Keyword(Keyword::Structure),
+                            "if" => TokenType::Keyword(Keyword::If),
                             "true" | "false" => TokenType::Literal(aggregation.into()),
                             _ => TokenType::Identifier(aggregation.into()),
                         },

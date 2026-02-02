@@ -53,6 +53,7 @@ pub enum Keyword {
     Variable,
     Return,
     Structure,
+    If,
 }
 
 impl Debug for Keyword {
@@ -63,6 +64,7 @@ impl Debug for Keyword {
             Keyword::Variable => write!(f, "Variable"),
             Keyword::Return => write!(f, "Return"),
             Keyword::Structure => write!(f, "Structure"),
+            Keyword::If => write!(f, "If"),
         }
     }
 }

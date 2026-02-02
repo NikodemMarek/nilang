@@ -23,12 +23,13 @@ pub struct AtAndTFlavour;
 impl<R: Registers> AssemblyFlavour<R> for AtAndTFlavour {
     fn generate_parameter(parameter: &AssemblyInstructionParameter<R>) -> String {
         match parameter {
-            AssemblyInstructionParameter::Register(register) => format!("%{}", register),
-            AssemblyInstructionParameter::Memory(memory) => format!("-{}(%rax)", memory),
-            AssemblyInstructionParameter::Number(number) => format!("${}", number),
-            AssemblyInstructionParameter::Char(char) => format!("$'{}'", char),
+            AssemblyInstructionParameter::Register(register) => format!("%{register}"),
+            AssemblyInstructionParameter::Memory(memory) => format!("-{memory}(%rax)"),
+            AssemblyInstructionParameter::Number(number) => format!("${number}"),
+            AssemblyInstructionParameter::Char(char) => format!("$'{char}'"),
             AssemblyInstructionParameter::Function(name) => name.to_string(),
-            AssemblyInstructionParameter::Data(pointer) => format!("${}", pointer),
+            AssemblyInstructionParameter::Label(name) => format!(".{name}"),
+            AssemblyInstructionParameter::Data(pointer) => format!("${pointer}"),
         }
     }
 
@@ -43,6 +44,11 @@ impl<R: Registers> AssemblyFlavour<R> for AtAndTFlavour {
             .collect::<Vec<_>>();
 
         let instruction = match instruction {
+            AssemblyInstruction::Label => format!("{}:", parameters[0]).into(),
+            AssemblyInstruction::Je => instruction_with_arguments("je", &[&parameters[0]]),
+            AssemblyInstruction::Test => {
+                instruction_with_arguments("testq", &[&parameters[1], &parameters[0]])
+            }
             AssemblyInstruction::Move => {
                 instruction_with_arguments("movq", &[&parameters[1], &parameters[0]])
             }
@@ -139,13 +145,16 @@ pub type FullInstruction<R> = (
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum AssemblyInstruction {
-    Move, // destination, source
-    Swap, // a, b
-    Call, // function
-    Add,  // destination & a, b
-    Sub,  // destination & a, b
-    Mul,  // destination & a, b
-    Div,  // destination & a
+    Label, // label
+    Je,    // label
+    Test,  // a, b
+    Move,  // destination, source
+    Swap,  // a, b
+    Call,  // function
+    Add,   // destination & a, b
+    Sub,   // destination & a, b
+    Mul,   // destination & a, b
+    Div,   // destination & a
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -155,6 +164,7 @@ pub enum AssemblyInstructionParameter<R: Registers> {
     Number(f64),
     Char(char),
     Function(Box<str>),
+    Label(Box<str>),
     Data(Box<str>),
 }
 

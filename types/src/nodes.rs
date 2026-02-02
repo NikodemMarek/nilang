@@ -48,12 +48,19 @@ pub enum StatementNode {
     },
     Return(Box<ExpressionNode>),
     FunctionCall(FunctionCall),
+    Conditional(Conditional),
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FunctionCall {
     pub name: Box<str>,
     pub arguments: Box<[ExpressionNode]>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Conditional {
+    pub condition: ExpressionNode,
+    pub body: Box<[StatementNode]>,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]

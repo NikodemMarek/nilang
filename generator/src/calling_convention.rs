@@ -172,6 +172,28 @@ pub trait CallingConvention: Sized {
             Instruction::DivideVariables(_, _, _) | Instruction::ModuloVariables(_, _, _) => {
                 Self::generate_instruction_specific(mm, instruction)?
             }
+            Instruction::Label(label) => {
+                vec![(
+                    AssemblyInstruction::Label,
+                    vec![AssemblyInstructionParameter::Label(label.clone())],
+                    format!("Create label `{label}`").into(),
+                )]
+            }
+            Instruction::ConditionalJump(check, label) => {
+                let check_loc = mm.get_location_or_err(&check)?;
+                vec![
+                    (
+                        AssemblyInstruction::Test,
+                        vec![check_loc.into(), check_loc.into()],
+                        format!("Test if `{check}` is `0`").into(),
+                    ),
+                    (
+                        AssemblyInstruction::Je,
+                        vec![AssemblyInstructionParameter::Label(label.clone())],
+                        format!("Jump to label `{label}` if `{check}` test passed").into(),
+                    ),
+                ]
+            }
         })
     }
 

@@ -33,7 +33,8 @@ mod tests {
     use std::cell::RefCell;
 
     use crate::{
-        structures_ref::tests::test_structures_ref, temporaries::Temporaries, FunctionsRef,
+        labels::Labels, structures_ref::tests::test_structures_ref, temporaries::Temporaries,
+        FunctionsRef,
     };
 
     use super::*;
@@ -44,6 +45,7 @@ mod tests {
             functions: &FunctionsRef::default(),
             structures: &test_structures_ref(),
             temporaries: Temporaries::default(),
+            labels: Labels::default(),
             data: &RefCell::new(Vec::new()),
         };
 

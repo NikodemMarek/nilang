@@ -1,4 +1,5 @@
 mod functions_ref;
+mod labels;
 mod structures_ref;
 mod temporaries;
 mod transformers;
@@ -14,6 +15,8 @@ use nilang_types::{
 pub use structures_ref::StructuresRef;
 use temporaries::Temporaries;
 
+use crate::labels::Labels;
+
 type InstructionsIterator<'a> =
     Box<dyn Iterator<Item = Result<Instruction, TransformerErrors>> + 'a>;
 
@@ -24,6 +27,7 @@ struct Context<'a> {
     functions: &'a FunctionsRef,
     structures: &'a StructuresRef,
     temporaries: Temporaries,
+    labels: Labels,
     data: &'a Data,
 }
 
@@ -37,6 +41,7 @@ pub fn transform_function<'a>(
     }: &'a FunctionDeclaration,
 ) -> (InstructionsIterator<'a>, Vec<Declaration>) {
     let temporaries = Temporaries::default();
+    let labels = Labels::default();
 
     let parameters = transform_parameters(
         &refs.1,
@@ -52,6 +57,7 @@ pub fn transform_function<'a>(
         functions: &refs.0,
         structures: &refs.1,
         temporaries,
+        labels,
         data: &data,
     };
 

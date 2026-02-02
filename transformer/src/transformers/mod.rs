@@ -1,3 +1,4 @@
+mod conditional_transformer;
 mod field_access_transformator;
 mod function_call_transformer;
 mod object_transformer;
@@ -10,14 +11,17 @@ use std::iter::once;
 
 use field_access_transformator::transform_field_access;
 use function_call_transformer::transform_function_call;
-use nilang_types::nodes::{ExpressionNode, FunctionCall, StatementNode};
+use nilang_types::nodes::{Conditional, ExpressionNode, FunctionCall, StatementNode};
 use object_transformer::transform_object;
 use operation_transformer::transform_operation;
 use return_transformer::transform_return;
 use variable_declaration_transformer::transform_variable_declaration;
 use variable_reference_transformer::transform_variable_reference;
 
-use crate::{Context, Instruction, InstructionsIterator, Type};
+use crate::{
+    transformers::conditional_transformer::transform_conditional, Context, Instruction,
+    InstructionsIterator, Type,
+};
 
 pub fn transform_statement<'a>(
     context: &'a Context,
@@ -35,6 +39,7 @@ pub fn transform_statement<'a>(
         StatementNode::FunctionCall(FunctionCall { name, arguments }) => {
             transform_function_call(context, name, &arguments, "".into(), &Type::Void)
         }
+        StatementNode::Conditional(conditional) => transform_conditional(context, conditional),
     }
 }
 

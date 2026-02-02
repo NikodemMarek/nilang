@@ -12,9 +12,12 @@ use parenthesis_parser::parse_parenthesis;
 use return_parser::parse_return;
 use variable_declaration_parser::parse_variable_declaration;
 
-use crate::assuming_iterator::PeekableAssumingIterator;
+use crate::{
+    assuming_iterator::PeekableAssumingIterator, parsers::conditional_parser::parse_conditional,
+};
 
 mod argument_list_parser;
+mod conditional_parser;
 mod field_access_parser;
 mod function_call_parser;
 pub mod function_definition_parser;
@@ -38,6 +41,7 @@ pub fn parse_statement<I: PeekableAssumingIterator>(
         TokenType::Keyword(value) => match value {
             Keyword::Variable => parse_variable_declaration(tokens)?,
             Keyword::Return => parse_return(tokens)?,
+            Keyword::If => parse_conditional(tokens)?,
             Keyword::Function | Keyword::Structure => {
                 return Err(NilangError {
                     location: CodeLocation::at(peek_valid.start.0, peek_valid.start.1),

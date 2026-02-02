@@ -1,18 +1,10 @@
-st Point {
-    x: int,
-    y: int
-}
-
-st Rect {
-    start: Point,
-    end: Point
-}
-
 fn main(): int {
-    vr is_true: bool = false;
+    vr is_true: bool = true;
     vr text: string = "Hello World!";
 
-    printb(is_true);
+    if (is_true) {
+        print(text);
+    }
 
     rt 0;
 }

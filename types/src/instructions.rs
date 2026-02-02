@@ -1,4 +1,5 @@
 type Temporary = Box<str>;
+type Label = Box<str>;
 type Boolean = bool;
 type Number = f64;
 type Char = char;
@@ -6,6 +7,9 @@ type Function = Box<str>;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Instruction {
+    Label(Label),
+    ConditionalJump(Temporary, Label),
+
     Declare(Temporary),
 
     FunctionCall(Function, Box<[Temporary]>, Option<Temporary>),
