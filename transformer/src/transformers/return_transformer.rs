@@ -40,7 +40,7 @@ mod tests {
     };
 
     use crate::{
-        structures_ref::tests::test_structures_ref, temporaries::Temporaries,
+        labels::Labels, structures_ref::tests::test_structures_ref, temporaries::Temporaries,
         transformers::return_transformer::transform_return, Context, FunctionsRef,
     };
 
@@ -50,6 +50,7 @@ mod tests {
             functions: &FunctionsRef::default(),
             structures: &test_structures_ref(),
             temporaries: Temporaries::default(),
+            labels: Labels::default(),
             data: &RefCell::new(Vec::new()),
         };
 
@@ -77,6 +78,7 @@ mod tests {
             functions: &FunctionsRef::default(),
             structures: &test_structures_ref(),
             temporaries: Temporaries::default(),
+            labels: Labels::default(),
             data: &RefCell::new(Vec::new()),
         };
 

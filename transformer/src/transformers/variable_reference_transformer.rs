@@ -38,7 +38,7 @@ mod tests {
     use nilang_types::instructions::Instruction;
 
     use crate::{
-        structures_ref::tests::test_structures_ref, temporaries::Temporaries,
+        labels::Labels, structures_ref::tests::test_structures_ref, temporaries::Temporaries,
         transformers::variable_reference_transformer::transform_variable_reference, Context,
         FunctionsRef, Type,
     };
@@ -49,6 +49,7 @@ mod tests {
             functions: &FunctionsRef::default(),
             structures: &test_structures_ref(),
             temporaries: Temporaries::default(),
+            labels: Labels::default(),
             data: &RefCell::new(Vec::new()),
         };
 
