@@ -1,7 +1,7 @@
-use errors::NilangError;
+use errors::{CodeLocation, NilangError, ParserErrors};
 use nilang_types::{
-    nodes::{Conditional, ExpressionNode, StatementNode},
-    tokens::{Keyword, TokenType},
+    nodes::{Conditional, ExpressionNode},
+    tokens::{Keyword, Token, TokenType},
 };
 
 use crate::{assuming_iterator::PeekableAssumingIterator, parsers::scope_parser::parse_scope};
@@ -10,34 +10,60 @@ use super::parse_expression;
 
 pub fn parse_conditional<I: PeekableAssumingIterator>(
     tokens: &mut I,
-) -> Result<StatementNode, NilangError> {
+) -> Result<Conditional, NilangError> {
+    match tokens.peek_valid()? {
+        Token {
+            token: TokenType::Keyword(Keyword::If),
+            ..
+        } => parse_if(tokens),
+        Token {
+            token: TokenType::Keyword(Keyword::Else),
+            ..
+        } => parse_else(tokens),
+        Token { start, end, .. } => Err(NilangError {
+            location: CodeLocation::range(start.0, start.1, end.0, end.1),
+            error: ParserErrors::ExpectedTokens(
+                [
+                    TokenType::Keyword(Keyword::If),
+                    TokenType::Keyword(Keyword::Else),
+                ]
+                .to_vec(),
+            )
+            .into(),
+        }),
+    }
+}
+
+pub fn parse_if<I: PeekableAssumingIterator>(tokens: &mut I) -> Result<Conditional, NilangError> {
     tokens.assume_keyword(Keyword::If)?;
 
     let condition = parse_expression(tokens)?;
     let body = parse_scope(tokens)?;
+    let chained = parse_conditional(tokens).ok().map(Box::new);
 
-    let chained = if tokens.peek_valid()?.token == TokenType::Keyword(Keyword::Else) {
-        tokens.assume_keyword(Keyword::Else)?;
-        Some(Box::new(Conditional {
-            condition: ExpressionNode::Boolean(true),
-            body: parse_scope(tokens)?,
-            chained: None,
-        }))
-    } else {
-        None
-    };
-
-    Ok(StatementNode::Conditional(Conditional {
+    Ok(Conditional {
         condition,
         body,
         chained,
-    }))
+    })
+}
+
+pub fn parse_else<I: PeekableAssumingIterator>(tokens: &mut I) -> Result<Conditional, NilangError> {
+    tokens.assume_keyword(Keyword::Else)?;
+
+    let body = parse_scope(tokens)?;
+
+    Ok(Conditional {
+        condition: ExpressionNode::Boolean(true),
+        body,
+        chained: None,
+    })
 }
 
 #[cfg(test)]
 mod tests {
     use nilang_types::{
-        nodes::{Conditional, ExpressionNode, StatementNode},
+        nodes::{Conditional, ExpressionNode},
         tokens::{Keyword, Token, TokenType},
     };
 
@@ -78,11 +104,11 @@ mod tests {
                 .peekable(),
             )
             .unwrap(),
-            StatementNode::Conditional(Conditional {
+            Conditional {
                 condition: ExpressionNode::Boolean(true),
                 body: Box::new([]),
                 chained: None
-            })
+            }
         );
     }
 
@@ -131,7 +157,7 @@ mod tests {
                 .peekable(),
             )
             .unwrap(),
-            StatementNode::Conditional(Conditional {
+            Conditional {
                 condition: ExpressionNode::Boolean(true),
                 body: Box::new([]),
                 chained: Some(Box::new(Conditional {
@@ -139,7 +165,7 @@ mod tests {
                     body: Box::new([]),
                     chained: None
                 }))
-            })
+            }
         );
     }
 }

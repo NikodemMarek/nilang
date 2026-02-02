@@ -42,7 +42,7 @@ pub fn parse_statement<I: PeekableAssumingIterator>(
         TokenType::Keyword(value) => match value {
             Keyword::Variable => parse_variable_declaration(tokens)?,
             Keyword::Return => parse_return(tokens)?,
-            Keyword::If => parse_conditional(tokens)?,
+            Keyword::If => StatementNode::Conditional(parse_conditional(tokens)?),
             Keyword::Else | Keyword::Function | Keyword::Structure => {
                 return Err(NilangError {
                     location: CodeLocation::at(peek_valid.start.0, peek_valid.start.1),
