@@ -54,6 +54,7 @@ pub enum Keyword {
     Return,
     Structure,
     If,
+    ElseIf,
     Else,
 }
 
@@ -66,6 +67,7 @@ impl Debug for Keyword {
             Keyword::Return => write!(f, "Return"),
             Keyword::Structure => write!(f, "Structure"),
             Keyword::If => write!(f, "If"),
+            Keyword::ElseIf => write!(f, "ElseIf"),
             Keyword::Else => write!(f, "Else"),
         }
     }

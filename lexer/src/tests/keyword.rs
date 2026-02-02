@@ -41,6 +41,15 @@ fn keyword() {
     );
 
     assert_eq!(
+        lex("ef").next().unwrap().unwrap(),
+        Token {
+            token: TokenType::Keyword(Keyword::ElseIf),
+            start: (0, 0),
+            end: (0, 1),
+        }
+    );
+
+    assert_eq!(
         lex("el").next().unwrap().unwrap(),
         Token {
             token: TokenType::Keyword(Keyword::Else),
