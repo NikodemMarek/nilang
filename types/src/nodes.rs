@@ -46,6 +46,10 @@ pub enum StatementNode {
         r#type: Type,
         value: Box<ExpressionNode>,
     },
+    VariableAssignment {
+        name: Box<str>,
+        value: Box<ExpressionNode>,
+    },
     Return(Box<ExpressionNode>),
     FunctionCall(FunctionCall),
     Conditional(Conditional),

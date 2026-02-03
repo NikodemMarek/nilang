@@ -4,6 +4,7 @@ mod function_call_transformer;
 mod object_transformer;
 mod operation_transformer;
 mod return_transformer;
+mod variable_assignment_transformer;
 mod variable_declaration_transformer;
 mod variable_reference_transformer;
 mod while_loop_transformer;
@@ -22,6 +23,7 @@ use variable_reference_transformer::transform_variable_reference;
 use crate::{
     transformers::{
         conditional_transformer::transform_conditional,
+        variable_assignment_transformer::transform_variable_assignment,
         while_loop_transformer::transform_while_loop,
     },
     Context, Instruction, InstructionsIterator, Type,
@@ -40,6 +42,9 @@ pub fn transform_statement<'a>(
             r#type,
             value,
         } => transform_variable_declaration(context, name, &r#type, *value),
+        StatementNode::VariableAssignment { name, value } => {
+            transform_variable_assignment(context, name, *value)
+        }
         StatementNode::FunctionCall(FunctionCall { name, arguments }) => {
             transform_function_call(context, name, &arguments, "".into(), &Type::Void)
         }

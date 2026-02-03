@@ -4,7 +4,7 @@ use identifier_parser::parse_identifier;
 use literal_parser::parse_literal;
 use nilang_types::{
     nodes::{ExpressionNode, StatementNode},
-    tokens::{Keyword, TokenType},
+    tokens::{Keyword, Token, TokenType},
 };
 
 use operation_parser::parse_operation_if_operator_follows;
@@ -14,7 +14,10 @@ use variable_declaration_parser::parse_variable_declaration;
 
 use crate::{
     assuming_iterator::PeekableAssumingIterator,
-    parsers::{conditional_parser::parse_conditional, while_loop_parser::parse_while_loop},
+    parsers::{
+        conditional_parser::parse_conditional,
+        variable_assignment_parser::parse_variable_assignment, while_loop_parser::parse_while_loop,
+    },
 };
 
 mod argument_list_parser;
@@ -32,6 +35,7 @@ mod return_parser;
 mod scope_parser;
 pub mod structure_parser;
 mod type_annotation_parser;
+mod variable_assignment_parser;
 mod variable_declaration_parser;
 mod while_loop_parser;
 
@@ -53,7 +57,20 @@ pub fn parse_statement<I: PeekableAssumingIterator>(
                 })
             }
         },
-        TokenType::Identifier(_) => parse_function_call_statement(tokens)?,
+        TokenType::Identifier(_) => match tokens.peek_nth_valid(1)? {
+            Token {
+                token: TokenType::Equals,
+                ..
+            } => parse_variable_assignment(tokens),
+            Token {
+                token: TokenType::OpeningParenthesis,
+                ..
+            } => parse_function_call_statement(tokens),
+            Token { start, end, token } => Err(NilangError {
+                location: CodeLocation::range(start.0, start.1, end.0, end.1),
+                error: ParserErrors::UnexpectedToken(token.clone()).into(),
+            }),
+        }?,
         TokenType::Operator(_)
         | TokenType::ClosingParenthesis
         | TokenType::ClosingBrace

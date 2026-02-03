@@ -31,10 +31,15 @@ main:
     movq $print_format, %rdi      # Load `print_format` as argument 0
     movq %r8, %rsi                # Load `temp_2` as argument 1
     call printf                   # Call function `printf`
+    movq %rax, %rsi               # Copy `is_true` into `temp_3`
+    testq %rsi, %rsi              # Test if `temp_3` is `0`
+    je .label_2                   # Jump to label `label_2` if `temp_3` test passed
+    movq $0, %rax                 # Load boolean 'false' into `is_true`
+    .label_2:                     # Create label `label_2`
     jmp .label_0                  # Jump to label `label_0`
     .label_1:                     # Create label `label_1`
-    movq $0, %rsi                 # Load number '0' into `temp_3`
-    movq %rsi, %rax               # Return `temp_3`
+    movq $0, %rdi                 # Load number '0' into `temp_4`
+    movq %rdi, %rax               # Return `temp_4`
     # Epilogue
     # leave
     movq %rbp, %rsp
