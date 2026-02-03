@@ -23,13 +23,13 @@ mod tests {
         tokens::{Keyword, Token, TokenType},
     };
 
-    use crate::parsers::while_loop_parser::parse_while_loop;
+    use crate::{multi_peekable::MultiPeekable, parsers::while_loop_parser::parse_while_loop};
 
     #[test]
     fn test_parse_while_loop() {
         assert_eq!(
-            parse_while_loop(
-                &mut [
+            parse_while_loop(&mut MultiPeekable::new(
+                [
                     Ok(Token {
                         token: TokenType::Keyword(Keyword::While),
                         start: (0, 0),
@@ -52,8 +52,7 @@ mod tests {
                     }),
                 ]
                 .into_iter()
-                .peekable(),
-            )
+            ),)
             .unwrap(),
             StatementNode::WhileLoop {
                 condition: ExpressionNode::Boolean(true),

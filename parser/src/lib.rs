@@ -1,19 +1,21 @@
 use std::usize;
 
-use assuming_iterator::PeekableAssumingIterator;
 use errors::{CodeLocation, NilangError, ParserErrors};
 use nilang_types::{
     nodes::{FunctionDeclaration, StructureDeclaration},
     tokens::{Keyword, Token, TokenType},
 };
 
+use crate::{assuming_iterator::PeekableAssumingIterator, multi_peekable::MultiPeekable};
+
 mod assuming_iterator;
+mod multi_peekable;
 mod parsers;
 
-pub fn parse(
-    tokens: impl Iterator<Item = Result<Token, NilangError>>,
+pub fn parse<I: Iterator<Item = Result<Token, NilangError>>>(
+    tokens: I,
 ) -> Result<(Vec<FunctionDeclaration>, Vec<StructureDeclaration>), NilangError> {
-    let mut tokens = tokens.peekable();
+    let mut tokens = MultiPeekable::new(tokens);
 
     let mut structures = Vec::new();
     let mut functions = Vec::new();

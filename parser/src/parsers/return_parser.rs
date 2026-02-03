@@ -27,13 +27,13 @@ mod tests {
         tokens::{Keyword, Token, TokenType},
     };
 
-    use crate::parsers::return_parser::parse_return;
+    use crate::{multi_peekable::MultiPeekable, parsers::return_parser::parse_return};
 
     #[test]
     fn test_parse_return() {
         assert_eq!(
-            parse_return(
-                &mut [
+            parse_return(&mut MultiPeekable::new(
+                [
                     Ok(Token {
                         token: TokenType::Keyword(Keyword::Return),
                         start: (0, 0),
@@ -51,15 +51,14 @@ mod tests {
                     }),
                 ]
                 .into_iter()
-                .peekable(),
-            )
+            ),)
             .unwrap(),
             StatementNode::Return(Box::new(ExpressionNode::Number(6.)))
         );
 
         assert_eq!(
-            parse_return(
-                &mut [
+            parse_return(&mut MultiPeekable::new(
+                [
                     Ok(Token {
                         token: TokenType::Keyword(Keyword::Return),
                         start: (0, 0),
@@ -97,8 +96,7 @@ mod tests {
                     }),
                 ]
                 .into_iter()
-                .peekable(),
-            )
+            ),)
             .unwrap(),
             StatementNode::Return(Box::new(ExpressionNode::Operation {
                 operator: Operator::Add,
@@ -108,8 +106,8 @@ mod tests {
         );
 
         assert_eq!(
-            parse_return(
-                &mut [
+            parse_return(&mut MultiPeekable::new(
+                [
                     Ok(Token {
                         token: TokenType::Keyword(Keyword::Return),
                         start: (0, 0),
@@ -137,8 +135,7 @@ mod tests {
                     }),
                 ]
                 .into_iter()
-                .peekable(),
-            )
+            ),)
             .unwrap(),
             StatementNode::Return(Box::new(ExpressionNode::Operation {
                 operator: Operator::Add,
@@ -148,8 +145,8 @@ mod tests {
         );
 
         assert_eq!(
-            parse_return(
-                &mut [
+            parse_return(&mut MultiPeekable::new(
+                [
                     Ok(Token {
                         token: TokenType::Keyword(Keyword::Return),
                         start: (0, 0),
@@ -187,8 +184,7 @@ mod tests {
                     }),
                 ]
                 .into_iter()
-                .peekable(),
-            )
+            ),)
             .unwrap(),
             StatementNode::Return(Box::new(ExpressionNode::Operation {
                 operator: Operator::Add,

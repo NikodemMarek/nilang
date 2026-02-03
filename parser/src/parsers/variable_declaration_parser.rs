@@ -37,13 +37,16 @@ mod tests {
         tokens::{Keyword, Token, TokenType},
     };
 
-    use crate::parsers::variable_declaration_parser::parse_variable_declaration;
+    use crate::{
+        multi_peekable::MultiPeekable,
+        parsers::variable_declaration_parser::parse_variable_declaration,
+    };
 
     #[test]
     fn test_parse_variable_declaration() {
         assert_eq!(
-            parse_variable_declaration(
-                &mut [
+            parse_variable_declaration(&mut MultiPeekable::new(
+                [
                     Ok(Token {
                         token: TokenType::Keyword(Keyword::Variable),
                         start: (0, 0),
@@ -81,8 +84,7 @@ mod tests {
                     }),
                 ]
                 .into_iter()
-                .peekable(),
-            )
+            ),)
             .unwrap(),
             StatementNode::VariableDeclaration {
                 name: "test".into(),
@@ -92,8 +94,8 @@ mod tests {
         );
 
         assert_eq!(
-            parse_variable_declaration(
-                &mut [
+            parse_variable_declaration(&mut MultiPeekable::new(
+                [
                     Ok(Token {
                         token: TokenType::Keyword(Keyword::Variable),
                         start: (0, 0),
@@ -131,8 +133,7 @@ mod tests {
                     }),
                 ]
                 .into_iter()
-                .peekable(),
-            )
+            ),)
             .unwrap(),
             StatementNode::VariableDeclaration {
                 name: "test".into(),
@@ -142,8 +143,8 @@ mod tests {
         );
 
         assert_eq!(
-            parse_variable_declaration(
-                &mut [
+            parse_variable_declaration(&mut MultiPeekable::new(
+                [
                     Ok(Token {
                         token: TokenType::Keyword(Keyword::Variable),
                         start: (0, 0),
@@ -201,8 +202,7 @@ mod tests {
                     }),
                 ]
                 .into_iter()
-                .peekable(),
-            )
+            ),)
             .unwrap(),
             StatementNode::VariableDeclaration {
                 name: "test".into(),
@@ -216,8 +216,8 @@ mod tests {
         );
 
         assert_eq!(
-            parse_variable_declaration(
-                &mut [
+            parse_variable_declaration(&mut MultiPeekable::new(
+                [
                     Ok(Token {
                         token: TokenType::Keyword(Keyword::Variable),
                         start: (0, 0),
@@ -275,8 +275,7 @@ mod tests {
                     }),
                 ]
                 .into_iter()
-                .peekable(),
-            )
+            ),)
             .unwrap(),
             StatementNode::VariableDeclaration {
                 name: "test".into(),
@@ -290,8 +289,8 @@ mod tests {
         );
 
         assert_eq!(
-            parse_variable_declaration(
-                &mut [
+            parse_variable_declaration(&mut MultiPeekable::new(
+                [
                     Ok(Token {
                         token: TokenType::Keyword(Keyword::Variable),
                         start: (0, 0),
@@ -354,8 +353,7 @@ mod tests {
                     }),
                 ]
                 .into_iter()
-                .peekable(),
-            )
+            ),)
             .unwrap(),
             StatementNode::VariableDeclaration {
                 name: "test".into(),

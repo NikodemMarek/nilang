@@ -13,8 +13,8 @@ use super::{
 
 pub fn parse_function_call_statement<I: PeekableAssumingIterator>(
     tokens: &mut I,
-    name: Box<str>,
 ) -> Result<StatementNode, NilangError> {
+    let (_, _, name) = tokens.assume_identifier()?;
     let function_call = parse_function_call_only(tokens, name)?;
     Ok(StatementNode::FunctionCall(function_call))
 }
@@ -63,31 +63,35 @@ mod tests {
         tokens::{Token, TokenType},
     };
 
-    use crate::parsers::function_call_parser::parse_function_call_expression;
+    use crate::{
+        multi_peekable::MultiPeekable,
+        parsers::function_call_parser::parse_function_call_expression,
+    };
 
     #[test]
     fn test_parse_function_call() {
         assert_eq!(
             parse_function_call_expression(
-                &mut [
-                    Ok(Token {
-                        token: TokenType::OpeningParenthesis,
-                        start: (0, 1),
-                        end: (0, 1),
-                    }),
-                    Ok(Token {
-                        token: TokenType::ClosingParenthesis,
-                        start: (0, 2),
-                        end: (0, 2),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Semicolon,
-                        start: (0, 3),
-                        end: (0, 3),
-                    })
-                ]
-                .into_iter()
-                .peekable(),
+                &mut MultiPeekable::new(
+                    [
+                        Ok(Token {
+                            token: TokenType::OpeningParenthesis,
+                            start: (0, 1),
+                            end: (0, 1),
+                        }),
+                        Ok(Token {
+                            token: TokenType::ClosingParenthesis,
+                            start: (0, 2),
+                            end: (0, 2),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Semicolon,
+                            start: (0, 3),
+                            end: (0, 3),
+                        })
+                    ]
+                    .into_iter()
+                ),
                 "x".into()
             )
             .unwrap(),
@@ -99,35 +103,36 @@ mod tests {
 
         assert_eq!(
             parse_function_call_expression(
-                &mut [
-                    Ok(Token {
-                        token: TokenType::OpeningParenthesis,
-                        start: (0, 1),
-                        end: (0, 1),
-                    }),
-                    Ok(Token {
-                        token: TokenType::ClosingParenthesis,
-                        start: (0, 2),
-                        end: (0, 2),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Dot,
-                        start: (0, 3),
-                        end: (0, 3),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Identifier("test".into()),
-                        start: (0, 4),
-                        end: (0, 7),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Semicolon,
-                        start: (0, 8),
-                        end: (0, 8),
-                    })
-                ]
-                .into_iter()
-                .peekable(),
+                &mut MultiPeekable::new(
+                    [
+                        Ok(Token {
+                            token: TokenType::OpeningParenthesis,
+                            start: (0, 1),
+                            end: (0, 1),
+                        }),
+                        Ok(Token {
+                            token: TokenType::ClosingParenthesis,
+                            start: (0, 2),
+                            end: (0, 2),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Dot,
+                            start: (0, 3),
+                            end: (0, 3),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Identifier("test".into()),
+                            start: (0, 4),
+                            end: (0, 7),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Semicolon,
+                            start: (0, 8),
+                            end: (0, 8),
+                        })
+                    ]
+                    .into_iter()
+                ),
                 "x".into()
             )
             .unwrap(),

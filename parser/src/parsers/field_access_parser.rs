@@ -30,31 +30,32 @@ mod tests {
         tokens::{Token, TokenType},
     };
 
-    use crate::parsers::field_access_parser::parse_field_access;
+    use crate::{multi_peekable::MultiPeekable, parsers::field_access_parser::parse_field_access};
 
     #[test]
     fn test_parse_field_access() {
         assert_eq!(
             parse_field_access(
-                &mut [
-                    Ok(Token {
-                        token: TokenType::Dot,
-                        start: (0, 1),
-                        end: (0, 1),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Identifier("test".into()),
-                        start: (0, 2),
-                        end: (0, 5),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Semicolon,
-                        start: (0, 6),
-                        end: (0, 6),
-                    }),
-                ]
-                .into_iter()
-                .peekable(),
+                &mut MultiPeekable::new(
+                    [
+                        Ok(Token {
+                            token: TokenType::Dot,
+                            start: (0, 1),
+                            end: (0, 1),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Identifier("test".into()),
+                            start: (0, 2),
+                            end: (0, 5),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Semicolon,
+                            start: (0, 6),
+                            end: (0, 6),
+                        }),
+                    ]
+                    .into_iter()
+                ),
                 "x".into()
             )
             .unwrap(),
@@ -66,35 +67,36 @@ mod tests {
 
         assert_eq!(
             parse_field_access(
-                &mut [
-                    Ok(Token {
-                        token: TokenType::Dot,
-                        start: (0, 1),
-                        end: (0, 1),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Identifier("test1".into()),
-                        start: (0, 2),
-                        end: (0, 5),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Dot,
-                        start: (0, 6),
-                        end: (0, 6),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Identifier("test2".into()),
-                        start: (0, 7),
-                        end: (0, 11),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Semicolon,
-                        start: (0, 12),
-                        end: (0, 12),
-                    }),
-                ]
-                .into_iter()
-                .peekable(),
+                &mut MultiPeekable::new(
+                    [
+                        Ok(Token {
+                            token: TokenType::Dot,
+                            start: (0, 1),
+                            end: (0, 1),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Identifier("test1".into()),
+                            start: (0, 2),
+                            end: (0, 5),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Dot,
+                            start: (0, 6),
+                            end: (0, 6),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Identifier("test2".into()),
+                            start: (0, 7),
+                            end: (0, 11),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Semicolon,
+                            start: (0, 12),
+                            end: (0, 12),
+                        }),
+                    ]
+                    .into_iter()
+                ),
                 "x".into()
             )
             .unwrap(),
@@ -109,45 +111,46 @@ mod tests {
 
         assert_eq!(
             parse_field_access(
-                &mut [
-                    Ok(Token {
-                        token: TokenType::Dot,
-                        start: (0, 1),
-                        end: (0, 1),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Identifier("test1".into()),
-                        start: (0, 2),
-                        end: (0, 5),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Dot,
-                        start: (0, 6),
-                        end: (0, 6),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Identifier("test2".into()),
-                        start: (0, 7),
-                        end: (0, 11),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Dot,
-                        start: (0, 12),
-                        end: (0, 12),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Identifier("test3".into()),
-                        start: (0, 13),
-                        end: (0, 17),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Semicolon,
-                        start: (0, 18),
-                        end: (0, 18),
-                    }),
-                ]
-                .into_iter()
-                .peekable(),
+                &mut MultiPeekable::new(
+                    [
+                        Ok(Token {
+                            token: TokenType::Dot,
+                            start: (0, 1),
+                            end: (0, 1),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Identifier("test1".into()),
+                            start: (0, 2),
+                            end: (0, 5),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Dot,
+                            start: (0, 6),
+                            end: (0, 6),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Identifier("test2".into()),
+                            start: (0, 7),
+                            end: (0, 11),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Dot,
+                            start: (0, 12),
+                            end: (0, 12),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Identifier("test3".into()),
+                            start: (0, 13),
+                            end: (0, 17),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Semicolon,
+                            start: (0, 18),
+                            end: (0, 18),
+                        }),
+                    ]
+                    .into_iter()
+                ),
                 "x".into()
             )
             .unwrap(),

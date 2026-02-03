@@ -25,13 +25,13 @@ mod tests {
         tokens::{Token, TokenType},
     };
 
-    use crate::parsers::scope_parser::parse_scope;
+    use crate::{multi_peekable::MultiPeekable, parsers::scope_parser::parse_scope};
 
     #[test]
     fn test_parse_empty_scope() {
         assert_eq!(
-            parse_scope(
-                &mut [
+            parse_scope(&mut MultiPeekable::new(
+                [
                     Ok(Token {
                         token: TokenType::OpeningBrace,
                         start: (0, 0),
@@ -44,8 +44,7 @@ mod tests {
                     }),
                 ]
                 .into_iter()
-                .peekable(),
-            )
+            ),)
             .unwrap(),
             [].into()
         );
@@ -54,8 +53,8 @@ mod tests {
     #[test]
     fn test_parse_scope_with_statement() {
         assert_eq!(
-            parse_scope(
-                &mut [
+            parse_scope(&mut MultiPeekable::new(
+                [
                     Ok(Token {
                         token: TokenType::OpeningBrace,
                         start: (0, 0),
@@ -88,8 +87,7 @@ mod tests {
                     }),
                 ]
                 .into_iter()
-                .peekable(),
-            )
+            ),)
             .unwrap(),
             [StatementNode::FunctionCall(FunctionCall {
                 name: "test".into(),

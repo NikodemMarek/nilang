@@ -87,13 +87,13 @@ mod tests {
         tokens::{Keyword, Token, TokenType},
     };
 
-    use crate::parsers::conditional_parser::parse_conditional;
+    use crate::{multi_peekable::MultiPeekable, parsers::conditional_parser::parse_conditional};
 
     #[test]
     fn test_parse_simple_conditional() {
         assert_eq!(
-            parse_conditional(
-                &mut [
+            parse_conditional(&mut MultiPeekable::new(
+                [
                     Ok(Token {
                         token: TokenType::Keyword(Keyword::If),
                         start: (0, 0),
@@ -116,8 +116,7 @@ mod tests {
                     }),
                 ]
                 .into_iter()
-                .peekable(),
-            )
+            ))
             .unwrap(),
             Conditional {
                 condition: ExpressionNode::Boolean(true),
@@ -130,8 +129,8 @@ mod tests {
     #[test]
     fn test_parse_conditional_with_else() {
         assert_eq!(
-            parse_conditional(
-                &mut [
+            parse_conditional(&mut MultiPeekable::new(
+                [
                     Ok(Token {
                         token: TokenType::Keyword(Keyword::If),
                         start: (0, 0),
@@ -169,8 +168,7 @@ mod tests {
                     }),
                 ]
                 .into_iter()
-                .peekable(),
-            )
+            ),)
             .unwrap(),
             Conditional {
                 condition: ExpressionNode::Boolean(true),
@@ -187,8 +185,8 @@ mod tests {
     #[test]
     fn test_parse_conditional_with_else_if() {
         assert_eq!(
-            parse_conditional(
-                &mut [
+            parse_conditional(&mut MultiPeekable::new(
+                [
                     Ok(Token {
                         token: TokenType::Keyword(Keyword::If),
                         start: (0, 0),
@@ -231,8 +229,7 @@ mod tests {
                     }),
                 ]
                 .into_iter()
-                .peekable(),
-            )
+            ),)
             .unwrap(),
             Conditional {
                 condition: ExpressionNode::Boolean(false),
@@ -249,8 +246,8 @@ mod tests {
     #[test]
     fn test_parse_conditional_with_else_if_and_else() {
         assert_eq!(
-            parse_conditional(
-                &mut [
+            parse_conditional(&mut MultiPeekable::new(
+                [
                     Ok(Token {
                         token: TokenType::Keyword(Keyword::If),
                         start: (0, 0),
@@ -308,8 +305,7 @@ mod tests {
                     }),
                 ]
                 .into_iter()
-                .peekable(),
-            )
+            ),)
             .unwrap(),
             Conditional {
                 condition: ExpressionNode::Boolean(false),

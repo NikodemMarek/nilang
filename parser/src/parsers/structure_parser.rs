@@ -74,13 +74,13 @@ mod test {
         tokens::{Keyword, Token, TokenType},
     };
 
-    use crate::parsers::structure_parser::parse_structure;
+    use crate::{multi_peekable::MultiPeekable, parsers::structure_parser::parse_structure};
 
     #[test]
     fn test_parse_structure() {
         assert_eq!(
-            parse_structure(
-                &mut [
+            parse_structure(&mut MultiPeekable::new(
+                [
                     Ok(Token {
                         token: TokenType::Keyword(Keyword::Structure,),
                         start: (0, 0,),
@@ -138,8 +138,7 @@ mod test {
                     },),
                 ]
                 .into_iter()
-                .peekable()
-            )
+            ))
             .unwrap(),
             StructureDeclaration {
                 name: "Test".into(),
@@ -152,8 +151,8 @@ mod test {
         );
 
         assert_eq!(
-            parse_structure(
-                &mut [
+            parse_structure(&mut MultiPeekable::new(
+                [
                     Ok(Token {
                         token: TokenType::Keyword(Keyword::Structure,),
                         start: (0, 0,),
@@ -196,8 +195,7 @@ mod test {
                     },),
                 ]
                 .into_iter()
-                .peekable()
-            )
+            ))
             .unwrap(),
             StructureDeclaration {
                 name: "Test".into(),

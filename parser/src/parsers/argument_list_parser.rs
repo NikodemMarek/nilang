@@ -73,13 +73,15 @@ mod tests {
         tokens::{Token, TokenType},
     };
 
-    use crate::parsers::argument_list_parser::parse_argument_list;
+    use crate::{
+        multi_peekable::MultiPeekable, parsers::argument_list_parser::parse_argument_list,
+    };
 
     #[test]
     fn test_parse_argument_list() {
         assert_eq!(
-            parse_argument_list(
-                &mut [
+            parse_argument_list(&mut MultiPeekable::new(
+                [
                     Ok(Token {
                         token: TokenType::OpeningParenthesis,
                         start: (0, 0),
@@ -107,8 +109,7 @@ mod tests {
                     }),
                 ]
                 .into_iter()
-                .peekable()
-            )
+            ))
             .unwrap(),
             [
                 ExpressionNode::Number(5.),
@@ -118,8 +119,8 @@ mod tests {
         );
 
         assert_eq!(
-            parse_argument_list(
-                &mut [
+            parse_argument_list(&mut MultiPeekable::new(
+                [
                     Ok(Token {
                         token: TokenType::OpeningParenthesis,
                         start: (0, 0),
@@ -147,8 +148,7 @@ mod tests {
                     }),
                 ]
                 .into_iter()
-                .peekable()
-            )
+            ))
             .unwrap(),
             [ExpressionNode::Operation {
                 operator: Operator::Add,

@@ -54,8 +54,7 @@ pub fn parse_statement<I: PeekableAssumingIterator>(
             }
         },
         TokenType::Identifier(_) => {
-            let (_, _, name) = tokens.assume_identifier()?;
-            let function_call = parse_function_call_statement(tokens, name)?;
+            let function_call = parse_function_call_statement(tokens)?;
             tokens.assume(TokenType::Semicolon)?;
             function_call
         }

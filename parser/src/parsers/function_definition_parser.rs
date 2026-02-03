@@ -32,13 +32,15 @@ mod tests {
         tokens::{Keyword, Token, TokenType},
     };
 
+    use crate::multi_peekable::MultiPeekable;
+
     use super::parse_function_definition;
 
     #[test]
     fn test_parse_function_definition() {
         assert_eq!(
-            parse_function_definition(
-                &mut [
+            parse_function_definition(&mut MultiPeekable::new(
+                [
                     Ok(Token {
                         token: TokenType::Keyword(Keyword::Function),
                         start: (0, 0),
@@ -96,8 +98,7 @@ mod tests {
                     })
                 ]
                 .into_iter()
-                .peekable(),
-            )
+            ),)
             .unwrap(),
             FunctionDeclaration {
                 name: "main".into(),

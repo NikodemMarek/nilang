@@ -64,13 +64,13 @@ mod tests {
         tokens::{Token, TokenType},
     };
 
-    use crate::parsers::parenthesis_parser::parse_parenthesis;
+    use crate::{multi_peekable::MultiPeekable, parsers::parenthesis_parser::parse_parenthesis};
 
     #[test]
     fn test_parse_parenthesis() {
         assert_eq!(
-            parse_parenthesis(
-                &mut [
+            parse_parenthesis(&mut MultiPeekable::new(
+                [
                     Ok(Token {
                         token: TokenType::OpeningParenthesis,
                         start: (0, 0),
@@ -98,8 +98,7 @@ mod tests {
                     }),
                 ]
                 .into_iter()
-                .peekable()
-            )
+            ))
             .unwrap(),
             ExpressionNode::Operation {
                 operator: Operator::Add,
@@ -109,8 +108,8 @@ mod tests {
         );
 
         assert_eq!(
-            parse_parenthesis(
-                &mut [
+            parse_parenthesis(&mut MultiPeekable::new(
+                [
                     Ok(Token {
                         token: TokenType::OpeningParenthesis,
                         start: (0, 0),
@@ -158,8 +157,7 @@ mod tests {
                     }),
                 ]
                 .into_iter()
-                .peekable()
-            )
+            ))
             .unwrap(),
             ExpressionNode::Operation {
                 operator: Operator::Multiply,
@@ -173,8 +171,8 @@ mod tests {
         );
 
         assert_eq!(
-            parse_parenthesis(
-                &mut [
+            parse_parenthesis(&mut MultiPeekable::new(
+                [
                     Ok(Token {
                         token: TokenType::OpeningParenthesis,
                         start: (0, 0),
@@ -222,8 +220,7 @@ mod tests {
                     }),
                 ]
                 .into_iter()
-                .peekable()
-            )
+            ))
             .unwrap(),
             ExpressionNode::Operation {
                 operator: Operator::Multiply,
@@ -237,8 +234,8 @@ mod tests {
         );
 
         assert_eq!(
-            parse_parenthesis(
-                &mut [
+            parse_parenthesis(&mut MultiPeekable::new(
+                [
                     Ok(Token {
                         token: TokenType::OpeningParenthesis,
                         start: (0, 0),
@@ -306,8 +303,7 @@ mod tests {
                     }),
                 ]
                 .into_iter()
-                .peekable()
-            )
+            ))
             .unwrap(),
             ExpressionNode::Operation {
                 operator: Operator::Add,

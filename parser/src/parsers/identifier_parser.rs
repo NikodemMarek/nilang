@@ -47,7 +47,7 @@ pub fn parse_identifier<I: PeekableAssumingIterator>(
 
 #[cfg(test)]
 mod tests {
-    use crate::parsers::identifier_parser::parse_identifier;
+    use crate::{multi_peekable::MultiPeekable, parsers::identifier_parser::parse_identifier};
     use nilang_types::{
         nodes::ExpressionNode,
         tokens::{Token, TokenType},
@@ -56,8 +56,8 @@ mod tests {
     #[test]
     fn test_parse_identifier() {
         assert_eq!(
-            parse_identifier(
-                &mut [
+            parse_identifier(&mut MultiPeekable::new(
+                [
                     Ok(Token {
                         token: TokenType::Identifier("x".into()),
                         start: (0, 0),
@@ -70,8 +70,7 @@ mod tests {
                     })
                 ]
                 .into_iter()
-                .peekable()
-            )
+            ))
             .unwrap(),
             ExpressionNode::VariableReference("x".into())
         );

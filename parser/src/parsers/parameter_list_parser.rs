@@ -67,13 +67,15 @@ mod test {
         tokens::{Token, TokenType},
     };
 
-    use crate::parsers::parameter_list_parser::parse_parameter_list;
+    use crate::{
+        multi_peekable::MultiPeekable, parsers::parameter_list_parser::parse_parameter_list,
+    };
 
     #[test]
     fn test_parameter_list() {
         assert_eq!(
-            parse_parameter_list(
-                &mut [
+            parse_parameter_list(&mut MultiPeekable::new(
+                [
                     Ok(Token {
                         token: TokenType::OpeningParenthesis,
                         start: (0, 0),
@@ -121,8 +123,7 @@ mod test {
                     }),
                 ]
                 .into_iter()
-                .peekable(),
-            )
+            ),)
             .unwrap(),
             [("test1".into(), Type::Int), ("test2".into(), Type::Int),].into()
         );

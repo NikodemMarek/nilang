@@ -45,33 +45,31 @@ mod tests {
         tokens::{Token, TokenType},
     };
 
-    use crate::parsers::literal_parser::parse_literal;
+    use crate::{multi_peekable::MultiPeekable, parsers::literal_parser::parse_literal};
 
     #[test]
     fn test_parse_booleans() {
         assert_eq!(
-            parse_literal(
-                &mut [Ok(Token {
+            parse_literal(&mut MultiPeekable::new(
+                [Ok(Token {
                     token: TokenType::Literal("true".into()),
                     start: (0, 0),
                     end: (0, 3),
                 })]
                 .into_iter()
-                .peekable()
-            )
+            ))
             .unwrap(),
             ExpressionNode::Boolean(true)
         );
         assert_eq!(
-            parse_literal(
-                &mut [Ok(Token {
+            parse_literal(&mut MultiPeekable::new(
+                [Ok(Token {
                     token: TokenType::Literal("false".into()),
                     start: (0, 0),
                     end: (0, 4),
                 })]
                 .into_iter()
-                .peekable()
-            )
+            ))
             .unwrap(),
             ExpressionNode::Boolean(false)
         )
@@ -80,54 +78,50 @@ mod tests {
     #[test]
     fn test_parse_numbers() {
         assert_eq!(
-            parse_literal(
-                &mut [Ok(Token {
+            parse_literal(&mut MultiPeekable::new(
+                [Ok(Token {
                     token: TokenType::Literal("54".into()),
                     start: (0, 0),
                     end: (0, 2),
                 })]
                 .into_iter()
-                .peekable()
-            )
+            ))
             .unwrap(),
             ExpressionNode::Number(54.)
         );
         assert_eq!(
-            parse_literal(
-                &mut [Ok(Token {
+            parse_literal(&mut MultiPeekable::new(
+                [Ok(Token {
                     token: TokenType::Literal("6.".into()),
                     start: (0, 0),
                     end: (0, 2),
                 })]
                 .into_iter()
-                .peekable()
-            )
+            ))
             .unwrap(),
             ExpressionNode::Number(6.)
         );
         assert_eq!(
-            parse_literal(
-                &mut [Ok(Token {
+            parse_literal(&mut MultiPeekable::new(
+                [Ok(Token {
                     token: TokenType::Literal(".2".into()),
                     start: (0, 0),
                     end: (0, 2),
                 })]
                 .into_iter()
-                .peekable()
-            )
+            ))
             .unwrap(),
             ExpressionNode::Number(0.2)
         );
         assert_eq!(
-            parse_literal(
-                &mut [Ok(Token {
+            parse_literal(&mut MultiPeekable::new(
+                [Ok(Token {
                     token: TokenType::Literal("8.5".into()),
                     start: (0, 0),
                     end: (0, 2),
                 })]
                 .into_iter()
-                .peekable()
-            )
+            ))
             .unwrap(),
             ExpressionNode::Number(8.5)
         );

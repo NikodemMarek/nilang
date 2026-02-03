@@ -1,10 +1,10 @@
-use std::iter::Peekable;
-
 use errors::{CodeLocation, NilangError, ParserErrors};
 use nilang_types::{
     nodes::Operator,
     tokens::{Keyword, Token, TokenType},
 };
+
+use crate::multi_peekable::MultiPeekable;
 
 type Loc = (usize, usize);
 
@@ -123,12 +123,17 @@ impl<I: Iterator<Item = Result<Token, NilangError>>> AssumingIterator for I {
 
 pub trait PeekableAssumingIterator: AssumingIterator {
     fn peek_valid(&mut self) -> Result<&Token, NilangError>;
+    fn peek_nth_valid(&mut self, n: usize) -> Result<&Token, NilangError>;
 }
 
-impl<I: Iterator<Item = Result<Token, NilangError>>> PeekableAssumingIterator for Peekable<I> {
+impl<I: Iterator<Item = Result<Token, NilangError>>> PeekableAssumingIterator for MultiPeekable<I> {
     #[inline]
     fn peek_valid(&mut self) -> Result<&Token, NilangError> {
-        match self.peek() {
+        self.peek_nth_valid(0)
+    }
+
+    fn peek_nth_valid(&mut self, n: usize) -> Result<&Token, NilangError> {
+        match self.peek_nth(n) {
             Some(Ok(token)) => Ok(token),
             Some(Err(e)) => Err(e.clone()),
             None => Err(NilangError {

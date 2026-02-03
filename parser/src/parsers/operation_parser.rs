@@ -160,43 +160,47 @@ mod tests {
         tokens::{Token, TokenType},
     };
 
-    use crate::parsers::operation_parser::{
-        extend_operation, parse_operation, parse_operation_if_operator_follows,
+    use crate::{
+        multi_peekable::MultiPeekable,
+        parsers::operation_parser::{
+            extend_operation, parse_operation, parse_operation_if_operator_follows,
+        },
     };
 
     #[test]
     fn test_parse_operation_if_operator_follows() {
         assert_eq!(
             parse_operation_if_operator_follows(
-                &mut [
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Add),
-                        start: (0, 1),
-                        end: (0, 1),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("9".into()),
-                        start: (0, 2),
-                        end: (0, 2),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Add),
-                        start: (0, 3),
-                        end: (0, 3),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("5".into()),
-                        start: (0, 4),
-                        end: (0, 4),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Semicolon,
-                        start: (0, 5),
-                        end: (0, 5),
-                    })
-                ]
-                .into_iter()
-                .peekable(),
+                &mut MultiPeekable::new(
+                    [
+                        Ok(Token {
+                            token: TokenType::Operator(Operator::Add),
+                            start: (0, 1),
+                            end: (0, 1),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Literal("9".into()),
+                            start: (0, 2),
+                            end: (0, 2),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Operator(Operator::Add),
+                            start: (0, 3),
+                            end: (0, 3),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Literal("5".into()),
+                            start: (0, 4),
+                            end: (0, 4),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Semicolon,
+                            start: (0, 5),
+                            end: (0, 5),
+                        })
+                    ]
+                    .into_iter()
+                ),
                 ExpressionNode::Number(6.)
             )
             .unwrap(),
@@ -216,25 +220,26 @@ mod tests {
     fn test_simple_operations() {
         assert_eq!(
             parse_operation(
-                &mut [
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Add),
-                        start: (0, 1),
-                        end: (0, 1),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("9".into()),
-                        start: (0, 2),
-                        end: (0, 2),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Semicolon,
-                        start: (0, 3),
-                        end: (0, 3),
-                    })
-                ]
-                .into_iter()
-                .peekable(),
+                &mut MultiPeekable::new(
+                    [
+                        Ok(Token {
+                            token: TokenType::Operator(Operator::Add),
+                            start: (0, 1),
+                            end: (0, 1),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Literal("9".into()),
+                            start: (0, 2),
+                            end: (0, 2),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Semicolon,
+                            start: (0, 3),
+                            end: (0, 3),
+                        })
+                    ]
+                    .into_iter()
+                ),
                 ExpressionNode::Number(6.),
                 true
             )
@@ -248,25 +253,26 @@ mod tests {
 
         assert_eq!(
             parse_operation(
-                &mut [
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Subtract),
-                        start: (0, 1),
-                        end: (0, 1),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("7.5".into()),
-                        start: (0, 2),
-                        end: (0, 4),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Semicolon,
-                        start: (0, 5),
-                        end: (0, 5),
-                    })
-                ]
-                .into_iter()
-                .peekable(),
+                &mut MultiPeekable::new(
+                    [
+                        Ok(Token {
+                            token: TokenType::Operator(Operator::Subtract),
+                            start: (0, 1),
+                            end: (0, 1),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Literal("7.5".into()),
+                            start: (0, 2),
+                            end: (0, 4),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Semicolon,
+                            start: (0, 5),
+                            end: (0, 5),
+                        })
+                    ]
+                    .into_iter()
+                ),
                 ExpressionNode::Number(5.),
                 true
             )
@@ -280,25 +286,26 @@ mod tests {
 
         assert_eq!(
             parse_operation(
-                &mut [
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Multiply),
-                        start: (0, 1),
-                        end: (0, 1),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("4".into()),
-                        start: (0, 4),
-                        end: (0, 4),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Semicolon,
-                        start: (0, 5),
-                        end: (0, 5),
-                    })
-                ]
-                .into_iter()
-                .peekable(),
+                &mut MultiPeekable::new(
+                    [
+                        Ok(Token {
+                            token: TokenType::Operator(Operator::Multiply),
+                            start: (0, 1),
+                            end: (0, 1),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Literal("4".into()),
+                            start: (0, 4),
+                            end: (0, 4),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Semicolon,
+                            start: (0, 5),
+                            end: (0, 5),
+                        })
+                    ]
+                    .into_iter()
+                ),
                 ExpressionNode::Number(0.3),
                 true
             )
@@ -312,25 +319,26 @@ mod tests {
 
         assert_eq!(
             parse_operation(
-                &mut [
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Divide),
-                        start: (0, 1),
-                        end: (0, 1),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("1".into()),
-                        start: (0, 2),
-                        end: (0, 2),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Semicolon,
-                        start: (0, 3),
-                        end: (0, 3),
-                    })
-                ]
-                .into_iter()
-                .peekable(),
+                &mut MultiPeekable::new(
+                    [
+                        Ok(Token {
+                            token: TokenType::Operator(Operator::Divide),
+                            start: (0, 1),
+                            end: (0, 1),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Literal("1".into()),
+                            start: (0, 2),
+                            end: (0, 2),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Semicolon,
+                            start: (0, 3),
+                            end: (0, 3),
+                        })
+                    ]
+                    .into_iter()
+                ),
                 ExpressionNode::Number(2.),
                 true
             )
@@ -344,25 +352,26 @@ mod tests {
 
         assert_eq!(
             parse_operation(
-                &mut [
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Modulo),
-                        start: (0, 1),
-                        end: (0, 1),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("1.5".into()),
-                        start: (0, 2),
-                        end: (0, 4),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Semicolon,
-                        start: (0, 5),
-                        end: (0, 5),
-                    })
-                ]
-                .into_iter()
-                .peekable(),
+                &mut MultiPeekable::new(
+                    [
+                        Ok(Token {
+                            token: TokenType::Operator(Operator::Modulo),
+                            start: (0, 1),
+                            end: (0, 1),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Literal("1.5".into()),
+                            start: (0, 2),
+                            end: (0, 4),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Semicolon,
+                            start: (0, 5),
+                            end: (0, 5),
+                        })
+                    ]
+                    .into_iter()
+                ),
                 ExpressionNode::Number(5.),
                 true
             )
@@ -379,35 +388,36 @@ mod tests {
     fn parse_complex_operations() {
         assert_eq!(
             parse_operation_if_operator_follows(
-                &mut [
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Add),
-                        start: (0, 1),
-                        end: (0, 1),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("9".into()),
-                        start: (0, 2),
-                        end: (0, 2),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Add),
-                        start: (0, 3),
-                        end: (0, 3),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("5".into()),
-                        start: (0, 4),
-                        end: (0, 4),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Semicolon,
-                        start: (0, 5),
-                        end: (0, 5),
-                    })
-                ]
-                .into_iter()
-                .peekable(),
+                &mut MultiPeekable::new(
+                    [
+                        Ok(Token {
+                            token: TokenType::Operator(Operator::Add),
+                            start: (0, 1),
+                            end: (0, 1),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Literal("9".into()),
+                            start: (0, 2),
+                            end: (0, 2),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Operator(Operator::Add),
+                            start: (0, 3),
+                            end: (0, 3),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Literal("5".into()),
+                            start: (0, 4),
+                            end: (0, 4),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Semicolon,
+                            start: (0, 5),
+                            end: (0, 5),
+                        })
+                    ]
+                    .into_iter()
+                ),
                 ExpressionNode::Number(6.),
             )
             .unwrap(),
@@ -424,35 +434,36 @@ mod tests {
 
         assert_eq!(
             parse_operation_if_operator_follows(
-                &mut [
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Add),
-                        start: (0, 1),
-                        end: (0, 1),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("9".into()),
-                        start: (0, 2),
-                        end: (0, 2),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Subtract),
-                        start: (0, 3),
-                        end: (0, 3),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("5".into()),
-                        start: (0, 4),
-                        end: (0, 4),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Semicolon,
-                        start: (0, 5),
-                        end: (0, 5),
-                    })
-                ]
-                .into_iter()
-                .peekable(),
+                &mut MultiPeekable::new(
+                    [
+                        Ok(Token {
+                            token: TokenType::Operator(Operator::Add),
+                            start: (0, 1),
+                            end: (0, 1),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Literal("9".into()),
+                            start: (0, 2),
+                            end: (0, 2),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Operator(Operator::Subtract),
+                            start: (0, 3),
+                            end: (0, 3),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Literal("5".into()),
+                            start: (0, 4),
+                            end: (0, 4),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Semicolon,
+                            start: (0, 5),
+                            end: (0, 5),
+                        })
+                    ]
+                    .into_iter()
+                ),
                 ExpressionNode::Number(6.),
             )
             .unwrap(),
@@ -469,35 +480,36 @@ mod tests {
 
         assert_eq!(
             parse_operation_if_operator_follows(
-                &mut [
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Multiply),
-                        start: (0, 1),
-                        end: (0, 1),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal(".5".into()),
-                        start: (0, 2),
-                        end: (0, 3),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Multiply),
-                        start: (0, 4),
-                        end: (0, 4),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("7".into()),
-                        start: (0, 5),
-                        end: (0, 5),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Semicolon,
-                        start: (0, 8),
-                        end: (0, 8),
-                    })
-                ]
-                .into_iter()
-                .peekable(),
+                &mut MultiPeekable::new(
+                    [
+                        Ok(Token {
+                            token: TokenType::Operator(Operator::Multiply),
+                            start: (0, 1),
+                            end: (0, 1),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Literal(".5".into()),
+                            start: (0, 2),
+                            end: (0, 3),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Operator(Operator::Multiply),
+                            start: (0, 4),
+                            end: (0, 4),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Literal("7".into()),
+                            start: (0, 5),
+                            end: (0, 5),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Semicolon,
+                            start: (0, 8),
+                            end: (0, 8),
+                        })
+                    ]
+                    .into_iter()
+                ),
                 ExpressionNode::Number(6.),
             )
             .unwrap(),
@@ -514,35 +526,36 @@ mod tests {
 
         assert_eq!(
             parse_operation_if_operator_follows(
-                &mut [
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Multiply),
-                        start: (0, 1),
-                        end: (0, 1),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal(".5".into()),
-                        start: (0, 2),
-                        end: (0, 3),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Divide),
-                        start: (0, 4),
-                        end: (0, 4),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("7".into()),
-                        start: (0, 5),
-                        end: (0, 5),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Semicolon,
-                        start: (0, 6),
-                        end: (0, 6),
-                    })
-                ]
-                .into_iter()
-                .peekable(),
+                &mut MultiPeekable::new(
+                    [
+                        Ok(Token {
+                            token: TokenType::Operator(Operator::Multiply),
+                            start: (0, 1),
+                            end: (0, 1),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Literal(".5".into()),
+                            start: (0, 2),
+                            end: (0, 3),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Operator(Operator::Divide),
+                            start: (0, 4),
+                            end: (0, 4),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Literal("7".into()),
+                            start: (0, 5),
+                            end: (0, 5),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Semicolon,
+                            start: (0, 6),
+                            end: (0, 6),
+                        })
+                    ]
+                    .into_iter()
+                ),
                 ExpressionNode::Number(6.),
             )
             .unwrap(),
@@ -559,35 +572,36 @@ mod tests {
 
         assert_eq!(
             parse_operation_if_operator_follows(
-                &mut [
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Multiply),
-                        start: (0, 1),
-                        end: (0, 1),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal(".5".into()),
-                        start: (0, 2),
-                        end: (0, 3),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Add),
-                        start: (0, 4),
-                        end: (0, 4),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("7".into()),
-                        start: (0, 5),
-                        end: (0, 5),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Semicolon,
-                        start: (0, 6),
-                        end: (0, 6),
-                    })
-                ]
-                .into_iter()
-                .peekable(),
+                &mut MultiPeekable::new(
+                    [
+                        Ok(Token {
+                            token: TokenType::Operator(Operator::Multiply),
+                            start: (0, 1),
+                            end: (0, 1),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Literal(".5".into()),
+                            start: (0, 2),
+                            end: (0, 3),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Operator(Operator::Add),
+                            start: (0, 4),
+                            end: (0, 4),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Literal("7".into()),
+                            start: (0, 5),
+                            end: (0, 5),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Semicolon,
+                            start: (0, 6),
+                            end: (0, 6),
+                        })
+                    ]
+                    .into_iter()
+                ),
                 ExpressionNode::Number(6.),
             )
             .unwrap(),
@@ -604,45 +618,46 @@ mod tests {
 
         assert_eq!(
             parse_operation_if_operator_follows(
-                &mut [
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Divide),
-                        start: (0, 1),
-                        end: (0, 1),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal(".5".into()),
-                        start: (0, 2),
-                        end: (0, 3),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Add),
-                        start: (0, 4),
-                        end: (0, 4),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("7".into()),
-                        start: (0, 5),
-                        end: (0, 5),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Multiply),
-                        start: (0, 6),
-                        end: (0, 6),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("3".into()),
-                        start: (0, 7),
-                        end: (0, 7),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Semicolon,
-                        start: (0, 8),
-                        end: (0, 8),
-                    })
-                ]
-                .into_iter()
-                .peekable(),
+                &mut MultiPeekable::new(
+                    [
+                        Ok(Token {
+                            token: TokenType::Operator(Operator::Divide),
+                            start: (0, 1),
+                            end: (0, 1),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Literal(".5".into()),
+                            start: (0, 2),
+                            end: (0, 3),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Operator(Operator::Add),
+                            start: (0, 4),
+                            end: (0, 4),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Literal("7".into()),
+                            start: (0, 5),
+                            end: (0, 5),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Operator(Operator::Multiply),
+                            start: (0, 6),
+                            end: (0, 6),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Literal("3".into()),
+                            start: (0, 7),
+                            end: (0, 7),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Semicolon,
+                            start: (0, 8),
+                            end: (0, 8),
+                        })
+                    ]
+                    .into_iter()
+                ),
                 ExpressionNode::Number(6.),
             )
             .unwrap(),
@@ -663,45 +678,46 @@ mod tests {
 
         assert_eq!(
             parse_operation_if_operator_follows(
-                &mut [
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Subtract),
-                        start: (0, 2),
-                        end: (0, 2),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("5.5".into()),
-                        start: (0, 3),
-                        end: (0, 5),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Multiply),
-                        start: (0, 6),
-                        end: (0, 6),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("8".into()),
-                        start: (0, 7),
-                        end: (0, 7),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Add),
-                        start: (0, 8),
-                        end: (0, 8),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal(".7".into()),
-                        start: (0, 9),
-                        end: (0, 11),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Semicolon,
-                        start: (0, 12),
-                        end: (0, 12),
-                    })
-                ]
-                .into_iter()
-                .peekable(),
+                &mut MultiPeekable::new(
+                    [
+                        Ok(Token {
+                            token: TokenType::Operator(Operator::Subtract),
+                            start: (0, 2),
+                            end: (0, 2),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Literal("5.5".into()),
+                            start: (0, 3),
+                            end: (0, 5),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Operator(Operator::Multiply),
+                            start: (0, 6),
+                            end: (0, 6),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Literal("8".into()),
+                            start: (0, 7),
+                            end: (0, 7),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Operator(Operator::Add),
+                            start: (0, 8),
+                            end: (0, 8),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Literal(".7".into()),
+                            start: (0, 9),
+                            end: (0, 11),
+                        }),
+                        Ok(Token {
+                            token: TokenType::Semicolon,
+                            start: (0, 12),
+                            end: (0, 12),
+                        })
+                    ]
+                    .into_iter()
+                ),
                 ExpressionNode::Number(0.2),
             )
             .unwrap(),

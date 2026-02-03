@@ -31,13 +31,15 @@ mod test {
         tokens::{Token, TokenType},
     };
 
-    use crate::parsers::type_annotation_parser::parse_type_annotation;
+    use crate::{
+        multi_peekable::MultiPeekable, parsers::type_annotation_parser::parse_type_annotation,
+    };
 
     #[test]
     fn test_parse_structure() {
         assert_eq!(
-            parse_type_annotation(
-                &mut [
+            parse_type_annotation(&mut MultiPeekable::new(
+                [
                     Ok(Token {
                         token: TokenType::Colon,
                         start: (1, 14,),
@@ -50,8 +52,7 @@ mod test {
                     },),
                 ]
                 .into_iter()
-                .peekable()
-            )
+            ))
             .unwrap(),
             Type::Int,
         );
