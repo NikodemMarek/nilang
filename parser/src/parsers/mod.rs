@@ -7,7 +7,6 @@ use nilang_types::{
     tokens::{Keyword, Token, TokenType},
 };
 
-use operation_parser::parse_operation_if_operator_follows;
 use parenthesis_parser::parse_parenthesis;
 use return_parser::parse_return;
 use variable_declaration_parser::parse_variable_declaration;
@@ -28,7 +27,7 @@ pub mod function_definition_parser;
 mod identifier_parser;
 mod literal_parser;
 mod object_parser;
-mod operation_parser;
+mod operation;
 mod parameter_list_parser;
 mod parenthesis_parser;
 mod return_parser;
@@ -92,7 +91,7 @@ pub fn parse_expression<I: PeekableAssumingIterator>(
     tokens: &mut I,
 ) -> Result<ExpressionNode, NilangError> {
     let expression_node = parse_single_expression(tokens)?;
-    parse_operation_if_operator_follows(tokens, expression_node)
+    operation::lookup_operation_recursive(tokens, expression_node)
 }
 
 pub fn parse_single_expression<I: PeekableAssumingIterator>(

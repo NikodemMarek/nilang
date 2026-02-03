@@ -8,7 +8,7 @@ use crate::assuming_iterator::PeekableAssumingIterator;
 
 use super::{
     field_access_parser::parse_field_access, function_call_parser::parse_function_call_expression,
-    object_parser::parse_object, operation_parser::parse_operation_if_operator_follows,
+    object_parser::parse_object, operation::lookup_operation_recursive,
 };
 
 pub fn parse_identifier<I: PeekableAssumingIterator>(
@@ -24,7 +24,7 @@ pub fn parse_identifier<I: PeekableAssumingIterator>(
             ..
         } => {
             let (_, _, name) = tokens.assume_identifier()?;
-            parse_operation_if_operator_follows(tokens, ExpressionNode::VariableReference(name))?
+            lookup_operation_recursive(tokens, ExpressionNode::VariableReference(name))?
         }
         Token {
             token: TokenType::OpeningBrace,

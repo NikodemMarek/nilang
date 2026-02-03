@@ -3,7 +3,7 @@ use std::iter::once;
 use errors::TransformerErrors;
 use nilang_types::{
     instructions::Instruction,
-    nodes::{ExpressionNode, Operator},
+    nodes::{Operation, Operator},
 };
 
 use crate::{Context, InstructionsIterator, Type};
@@ -13,9 +13,7 @@ use super::transform_expression;
 pub fn transform_operation<'a>(
     context @ Context { temporaries, .. }: &'a Context,
 
-    operator: Operator,
-    a: ExpressionNode,
-    b: ExpressionNode,
+    Operation { operator, a, b }: Operation,
 
     result: Box<str>,
     r#type: &Type,
@@ -28,9 +26,9 @@ pub fn transform_operation<'a>(
     }
 
     let a_temporary = temporaries.declare(r#type.clone());
-    let a_instructions = transform_expression(context, a, a_temporary.clone(), r#type);
+    let a_instructions = transform_expression(context, *a, a_temporary.clone(), r#type);
     let b_temporary = temporaries.declare(r#type.clone());
-    let b_instructions = transform_expression(context, b, b_temporary.clone(), r#type);
+    let b_instructions = transform_expression(context, *b, b_temporary.clone(), r#type);
 
     let Ok(_) = temporaries.access(&a_temporary) else {
         return Box::new(once(Err(TransformerErrors::TemporaryNotFound {

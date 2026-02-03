@@ -72,6 +72,9 @@ pub fn transform_expression<'a>(
         }
         ExpressionNode::Char(char) => Box::new(once(Ok(Instruction::LoadChar(result, char)))),
         ExpressionNode::String(text) => transform_string_declaration(context, &text, result),
+        ExpressionNode::Parenthesis(expression) => {
+            transform_expression(context, *expression, result, r#type)
+        }
         ExpressionNode::Object { r#type, fields } => {
             transform_object(context, fields, result, &r#type)
         }
@@ -81,8 +84,8 @@ pub fn transform_expression<'a>(
         ExpressionNode::FieldAccess { structure, field } => {
             transform_field_access(context, *structure, field, result, r#type)
         }
-        ExpressionNode::Operation { operator, a, b } => {
-            transform_operation(context, operator, *a, *b, result, r#type)
+        ExpressionNode::Operation(operation) => {
+            transform_operation(context, operation, result, r#type)
         }
         ExpressionNode::FunctionCall(FunctionCall { name, arguments }) => {
             transform_function_call(context, name, &arguments, result, r#type)

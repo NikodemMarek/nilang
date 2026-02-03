@@ -1,66 +1,25 @@
-use errors::{CodeLocation, NilangError, ParserErrors};
-use nilang_types::{
-    nodes::ExpressionNode,
-    tokens::{Token, TokenType},
-};
+use errors::NilangError;
+use nilang_types::{nodes::ExpressionNode, tokens::TokenType};
 
-use crate::assuming_iterator::PeekableAssumingIterator;
-
-use super::{
-    identifier_parser::parse_identifier, literal_parser::parse_literal,
-    operation_parser::parse_operation_if_operator_follows_no_rearrange,
-};
+use crate::{assuming_iterator::PeekableAssumingIterator, parsers::parse_expression};
 
 pub fn parse_parenthesis<I: PeekableAssumingIterator>(
     tokens: &mut I,
 ) -> Result<ExpressionNode, NilangError> {
-    let start = tokens.assume(TokenType::OpeningParenthesis)?;
-
-    let content = match tokens.peek_valid()? {
-        Token {
-            token: TokenType::Literal(_),
-            ..
-        } => {
-            let literal = parse_literal(tokens)?;
-            parse_operation_if_operator_follows_no_rearrange(tokens, literal)?
-        }
-        Token {
-            token: TokenType::Identifier(_),
-            ..
-        } => {
-            let identifier = parse_identifier(tokens)?;
-            parse_operation_if_operator_follows_no_rearrange(tokens, identifier)?
-        }
-        Token {
-            token: TokenType::OpeningParenthesis,
-            ..
-        } => {
-            let parenthesis = parse_parenthesis(tokens)?;
-            parse_operation_if_operator_follows_no_rearrange(tokens, parenthesis)?
-        }
-        Token {
-            token: TokenType::ClosingParenthesis,
-            end,
-            ..
-        } => Err(NilangError {
-            location: CodeLocation::range(start.0, start.1, end.0, end.1),
-            error: ParserErrors::EmptyParenthesis.into(),
-        })?,
-        Token { token, start, .. } => Err(NilangError {
-            location: CodeLocation::at(start.0, start.1),
-            error: ParserErrors::UnexpectedToken(token.clone()).into(),
-        })?,
-    };
-
+    tokens.assume(TokenType::OpeningParenthesis)?;
+    let parenthesis = parse_expression(tokens)?;
     tokens.assume(TokenType::ClosingParenthesis)?;
 
-    Ok(content)
+    super::operation::lookup_operation_recursive(
+        tokens,
+        ExpressionNode::Parenthesis(Box::new(parenthesis)),
+    )
 }
 
 #[cfg(test)]
 mod tests {
     use nilang_types::{
-        nodes::{ExpressionNode, Operator},
+        nodes::{ExpressionNode, Operation, Operator},
         tokens::{Token, TokenType},
     };
 
@@ -96,15 +55,20 @@ mod tests {
                         start: (0, 4),
                         end: (0, 4),
                     }),
+                    Ok(Token {
+                        token: TokenType::Semicolon,
+                        start: (0, 5),
+                        end: (0, 5),
+                    }),
                 ]
                 .into_iter()
             ))
             .unwrap(),
-            ExpressionNode::Operation {
+            ExpressionNode::Parenthesis(Box::new(ExpressionNode::Operation(Operation {
                 operator: Operator::Add,
                 a: Box::new(ExpressionNode::Number(6.)),
                 b: Box::new(ExpressionNode::Number(9.)),
-            }
+            })))
         );
 
         assert_eq!(
@@ -155,19 +119,26 @@ mod tests {
                         start: (0, 8),
                         end: (0, 8),
                     }),
+                    Ok(Token {
+                        token: TokenType::Semicolon,
+                        start: (0, 9),
+                        end: (0, 9),
+                    }),
                 ]
                 .into_iter()
             ))
             .unwrap(),
-            ExpressionNode::Operation {
+            ExpressionNode::Parenthesis(Box::new(ExpressionNode::Operation(Operation {
                 operator: Operator::Multiply,
                 a: Box::new(ExpressionNode::Number(6.)),
-                b: Box::new(ExpressionNode::Operation {
-                    operator: Operator::Add,
-                    a: Box::new(ExpressionNode::Number(9.)),
-                    b: Box::new(ExpressionNode::Number(5.)),
-                }),
-            }
+                b: Box::new(ExpressionNode::Parenthesis(Box::new(
+                    ExpressionNode::Operation(Operation {
+                        operator: Operator::Add,
+                        a: Box::new(ExpressionNode::Number(9.)),
+                        b: Box::new(ExpressionNode::Number(5.)),
+                    })
+                ))),
+            })))
         );
 
         assert_eq!(
@@ -218,19 +189,26 @@ mod tests {
                         start: (0, 8),
                         end: (0, 8),
                     }),
+                    Ok(Token {
+                        token: TokenType::Semicolon,
+                        start: (0, 9),
+                        end: (0, 9),
+                    }),
                 ]
                 .into_iter()
             ))
             .unwrap(),
-            ExpressionNode::Operation {
+            ExpressionNode::Parenthesis(Box::new(ExpressionNode::Operation(Operation {
                 operator: Operator::Multiply,
-                a: Box::new(ExpressionNode::Operation {
-                    operator: Operator::Add,
-                    a: Box::new(ExpressionNode::Number(4.)),
-                    b: Box::new(ExpressionNode::Number(9.)),
-                }),
+                a: Box::new(ExpressionNode::Parenthesis(Box::new(
+                    ExpressionNode::Operation(Operation {
+                        operator: Operator::Add,
+                        a: Box::new(ExpressionNode::Number(4.)),
+                        b: Box::new(ExpressionNode::Number(9.)),
+                    })
+                ))),
                 b: Box::new(ExpressionNode::Number(1.)),
-            }
+            })))
         );
 
         assert_eq!(
@@ -301,27 +279,34 @@ mod tests {
                         start: (0, 12),
                         end: (0, 12),
                     }),
+                    Ok(Token {
+                        token: TokenType::Semicolon,
+                        start: (0, 13),
+                        end: (0, 13),
+                    }),
                 ]
                 .into_iter()
             ))
             .unwrap(),
-            ExpressionNode::Operation {
+            ExpressionNode::Parenthesis(Box::new(ExpressionNode::Operation(Operation {
                 operator: Operator::Add,
-                a: Box::new(ExpressionNode::Operation {
+                a: Box::new(ExpressionNode::Operation(Operation {
                     operator: Operator::Multiply,
-                    a: Box::new(ExpressionNode::Operation {
-                        operator: Operator::Add,
-                        a: Box::new(ExpressionNode::Number(4.)),
-                        b: Box::new(ExpressionNode::Number(9.)),
-                    }),
+                    a: Box::new(ExpressionNode::Parenthesis(Box::new(
+                        ExpressionNode::Operation(Operation {
+                            operator: Operator::Add,
+                            a: Box::new(ExpressionNode::Number(4.)),
+                            b: Box::new(ExpressionNode::Number(9.)),
+                        })
+                    ))),
                     b: Box::new(ExpressionNode::Number(1.)),
-                }),
-                b: Box::new(ExpressionNode::Operation {
+                })),
+                b: Box::new(ExpressionNode::Operation(Operation {
                     operator: Operator::Multiply,
                     a: Box::new(ExpressionNode::Number(6.)),
                     b: Box::new(ExpressionNode::Number(2.)),
-                }),
-            }
+                })),
+            })))
         );
     }
 }

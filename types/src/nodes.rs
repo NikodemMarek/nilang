@@ -22,15 +22,12 @@ pub enum ExpressionNode {
     Number(f64),
     Char(char),
     String(Box<str>),
+    Parenthesis(Box<ExpressionNode>),
     Object {
         r#type: Type,
         fields: HashMap<Box<str>, ExpressionNode>,
     },
-    Operation {
-        operator: Operator,
-        a: Box<ExpressionNode>,
-        b: Box<ExpressionNode>,
-    },
+    Operation(Operation),
     VariableReference(Box<str>),
     FieldAccess {
         structure: Box<ExpressionNode>,
@@ -57,6 +54,13 @@ pub enum StatementNode {
         condition: ExpressionNode,
         body: Box<[StatementNode]>,
     },
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Operation {
+    pub operator: Operator,
+    pub a: Box<ExpressionNode>,
+    pub b: Box<ExpressionNode>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

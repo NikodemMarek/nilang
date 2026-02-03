@@ -6,10 +6,7 @@ use nilang_types::{
 
 use crate::assuming_iterator::PeekableAssumingIterator;
 
-use super::{
-    argument_list_parser::parse_argument_list,
-    operation_parser::parse_operation_if_operator_follows,
-};
+use super::{argument_list_parser::parse_argument_list, operation::lookup_operation_recursive};
 
 pub fn parse_function_call_statement<I: PeekableAssumingIterator>(
     tokens: &mut I,
@@ -25,7 +22,7 @@ pub fn parse_function_call_expression<I: PeekableAssumingIterator>(
     let function_call = parse_function_call_only(tokens)?;
     let function_call_field_access =
         expand_function_call_if_dot_follows(tokens, ExpressionNode::FunctionCall(function_call))?;
-    parse_operation_if_operator_follows(tokens, function_call_field_access)
+    lookup_operation_recursive(tokens, function_call_field_access)
 }
 
 fn parse_function_call_only<I: PeekableAssumingIterator>(

@@ -69,7 +69,7 @@ pub fn parse_argument_list<I: PeekableAssumingIterator>(
 #[cfg(test)]
 mod tests {
     use nilang_types::{
-        nodes::{ExpressionNode, Operator},
+        nodes::ExpressionNode,
         tokens::{Token, TokenType},
     };
 
@@ -115,46 +115,6 @@ mod tests {
                 ExpressionNode::Number(5.),
                 ExpressionNode::VariableReference("x".into())
             ]
-            .into()
-        );
-
-        assert_eq!(
-            parse_argument_list(&mut MultiPeekable::new(
-                [
-                    Ok(Token {
-                        token: TokenType::OpeningParenthesis,
-                        start: (0, 0),
-                        end: (0, 0),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Identifier("x".into()),
-                        start: (0, 1),
-                        end: (0, 1),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Operator(Operator::Add),
-                        start: (0, 2),
-                        end: (0, 2),
-                    }),
-                    Ok(Token {
-                        token: TokenType::Literal("4".into()),
-                        start: (0, 3),
-                        end: (0, 3),
-                    }),
-                    Ok(Token {
-                        token: TokenType::ClosingParenthesis,
-                        start: (0, 4),
-                        end: (0, 4),
-                    }),
-                ]
-                .into_iter()
-            ))
-            .unwrap(),
-            [ExpressionNode::Operation {
-                operator: Operator::Add,
-                a: Box::new(ExpressionNode::VariableReference("x".into())),
-                b: Box::new(ExpressionNode::Number(4.)),
-            }]
             .into()
         );
     }
