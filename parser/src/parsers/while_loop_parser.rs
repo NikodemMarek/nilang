@@ -26,7 +26,7 @@ mod tests {
     use crate::parsers::while_loop_parser::parse_while_loop;
 
     #[test]
-    fn test_parse_function_definition() {
+    fn test_parse_while_loop() {
         assert_eq!(
             parse_while_loop(
                 &mut [
@@ -37,18 +37,18 @@ mod tests {
                     }),
                     Ok(Token {
                         token: TokenType::Literal("true".into()),
-                        start: (0, 3),
-                        end: (0, 3),
+                        start: (0, 2),
+                        end: (0, 5),
                     }),
                     Ok(Token {
                         token: TokenType::OpeningBrace,
-                        start: (0, 4),
-                        end: (0, 4),
+                        start: (0, 6),
+                        end: (0, 6),
                     }),
                     Ok(Token {
                         token: TokenType::ClosingBrace,
-                        start: (0, 5),
-                        end: (0, 5),
+                        start: (0, 7),
+                        end: (0, 7),
                     }),
                 ]
                 .into_iter()
