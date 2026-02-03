@@ -5,8 +5,8 @@ use crate::assuming_iterator::PeekableAssumingIterator;
 
 pub fn parse_field_access<I: PeekableAssumingIterator>(
     tokens: &mut I,
-    name: Box<str>,
 ) -> Result<ExpressionNode, NilangError> {
+    let (_, _, name) = tokens.assume_identifier()?;
     let mut field_access = ExpressionNode::VariableReference(name);
 
     while let TokenType::Dot = tokens.peek_valid()?.token {
@@ -35,29 +35,31 @@ mod tests {
     #[test]
     fn test_parse_field_access() {
         assert_eq!(
-            parse_field_access(
-                &mut MultiPeekable::new(
-                    [
-                        Ok(Token {
-                            token: TokenType::Dot,
-                            start: (0, 1),
-                            end: (0, 1),
-                        }),
-                        Ok(Token {
-                            token: TokenType::Identifier("test".into()),
-                            start: (0, 2),
-                            end: (0, 5),
-                        }),
-                        Ok(Token {
-                            token: TokenType::Semicolon,
-                            start: (0, 6),
-                            end: (0, 6),
-                        }),
-                    ]
-                    .into_iter()
-                ),
-                "x".into()
-            )
+            parse_field_access(&mut MultiPeekable::new(
+                [
+                    Ok(Token {
+                        token: TokenType::Identifier("x".into()),
+                        start: (0, 1),
+                        end: (0, 1),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Dot,
+                        start: (0, 1),
+                        end: (0, 1),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Identifier("test".into()),
+                        start: (0, 2),
+                        end: (0, 5),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Semicolon,
+                        start: (0, 6),
+                        end: (0, 6),
+                    }),
+                ]
+                .into_iter()
+            ))
             .unwrap(),
             ExpressionNode::FieldAccess {
                 structure: Box::new(ExpressionNode::VariableReference("x".into())),
@@ -66,39 +68,41 @@ mod tests {
         );
 
         assert_eq!(
-            parse_field_access(
-                &mut MultiPeekable::new(
-                    [
-                        Ok(Token {
-                            token: TokenType::Dot,
-                            start: (0, 1),
-                            end: (0, 1),
-                        }),
-                        Ok(Token {
-                            token: TokenType::Identifier("test1".into()),
-                            start: (0, 2),
-                            end: (0, 5),
-                        }),
-                        Ok(Token {
-                            token: TokenType::Dot,
-                            start: (0, 6),
-                            end: (0, 6),
-                        }),
-                        Ok(Token {
-                            token: TokenType::Identifier("test2".into()),
-                            start: (0, 7),
-                            end: (0, 11),
-                        }),
-                        Ok(Token {
-                            token: TokenType::Semicolon,
-                            start: (0, 12),
-                            end: (0, 12),
-                        }),
-                    ]
-                    .into_iter()
-                ),
-                "x".into()
-            )
+            parse_field_access(&mut MultiPeekable::new(
+                [
+                    Ok(Token {
+                        token: TokenType::Identifier("x".into()),
+                        start: (0, 1),
+                        end: (0, 1),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Dot,
+                        start: (0, 1),
+                        end: (0, 1),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Identifier("test1".into()),
+                        start: (0, 2),
+                        end: (0, 5),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Dot,
+                        start: (0, 6),
+                        end: (0, 6),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Identifier("test2".into()),
+                        start: (0, 7),
+                        end: (0, 11),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Semicolon,
+                        start: (0, 12),
+                        end: (0, 12),
+                    }),
+                ]
+                .into_iter()
+            ))
             .unwrap(),
             ExpressionNode::FieldAccess {
                 structure: Box::new(ExpressionNode::FieldAccess {
@@ -110,49 +114,51 @@ mod tests {
         );
 
         assert_eq!(
-            parse_field_access(
-                &mut MultiPeekable::new(
-                    [
-                        Ok(Token {
-                            token: TokenType::Dot,
-                            start: (0, 1),
-                            end: (0, 1),
-                        }),
-                        Ok(Token {
-                            token: TokenType::Identifier("test1".into()),
-                            start: (0, 2),
-                            end: (0, 5),
-                        }),
-                        Ok(Token {
-                            token: TokenType::Dot,
-                            start: (0, 6),
-                            end: (0, 6),
-                        }),
-                        Ok(Token {
-                            token: TokenType::Identifier("test2".into()),
-                            start: (0, 7),
-                            end: (0, 11),
-                        }),
-                        Ok(Token {
-                            token: TokenType::Dot,
-                            start: (0, 12),
-                            end: (0, 12),
-                        }),
-                        Ok(Token {
-                            token: TokenType::Identifier("test3".into()),
-                            start: (0, 13),
-                            end: (0, 17),
-                        }),
-                        Ok(Token {
-                            token: TokenType::Semicolon,
-                            start: (0, 18),
-                            end: (0, 18),
-                        }),
-                    ]
-                    .into_iter()
-                ),
-                "x".into()
-            )
+            parse_field_access(&mut MultiPeekable::new(
+                [
+                    Ok(Token {
+                        token: TokenType::Identifier("x".into()),
+                        start: (0, 1),
+                        end: (0, 1),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Dot,
+                        start: (0, 1),
+                        end: (0, 1),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Identifier("test1".into()),
+                        start: (0, 2),
+                        end: (0, 5),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Dot,
+                        start: (0, 6),
+                        end: (0, 6),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Identifier("test2".into()),
+                        start: (0, 7),
+                        end: (0, 11),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Dot,
+                        start: (0, 12),
+                        end: (0, 12),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Identifier("test3".into()),
+                        start: (0, 13),
+                        end: (0, 17),
+                    }),
+                    Ok(Token {
+                        token: TokenType::Semicolon,
+                        start: (0, 18),
+                        end: (0, 18),
+                    }),
+                ]
+                .into_iter()
+            ))
             .unwrap(),
             ExpressionNode::FieldAccess {
                 structure: Box::new(ExpressionNode::FieldAccess {

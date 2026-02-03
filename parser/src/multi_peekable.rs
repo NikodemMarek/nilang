@@ -28,7 +28,7 @@ impl<I: Iterator> MultiPeekable<I> {
     }
 
     pub fn peek_nth(&mut self, n: usize) -> Option<&I::Item> {
-        let to_peek = n + 1 - self.peeked.len();
+        let to_peek = (n + 1).saturating_sub(self.peeked.len());
         let peeked = (&mut self.iter).take(to_peek);
         self.peeked.extend(peeked);
         self.peeked.get(n)
@@ -46,8 +46,8 @@ mod tests {
         assert_eq!(**peekable.peek().unwrap(), 1);
         assert_eq!(**peekable.peek().unwrap(), 1);
         assert_eq!(*peekable.next().unwrap(), 1);
-        assert_eq!(**peekable.peek_nth(0).unwrap(), 2);
         assert_eq!(**peekable.peek_nth(1).unwrap(), 3);
+        assert_eq!(**peekable.peek_nth(0).unwrap(), 2);
         assert_eq!(*peekable.next().unwrap(), 2);
         assert_eq!(*peekable.next().unwrap(), 3);
         assert_eq!(peekable.peek(), None);

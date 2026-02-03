@@ -12,8 +12,8 @@ use super::{parse_expression, type_annotation_parser::parse_type};
 
 pub fn parse_object<I: PeekableAssumingIterator>(
     tokens: &mut I,
-    name: Box<str>,
 ) -> Result<ExpressionNode, NilangError> {
+    let (_, _, name) = tokens.assume_identifier()?;
     tokens.assume(TokenType::OpeningBrace)?;
 
     let mut fields = HashMap::new();

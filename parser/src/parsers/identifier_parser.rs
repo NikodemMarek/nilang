@@ -14,32 +14,30 @@ use super::{
 pub fn parse_identifier<I: PeekableAssumingIterator>(
     tokens: &mut I,
 ) -> Result<ExpressionNode, NilangError> {
-    let (_, _, name) = tokens.assume_identifier()?;
-
-    let peek_valid = if let Ok(token) = tokens.peek_valid() {
-        token
-    } else {
-        return Ok(ExpressionNode::VariableReference(name));
-    };
-
-    let expression = match peek_valid {
+    let expression = match tokens.peek_nth_valid(1)? {
         Token {
             token: TokenType::OpeningParenthesis,
             ..
-        } => parse_function_call_expression(tokens, name)?,
+        } => parse_function_call_expression(tokens)?,
         Token {
             token: TokenType::Operator(_),
             ..
-        } => parse_operation_if_operator_follows(tokens, ExpressionNode::VariableReference(name))?,
+        } => {
+            let (_, _, name) = tokens.assume_identifier()?;
+            parse_operation_if_operator_follows(tokens, ExpressionNode::VariableReference(name))?
+        }
         Token {
             token: TokenType::OpeningBrace,
             ..
-        } => parse_object(tokens, name)?,
+        } => parse_object(tokens)?,
         Token {
             token: TokenType::Dot,
             ..
-        } => parse_field_access(tokens, name)?,
-        Token { .. } => ExpressionNode::VariableReference(name),
+        } => parse_field_access(tokens)?,
+        Token { .. } => {
+            let (_, _, name) = tokens.assume_identifier()?;
+            ExpressionNode::VariableReference(name)
+        }
     };
 
     Ok(expression)
