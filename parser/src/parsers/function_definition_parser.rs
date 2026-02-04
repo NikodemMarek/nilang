@@ -29,7 +29,7 @@ pub fn parse_function_definition<I: PeekableAssumingIterator>(
 mod tests {
     use nilang_types::{
         nodes::{
-            expressions::ExpressionNode,
+            expressions::{ExpressionNode, Primitive},
             statements::{FunctionDeclaration, StatementNode},
             Type,
         },
@@ -108,7 +108,9 @@ mod tests {
                 name: "main".into(),
                 parameters: [].into(),
                 return_type: Type::Int,
-                body: Box::new([StatementNode::Return(Box::new(ExpressionNode::Number(6.)))]),
+                body: Box::new([StatementNode::Return(Box::new(ExpressionNode::Primitive(
+                    Primitive::Number(6.)
+                )))]),
             }
         );
     }

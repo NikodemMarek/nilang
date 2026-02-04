@@ -33,7 +33,11 @@ pub fn parse_variable_declaration<I: PeekableAssumingIterator>(
 #[cfg(test)]
 mod tests {
     use nilang_types::{
-        nodes::{expressions::ExpressionNode, statements::StatementNode, Type},
+        nodes::{
+            expressions::{ExpressionNode, Primitive},
+            statements::StatementNode,
+            Type,
+        },
         tokens::{Keyword, Token, TokenType},
     };
 
@@ -89,7 +93,7 @@ mod tests {
             StatementNode::VariableDeclaration {
                 name: "test".into(),
                 r#type: Type::Int,
-                value: Box::new(ExpressionNode::Number(9.))
+                value: Box::new(ExpressionNode::Primitive(Primitive::Number(9.)))
             }
         );
 

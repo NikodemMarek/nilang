@@ -19,7 +19,10 @@ pub fn parse_while_loop<I: PeekableAssumingIterator>(
 #[cfg(test)]
 mod tests {
     use nilang_types::{
-        nodes::{expressions::ExpressionNode, statements::StatementNode},
+        nodes::{
+            expressions::{ExpressionNode, Primitive},
+            statements::StatementNode,
+        },
         tokens::{Keyword, Token, TokenType},
     };
 
@@ -55,7 +58,7 @@ mod tests {
             ),)
             .unwrap(),
             StatementNode::WhileLoop {
-                condition: ExpressionNode::Boolean(true),
+                condition: ExpressionNode::Primitive(Primitive::Boolean(true)),
                 body: Box::new([]),
             }
         );

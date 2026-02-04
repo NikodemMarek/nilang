@@ -23,7 +23,10 @@ pub fn parse_return<I: PeekableAssumingIterator>(
 #[cfg(test)]
 mod tests {
     use nilang_types::{
-        nodes::{expressions::ExpressionNode, statements::StatementNode},
+        nodes::{
+            expressions::{ExpressionNode, Primitive},
+            statements::StatementNode,
+        },
         tokens::{Keyword, Token, TokenType},
     };
 
@@ -53,7 +56,7 @@ mod tests {
                 .into_iter()
             ),)
             .unwrap(),
-            StatementNode::Return(Box::new(ExpressionNode::Number(6.)))
+            StatementNode::Return(Box::new(ExpressionNode::Primitive(Primitive::Number(6.))))
         );
     }
 }

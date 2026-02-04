@@ -69,7 +69,7 @@ pub fn parse_argument_list<I: PeekableAssumingIterator>(
 #[cfg(test)]
 mod tests {
     use nilang_types::{
-        nodes::expressions::ExpressionNode,
+        nodes::expressions::{ExpressionNode, Primitive},
         tokens::{Token, TokenType},
     };
 
@@ -112,7 +112,7 @@ mod tests {
             ))
             .unwrap(),
             [
-                ExpressionNode::Number(5.),
+                ExpressionNode::Primitive(Primitive::Number(5.)),
                 ExpressionNode::VariableReference("x".into())
             ]
             .into()

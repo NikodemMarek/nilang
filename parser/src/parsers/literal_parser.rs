@@ -1,5 +1,5 @@
 use errors::{CodeLocation, NilangError, ParserErrors};
-use nilang_types::nodes::expressions::ExpressionNode;
+use nilang_types::nodes::expressions::{ExpressionNode, Primitive};
 
 use crate::assuming_iterator::PeekableAssumingIterator;
 
@@ -15,22 +15,26 @@ pub fn parse_literal<I: PeekableAssumingIterator>(
                 error: ParserErrors::InvalidLiteral.into(),
             });
         }
-        return Ok(ExpressionNode::Char(value.chars().nth(1).unwrap()));
+        return Ok(ExpressionNode::Primitive(Primitive::Char(
+            value.chars().nth(1).unwrap(),
+        )));
     }
 
     if value.starts_with('"') && value.ends_with('"') {
-        return Ok(ExpressionNode::String(value[1..value.len() - 1].into()));
+        return Ok(ExpressionNode::Primitive(Primitive::String(
+            value[1..value.len() - 1].into(),
+        )));
     }
 
     if &*value == "true" {
-        return Ok(ExpressionNode::Boolean(true));
+        return Ok(ExpressionNode::Primitive(Primitive::Boolean(true)));
     }
     if &*value == "false" {
-        return Ok(ExpressionNode::Boolean(false));
+        return Ok(ExpressionNode::Primitive(Primitive::Boolean(false)));
     }
 
     Ok(match value.parse() {
-        Ok(parsed) => ExpressionNode::Number(parsed),
+        Ok(parsed) => ExpressionNode::Primitive(Primitive::Number(parsed)),
         Err(_) => Err(NilangError {
             location: CodeLocation::range(start.0, start.1, end.0, end.1),
             error: ParserErrors::InvalidLiteral.into(),
@@ -41,7 +45,7 @@ pub fn parse_literal<I: PeekableAssumingIterator>(
 #[cfg(test)]
 mod tests {
     use nilang_types::{
-        nodes::expressions::ExpressionNode,
+        nodes::expressions::{ExpressionNode, Primitive},
         tokens::{Token, TokenType},
     };
 
@@ -59,7 +63,7 @@ mod tests {
                 .into_iter()
             ))
             .unwrap(),
-            ExpressionNode::Boolean(true)
+            ExpressionNode::Primitive(Primitive::Boolean(true))
         );
         assert_eq!(
             parse_literal(&mut MultiPeekable::new(
@@ -71,7 +75,7 @@ mod tests {
                 .into_iter()
             ))
             .unwrap(),
-            ExpressionNode::Boolean(false)
+            ExpressionNode::Primitive(Primitive::Boolean(false))
         )
     }
 
@@ -87,7 +91,7 @@ mod tests {
                 .into_iter()
             ))
             .unwrap(),
-            ExpressionNode::Number(54.)
+            ExpressionNode::Primitive(Primitive::Number(54.))
         );
         assert_eq!(
             parse_literal(&mut MultiPeekable::new(
@@ -99,7 +103,7 @@ mod tests {
                 .into_iter()
             ))
             .unwrap(),
-            ExpressionNode::Number(6.)
+            ExpressionNode::Primitive(Primitive::Number(6.))
         );
         assert_eq!(
             parse_literal(&mut MultiPeekable::new(
@@ -111,7 +115,7 @@ mod tests {
                 .into_iter()
             ))
             .unwrap(),
-            ExpressionNode::Number(0.2)
+            ExpressionNode::Primitive(Primitive::Number(0.2))
         );
         assert_eq!(
             parse_literal(&mut MultiPeekable::new(
@@ -123,7 +127,7 @@ mod tests {
                 .into_iter()
             ))
             .unwrap(),
-            ExpressionNode::Number(8.5)
+            ExpressionNode::Primitive(Primitive::Number(8.5))
         );
     }
 }

@@ -25,7 +25,10 @@ pub fn parse_variable_assignment<I: PeekableAssumingIterator>(
 #[cfg(test)]
 mod tests {
     use nilang_types::{
-        nodes::{expressions::ExpressionNode, statements::StatementNode},
+        nodes::{
+            expressions::{ExpressionNode, Primitive},
+            statements::StatementNode,
+        },
         tokens::{Token, TokenType},
     };
 
@@ -65,7 +68,7 @@ mod tests {
             .unwrap(),
             StatementNode::VariableAssignment {
                 name: "x".into(),
-                value: Box::new(ExpressionNode::Boolean(true))
+                value: Box::new(ExpressionNode::Primitive(Primitive::Boolean(true)))
             }
         );
     }

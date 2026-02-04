@@ -1,6 +1,6 @@
 use errors::{CodeLocation, NilangError, ParserErrors};
 use nilang_types::{
-    nodes::expressions::{Conditional, ExpressionNode},
+    nodes::expressions::{Conditional, ExpressionNode, Primitive},
     tokens::{Keyword, Token, TokenType},
 };
 
@@ -74,7 +74,7 @@ pub fn parse_else<I: PeekableAssumingIterator>(tokens: &mut I) -> Result<Conditi
     let body = parse_scope(tokens)?;
 
     Ok(Conditional {
-        condition: ExpressionNode::Boolean(true),
+        condition: ExpressionNode::Primitive(Primitive::Boolean(true)),
         body,
         chained: None,
     })
@@ -83,7 +83,7 @@ pub fn parse_else<I: PeekableAssumingIterator>(tokens: &mut I) -> Result<Conditi
 #[cfg(test)]
 mod tests {
     use nilang_types::{
-        nodes::expressions::{Conditional, ExpressionNode},
+        nodes::expressions::{Conditional, ExpressionNode, Primitive},
         tokens::{Keyword, Token, TokenType},
     };
 
@@ -119,7 +119,7 @@ mod tests {
             ))
             .unwrap(),
             Conditional {
-                condition: ExpressionNode::Boolean(true),
+                condition: ExpressionNode::Primitive(Primitive::Boolean(true)),
                 body: Box::new([]),
                 chained: None
             }
@@ -171,10 +171,10 @@ mod tests {
             ),)
             .unwrap(),
             Conditional {
-                condition: ExpressionNode::Boolean(true),
+                condition: ExpressionNode::Primitive(Primitive::Boolean(true)),
                 body: Box::new([]),
                 chained: Some(Box::new(Conditional {
-                    condition: ExpressionNode::Boolean(true),
+                    condition: ExpressionNode::Primitive(Primitive::Boolean(true)),
                     body: Box::new([]),
                     chained: None
                 }))
@@ -232,10 +232,10 @@ mod tests {
             ),)
             .unwrap(),
             Conditional {
-                condition: ExpressionNode::Boolean(false),
+                condition: ExpressionNode::Primitive(Primitive::Boolean(false)),
                 body: Box::new([]),
                 chained: Some(Box::new(Conditional {
-                    condition: ExpressionNode::Boolean(false),
+                    condition: ExpressionNode::Primitive(Primitive::Boolean(false)),
                     body: Box::new([]),
                     chained: None
                 }))
@@ -308,13 +308,13 @@ mod tests {
             ),)
             .unwrap(),
             Conditional {
-                condition: ExpressionNode::Boolean(false),
+                condition: ExpressionNode::Primitive(Primitive::Boolean(false)),
                 body: Box::new([]),
                 chained: Some(Box::new(Conditional {
-                    condition: ExpressionNode::Boolean(false),
+                    condition: ExpressionNode::Primitive(Primitive::Boolean(false)),
                     body: Box::new([]),
                     chained: Some(Box::new(Conditional {
-                        condition: ExpressionNode::Boolean(true),
+                        condition: ExpressionNode::Primitive(Primitive::Boolean(true)),
                         body: Box::new([]),
                         chained: None
                     }))

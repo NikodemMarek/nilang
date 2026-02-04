@@ -36,7 +36,7 @@ pub fn lookup_operation_recursive<I: PeekableAssumingIterator>(
 #[cfg(test)]
 mod tests {
     use nilang_types::{
-        nodes::expressions::{ExpressionNode, Operation, Operator},
+        nodes::expressions::{ExpressionNode, Operation, Operator, Primitive},
         tokens::{Token, TokenType},
     };
 
@@ -76,17 +76,17 @@ mod tests {
                     ]
                     .into_iter()
                 ),
-                ExpressionNode::Number(6.)
+                ExpressionNode::Primitive(Primitive::Number(6.))
             )
             .unwrap(),
             ExpressionNode::Operation(Operation {
                 operator: Operator::Add,
                 a: Box::new(ExpressionNode::Operation(Operation {
                     operator: Operator::Add,
-                    a: Box::new(ExpressionNode::Number(6.)),
-                    b: Box::new(ExpressionNode::Number(9.)),
+                    a: Box::new(ExpressionNode::Primitive(Primitive::Number(6.))),
+                    b: Box::new(ExpressionNode::Primitive(Primitive::Number(9.))),
                 })),
-                b: Box::new(ExpressionNode::Number(5.)),
+                b: Box::new(ExpressionNode::Primitive(Primitive::Number(5.))),
             })
         );
     }
@@ -125,17 +125,17 @@ mod tests {
                     ]
                     .into_iter()
                 ),
-                ExpressionNode::Number(6.),
+                ExpressionNode::Primitive(Primitive::Number(6.)),
             )
             .unwrap(),
             ExpressionNode::Operation(Operation {
                 operator: Operator::Add,
                 a: Box::new(ExpressionNode::Operation(Operation {
                     operator: Operator::Add,
-                    a: Box::new(ExpressionNode::Number(6.)),
-                    b: Box::new(ExpressionNode::Number(9.)),
+                    a: Box::new(ExpressionNode::Primitive(Primitive::Number(6.))),
+                    b: Box::new(ExpressionNode::Primitive(Primitive::Number(9.))),
                 })),
-                b: Box::new(ExpressionNode::Number(5.)),
+                b: Box::new(ExpressionNode::Primitive(Primitive::Number(5.))),
             })
         );
 
@@ -171,17 +171,17 @@ mod tests {
                     ]
                     .into_iter()
                 ),
-                ExpressionNode::Number(6.),
+                ExpressionNode::Primitive(Primitive::Number(6.)),
             )
             .unwrap(),
             ExpressionNode::Operation(Operation {
                 operator: Operator::Subtract,
                 a: Box::new(ExpressionNode::Operation(Operation {
                     operator: Operator::Add,
-                    a: Box::new(ExpressionNode::Number(6.)),
-                    b: Box::new(ExpressionNode::Number(9.)),
+                    a: Box::new(ExpressionNode::Primitive(Primitive::Number(6.))),
+                    b: Box::new(ExpressionNode::Primitive(Primitive::Number(9.))),
                 })),
-                b: Box::new(ExpressionNode::Number(5.)),
+                b: Box::new(ExpressionNode::Primitive(Primitive::Number(5.))),
             })
         );
 
@@ -217,17 +217,17 @@ mod tests {
                     ]
                     .into_iter()
                 ),
-                ExpressionNode::Number(6.),
+                ExpressionNode::Primitive(Primitive::Number(6.)),
             )
             .unwrap(),
             ExpressionNode::Operation(Operation {
                 operator: Operator::Multiply,
                 a: Box::new(ExpressionNode::Operation(Operation {
                     operator: Operator::Multiply,
-                    a: Box::new(ExpressionNode::Number(6.)),
-                    b: Box::new(ExpressionNode::Number(0.5)),
+                    a: Box::new(ExpressionNode::Primitive(Primitive::Number(6.))),
+                    b: Box::new(ExpressionNode::Primitive(Primitive::Number(0.5))),
                 })),
-                b: Box::new(ExpressionNode::Number(7.)),
+                b: Box::new(ExpressionNode::Primitive(Primitive::Number(7.))),
             })
         );
 
@@ -263,17 +263,17 @@ mod tests {
                     ]
                     .into_iter()
                 ),
-                ExpressionNode::Number(6.),
+                ExpressionNode::Primitive(Primitive::Number(6.)),
             )
             .unwrap(),
             ExpressionNode::Operation(Operation {
                 operator: Operator::Divide,
                 a: Box::new(ExpressionNode::Operation(Operation {
                     operator: Operator::Multiply,
-                    a: Box::new(ExpressionNode::Number(6.)),
-                    b: Box::new(ExpressionNode::Number(0.5)),
+                    a: Box::new(ExpressionNode::Primitive(Primitive::Number(6.))),
+                    b: Box::new(ExpressionNode::Primitive(Primitive::Number(0.5))),
                 })),
-                b: Box::new(ExpressionNode::Number(7.0)),
+                b: Box::new(ExpressionNode::Primitive(Primitive::Number(7.0))),
             })
         );
 
@@ -309,17 +309,17 @@ mod tests {
                     ]
                     .into_iter()
                 ),
-                ExpressionNode::Number(6.),
+                ExpressionNode::Primitive(Primitive::Number(6.)),
             )
             .unwrap(),
             ExpressionNode::Operation(Operation {
                 operator: Operator::Add,
                 a: Box::new(ExpressionNode::Operation(Operation {
                     operator: Operator::Multiply,
-                    a: Box::new(ExpressionNode::Number(6.)),
-                    b: Box::new(ExpressionNode::Number(0.5)),
+                    a: Box::new(ExpressionNode::Primitive(Primitive::Number(6.))),
+                    b: Box::new(ExpressionNode::Primitive(Primitive::Number(0.5))),
                 })),
-                b: Box::new(ExpressionNode::Number(7.)),
+                b: Box::new(ExpressionNode::Primitive(Primitive::Number(7.))),
             })
         );
 
@@ -365,20 +365,20 @@ mod tests {
                     ]
                     .into_iter()
                 ),
-                ExpressionNode::Number(6.),
+                ExpressionNode::Primitive(Primitive::Number(6.)),
             )
             .unwrap(),
             ExpressionNode::Operation(Operation {
                 operator: Operator::Add,
                 a: Box::new(ExpressionNode::Operation(Operation {
                     operator: Operator::Divide,
-                    a: Box::new(ExpressionNode::Number(6.)),
-                    b: Box::new(ExpressionNode::Number(0.5)),
+                    a: Box::new(ExpressionNode::Primitive(Primitive::Number(6.))),
+                    b: Box::new(ExpressionNode::Primitive(Primitive::Number(0.5))),
                 })),
                 b: Box::new(ExpressionNode::Operation(Operation {
                     operator: Operator::Multiply,
-                    a: Box::new(ExpressionNode::Number(7.)),
-                    b: Box::new(ExpressionNode::Number(3.)),
+                    a: Box::new(ExpressionNode::Primitive(Primitive::Number(7.))),
+                    b: Box::new(ExpressionNode::Primitive(Primitive::Number(3.))),
                 })),
             })
         );
@@ -425,21 +425,21 @@ mod tests {
                     ]
                     .into_iter()
                 ),
-                ExpressionNode::Number(0.2),
+                ExpressionNode::Primitive(Primitive::Number(0.2)),
             )
             .unwrap(),
             ExpressionNode::Operation(Operation {
                 operator: Operator::Add,
                 a: Box::new(ExpressionNode::Operation(Operation {
                     operator: Operator::Subtract,
-                    a: Box::new(ExpressionNode::Number(0.2)),
+                    a: Box::new(ExpressionNode::Primitive(Primitive::Number(0.2))),
                     b: Box::new(ExpressionNode::Operation(Operation {
                         operator: Operator::Multiply,
-                        a: Box::new(ExpressionNode::Number(5.5)),
-                        b: Box::new(ExpressionNode::Number(8.)),
+                        a: Box::new(ExpressionNode::Primitive(Primitive::Number(5.5))),
+                        b: Box::new(ExpressionNode::Primitive(Primitive::Number(8.))),
                     })),
                 })),
-                b: Box::new(ExpressionNode::Number(0.7)),
+                b: Box::new(ExpressionNode::Primitive(Primitive::Number(0.7))),
             })
         );
     }

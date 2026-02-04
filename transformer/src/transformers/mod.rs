@@ -14,7 +14,7 @@ use std::iter::once;
 use field_access_transformator::transform_field_access;
 use function_call_transformer::transform_function_call;
 use nilang_types::nodes::{
-    expressions::{ExpressionNode, FunctionCall},
+    expressions::{ExpressionNode, FunctionCall, Primitive},
     statements::StatementNode,
 };
 use object_transformer::transform_object;
@@ -67,14 +67,7 @@ pub fn transform_expression<'a>(
     r#type: &Type,
 ) -> InstructionsIterator<'a> {
     match node {
-        ExpressionNode::Boolean(boolean) => {
-            Box::new(once(Ok(Instruction::LoadBoolean(result, boolean))))
-        }
-        ExpressionNode::Number(number) => {
-            Box::new(once(Ok(Instruction::LoadNumber(result, number))))
-        }
-        ExpressionNode::Char(char) => Box::new(once(Ok(Instruction::LoadChar(result, char)))),
-        ExpressionNode::String(text) => transform_string_declaration(context, &text, result),
+        ExpressionNode::Primitive(primitive) => transform_primitive(context, primitive, result),
         ExpressionNode::Parenthesis(expression) => {
             transform_expression(context, *expression, result, r#type)
         }
@@ -93,6 +86,23 @@ pub fn transform_expression<'a>(
         ExpressionNode::FunctionCall(FunctionCall { name, arguments }) => {
             transform_function_call(context, name, &arguments, result, r#type)
         }
+    }
+}
+
+fn transform_primitive<'a>(
+    context: &'a Context,
+
+    primitive: Primitive,
+
+    result: Box<str>,
+) -> InstructionsIterator<'a> {
+    match primitive {
+        Primitive::Boolean(boolean) => {
+            Box::new(once(Ok(Instruction::LoadBoolean(result, boolean))))
+        }
+        Primitive::Number(number) => Box::new(once(Ok(Instruction::LoadNumber(result, number)))),
+        Primitive::Char(char) => Box::new(once(Ok(Instruction::LoadChar(result, char)))),
+        Primitive::String(text) => transform_string_declaration(context, &text, result),
     }
 }
 

@@ -26,7 +26,10 @@ pub fn transform_variable_assignment<'a>(
 mod tests {
     use std::cell::RefCell;
 
-    use nilang_types::{instructions::Instruction, nodes::Type};
+    use nilang_types::{
+        instructions::Instruction,
+        nodes::{expressions::Primitive, Type},
+    };
 
     use crate::{
         labels::Labels, structures_ref::tests::test_structures_ref, temporaries::Temporaries,
@@ -48,9 +51,13 @@ mod tests {
         context.temporaries.declare_named("a".into(), Type::Int);
 
         assert_eq!(
-            transform_variable_assignment(&context, "a".into(), ExpressionNode::Number(10.))
-                .collect::<Result<Vec<_>, _>>()
-                .unwrap(),
+            transform_variable_assignment(
+                &context,
+                "a".into(),
+                ExpressionNode::Primitive(Primitive::Number(10.))
+            )
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap(),
             [Instruction::LoadNumber("a".into(), 10.)]
         );
     }

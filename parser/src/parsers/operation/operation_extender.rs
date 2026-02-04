@@ -32,7 +32,7 @@ pub(super) fn extend_operation(
 
 #[cfg(test)]
 mod tests {
-    use nilang_types::nodes::expressions::{ExpressionNode, Operation, Operator};
+    use nilang_types::nodes::expressions::{ExpressionNode, Operation, Operator, Primitive};
 
     use crate::parsers::operation::operation_extender::extend_operation;
 
@@ -42,20 +42,20 @@ mod tests {
             extend_operation(
                 Operation {
                     operator: Operator::Add,
-                    a: Box::new(ExpressionNode::Number(6.)),
-                    b: Box::new(ExpressionNode::Number(8.))
+                    a: Box::new(ExpressionNode::Primitive(Primitive::Number(6.))),
+                    b: Box::new(ExpressionNode::Primitive(Primitive::Number(8.)))
                 },
                 Operator::Add,
-                ExpressionNode::Number(4.)
+                ExpressionNode::Primitive(Primitive::Number(4.))
             ),
             Operation {
                 operator: Operator::Add,
                 a: Box::new(ExpressionNode::Operation(Operation {
                     operator: Operator::Add,
-                    a: Box::new(ExpressionNode::Number(6.)),
-                    b: Box::new(ExpressionNode::Number(8.))
+                    a: Box::new(ExpressionNode::Primitive(Primitive::Number(6.))),
+                    b: Box::new(ExpressionNode::Primitive(Primitive::Number(8.)))
                 })),
-                b: Box::new(ExpressionNode::Number(4.))
+                b: Box::new(ExpressionNode::Primitive(Primitive::Number(4.)))
             }
         );
 
@@ -63,19 +63,19 @@ mod tests {
             extend_operation(
                 Operation {
                     operator: Operator::Add,
-                    a: Box::new(ExpressionNode::Number(6.)),
-                    b: Box::new(ExpressionNode::Number(8.))
+                    a: Box::new(ExpressionNode::Primitive(Primitive::Number(6.))),
+                    b: Box::new(ExpressionNode::Primitive(Primitive::Number(8.)))
                 },
                 Operator::Multiply,
-                ExpressionNode::Number(4.)
+                ExpressionNode::Primitive(Primitive::Number(4.))
             ),
             Operation {
                 operator: Operator::Add,
-                a: Box::new(ExpressionNode::Number(6.)),
+                a: Box::new(ExpressionNode::Primitive(Primitive::Number(6.))),
                 b: Box::new(ExpressionNode::Operation(Operation {
                     operator: Operator::Multiply,
-                    a: Box::new(ExpressionNode::Number(8.)),
-                    b: Box::new(ExpressionNode::Number(4.))
+                    a: Box::new(ExpressionNode::Primitive(Primitive::Number(8.))),
+                    b: Box::new(ExpressionNode::Primitive(Primitive::Number(4.)))
                 }))
             }
         );
@@ -84,20 +84,20 @@ mod tests {
             extend_operation(
                 Operation {
                     operator: Operator::Multiply,
-                    a: Box::new(ExpressionNode::Number(6.)),
-                    b: Box::new(ExpressionNode::Number(8.))
+                    a: Box::new(ExpressionNode::Primitive(Primitive::Number(6.))),
+                    b: Box::new(ExpressionNode::Primitive(Primitive::Number(8.)))
                 },
                 Operator::Add,
-                ExpressionNode::Number(4.)
+                ExpressionNode::Primitive(Primitive::Number(4.))
             ),
             Operation {
                 operator: Operator::Add,
                 a: Box::new(ExpressionNode::Operation(Operation {
                     operator: Operator::Multiply,
-                    a: Box::new(ExpressionNode::Number(6.)),
-                    b: Box::new(ExpressionNode::Number(8.))
+                    a: Box::new(ExpressionNode::Primitive(Primitive::Number(6.))),
+                    b: Box::new(ExpressionNode::Primitive(Primitive::Number(8.)))
                 })),
-                b: Box::new(ExpressionNode::Number(4.))
+                b: Box::new(ExpressionNode::Primitive(Primitive::Number(4.)))
             }
         );
 
@@ -105,20 +105,20 @@ mod tests {
             extend_operation(
                 Operation {
                     operator: Operator::Multiply,
-                    a: Box::new(ExpressionNode::Number(6.)),
-                    b: Box::new(ExpressionNode::Number(8.))
+                    a: Box::new(ExpressionNode::Primitive(Primitive::Number(6.))),
+                    b: Box::new(ExpressionNode::Primitive(Primitive::Number(8.)))
                 },
                 Operator::Multiply,
-                ExpressionNode::Number(4.)
+                ExpressionNode::Primitive(Primitive::Number(4.))
             ),
             Operation {
                 operator: Operator::Multiply,
                 a: Box::new(ExpressionNode::Operation(Operation {
                     operator: Operator::Multiply,
-                    a: Box::new(ExpressionNode::Number(6.)),
-                    b: Box::new(ExpressionNode::Number(8.))
+                    a: Box::new(ExpressionNode::Primitive(Primitive::Number(6.))),
+                    b: Box::new(ExpressionNode::Primitive(Primitive::Number(8.)))
                 })),
-                b: Box::new(ExpressionNode::Number(4.))
+                b: Box::new(ExpressionNode::Primitive(Primitive::Number(4.)))
             }
         );
     }

@@ -4,10 +4,7 @@ use super::{statements::StatementNode, Type};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ExpressionNode {
-    Boolean(bool),
-    Number(f64),
-    Char(char),
-    String(Box<str>),
+    Primitive(Primitive),
     Parenthesis(Box<ExpressionNode>),
     Object {
         r#type: Type,
@@ -20,6 +17,14 @@ pub enum ExpressionNode {
         field: Box<str>,
     },
     FunctionCall(FunctionCall),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Primitive {
+    Boolean(bool),
+    Number(f64),
+    Char(char),
+    String(Box<str>),
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -19,7 +19,7 @@ pub fn parse_parenthesis<I: PeekableAssumingIterator>(
 #[cfg(test)]
 mod tests {
     use nilang_types::{
-        nodes::expressions::{ExpressionNode, Operation, Operator},
+        nodes::expressions::{ExpressionNode, Operation, Operator, Primitive},
         tokens::{Token, TokenType},
     };
 
@@ -66,8 +66,8 @@ mod tests {
             .unwrap(),
             ExpressionNode::Parenthesis(Box::new(ExpressionNode::Operation(Operation {
                 operator: Operator::Add,
-                a: Box::new(ExpressionNode::Number(6.)),
-                b: Box::new(ExpressionNode::Number(9.)),
+                a: Box::new(ExpressionNode::Primitive(Primitive::Number(6.))),
+                b: Box::new(ExpressionNode::Primitive(Primitive::Number(9.))),
             })))
         );
 
@@ -130,12 +130,12 @@ mod tests {
             .unwrap(),
             ExpressionNode::Parenthesis(Box::new(ExpressionNode::Operation(Operation {
                 operator: Operator::Multiply,
-                a: Box::new(ExpressionNode::Number(6.)),
+                a: Box::new(ExpressionNode::Primitive(Primitive::Number(6.))),
                 b: Box::new(ExpressionNode::Parenthesis(Box::new(
                     ExpressionNode::Operation(Operation {
                         operator: Operator::Add,
-                        a: Box::new(ExpressionNode::Number(9.)),
-                        b: Box::new(ExpressionNode::Number(5.)),
+                        a: Box::new(ExpressionNode::Primitive(Primitive::Number(9.))),
+                        b: Box::new(ExpressionNode::Primitive(Primitive::Number(5.))),
                     })
                 ))),
             })))
@@ -203,11 +203,11 @@ mod tests {
                 a: Box::new(ExpressionNode::Parenthesis(Box::new(
                     ExpressionNode::Operation(Operation {
                         operator: Operator::Add,
-                        a: Box::new(ExpressionNode::Number(4.)),
-                        b: Box::new(ExpressionNode::Number(9.)),
+                        a: Box::new(ExpressionNode::Primitive(Primitive::Number(4.))),
+                        b: Box::new(ExpressionNode::Primitive(Primitive::Number(9.))),
                     })
                 ))),
-                b: Box::new(ExpressionNode::Number(1.)),
+                b: Box::new(ExpressionNode::Primitive(Primitive::Number(1.))),
             })))
         );
 
@@ -295,16 +295,16 @@ mod tests {
                     a: Box::new(ExpressionNode::Parenthesis(Box::new(
                         ExpressionNode::Operation(Operation {
                             operator: Operator::Add,
-                            a: Box::new(ExpressionNode::Number(4.)),
-                            b: Box::new(ExpressionNode::Number(9.)),
+                            a: Box::new(ExpressionNode::Primitive(Primitive::Number(4.))),
+                            b: Box::new(ExpressionNode::Primitive(Primitive::Number(9.))),
                         })
                     ))),
-                    b: Box::new(ExpressionNode::Number(1.)),
+                    b: Box::new(ExpressionNode::Primitive(Primitive::Number(1.))),
                 })),
                 b: Box::new(ExpressionNode::Operation(Operation {
                     operator: Operator::Multiply,
-                    a: Box::new(ExpressionNode::Number(6.)),
-                    b: Box::new(ExpressionNode::Number(2.)),
+                    a: Box::new(ExpressionNode::Primitive(Primitive::Number(6.))),
+                    b: Box::new(ExpressionNode::Primitive(Primitive::Number(2.))),
                 })),
             })))
         );

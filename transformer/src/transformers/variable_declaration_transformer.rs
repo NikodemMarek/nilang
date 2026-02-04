@@ -32,6 +32,8 @@ pub fn transform_variable_declaration<'a>(
 mod tests {
     use std::cell::RefCell;
 
+    use nilang_types::nodes::expressions::Primitive;
+
     use crate::{
         labels::Labels, structures_ref::tests::test_structures_ref, temporaries::Temporaries,
         FunctionsRef,
@@ -54,7 +56,7 @@ mod tests {
                 &context,
                 "a".into(),
                 &Type::Int,
-                ExpressionNode::Number(10.),
+                ExpressionNode::Primitive(Primitive::Number(10.)),
             )
             .collect::<Result<Vec<_>, _>>()
             .unwrap(),
