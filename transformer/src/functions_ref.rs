@@ -1,7 +1,10 @@
 use std::collections::HashMap;
 
 use errors::TransformerErrors;
-use nilang_types::nodes::{FunctionDeclaration, Parameter, Type};
+use nilang_types::nodes::{
+    statements::{FunctionDeclaration, Parameter},
+    Type,
+};
 
 #[derive(Debug, Default)]
 pub struct FunctionsRef(HashMap<Box<str>, (Type, Box<[Parameter]>)>);

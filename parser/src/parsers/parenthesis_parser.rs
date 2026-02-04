@@ -1,5 +1,5 @@
 use errors::NilangError;
-use nilang_types::{nodes::ExpressionNode, tokens::TokenType};
+use nilang_types::{nodes::expressions::ExpressionNode, tokens::TokenType};
 
 use crate::{assuming_iterator::PeekableAssumingIterator, parsers::parse_expression};
 
@@ -19,7 +19,7 @@ pub fn parse_parenthesis<I: PeekableAssumingIterator>(
 #[cfg(test)]
 mod tests {
     use nilang_types::{
-        nodes::{ExpressionNode, Operation, Operator},
+        nodes::expressions::{ExpressionNode, Operation, Operator},
         tokens::{Token, TokenType},
     };
 

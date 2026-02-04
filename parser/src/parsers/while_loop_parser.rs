@@ -1,5 +1,5 @@
 use errors::NilangError;
-use nilang_types::{nodes::StatementNode, tokens::Keyword};
+use nilang_types::{nodes::statements::StatementNode, tokens::Keyword};
 
 use crate::assuming_iterator::PeekableAssumingIterator;
 
@@ -19,7 +19,7 @@ pub fn parse_while_loop<I: PeekableAssumingIterator>(
 #[cfg(test)]
 mod tests {
     use nilang_types::{
-        nodes::{ExpressionNode, StatementNode},
+        nodes::{expressions::ExpressionNode, statements::StatementNode},
         tokens::{Keyword, Token, TokenType},
     };
 

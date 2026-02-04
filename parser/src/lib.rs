@@ -2,7 +2,7 @@ use std::usize;
 
 use errors::{CodeLocation, NilangError, ParserErrors};
 use nilang_types::{
-    nodes::{FunctionDeclaration, StructureDeclaration},
+    nodes::statements::{FunctionDeclaration, StructureDeclaration},
     tokens::{Keyword, Token, TokenType},
 };
 

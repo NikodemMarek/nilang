@@ -1,6 +1,6 @@
 use errors::{CodeLocation, NilangError, ParserErrors};
 use nilang_types::{
-    nodes::ExpressionNode,
+    nodes::expressions::ExpressionNode,
     tokens::{Token, TokenType},
 };
 
@@ -69,7 +69,7 @@ pub fn parse_argument_list<I: PeekableAssumingIterator>(
 #[cfg(test)]
 mod tests {
     use nilang_types::{
-        nodes::ExpressionNode,
+        nodes::expressions::ExpressionNode,
         tokens::{Token, TokenType},
     };
 

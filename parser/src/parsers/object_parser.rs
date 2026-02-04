@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use errors::{CodeLocation, NilangError, ParserErrors};
 use nilang_types::{
-    nodes::ExpressionNode,
+    nodes::expressions::ExpressionNode,
     tokens::{Token, TokenType},
 };
 

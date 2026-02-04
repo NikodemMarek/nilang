@@ -3,7 +3,7 @@ use std::iter::once;
 use errors::TransformerErrors;
 use nilang_types::{
     instructions::Instruction,
-    nodes::{Operation, Operator},
+    nodes::expressions::{Operation, Operator},
 };
 
 use crate::{Context, InstructionsIterator, Type};

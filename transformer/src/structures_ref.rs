@@ -6,7 +6,7 @@ use std::{
 use errors::TransformerErrors;
 use nilang_types::{
     instructions::Instruction,
-    nodes::{StructureDeclaration, Type},
+    nodes::{statements::StructureDeclaration, Type},
 };
 
 use crate::{temporaries::Temporaries, InstructionsIterator};
@@ -151,7 +151,7 @@ pub fn copy_all_fields<'a>(
 pub mod tests {
     use std::collections::HashMap;
 
-    use nilang_types::nodes::{StructureDeclaration, Type};
+    use nilang_types::nodes::{statements::StructureDeclaration, Type};
 
     use crate::structures_ref::{object_fields_recursive, StructuresRef};
 

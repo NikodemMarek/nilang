@@ -1,5 +1,5 @@
 use errors::NilangError;
-use nilang_types::{nodes::ExpressionNode, tokens::TokenType};
+use nilang_types::{nodes::expressions::ExpressionNode, tokens::TokenType};
 
 use crate::assuming_iterator::PeekableAssumingIterator;
 
@@ -26,7 +26,7 @@ pub fn parse_field_access<I: PeekableAssumingIterator>(
 #[cfg(test)]
 mod tests {
     use nilang_types::{
-        nodes::ExpressionNode,
+        nodes::expressions::ExpressionNode,
         tokens::{Token, TokenType},
     };
 

@@ -3,7 +3,7 @@ use function_call_parser::parse_function_call_statement;
 use identifier_parser::parse_identifier;
 use literal_parser::parse_literal;
 use nilang_types::{
-    nodes::{ExpressionNode, StatementNode},
+    nodes::{expressions::ExpressionNode, statements::StatementNode},
     tokens::{Keyword, Token, TokenType},
 };
 

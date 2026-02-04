@@ -2,7 +2,7 @@ use std::iter::once;
 
 use nilang_types::{
     instructions::Instruction,
-    nodes::{ExpressionNode, StatementNode, Type},
+    nodes::{expressions::ExpressionNode, statements::StatementNode, Type},
 };
 
 use crate::{transform_body, transformers::transform_expression, Context, InstructionsIterator};

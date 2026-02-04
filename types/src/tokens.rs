@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use crate::nodes::Operator;
+use super::nodes::expressions::Operator;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Token {

@@ -10,7 +10,10 @@ use errors::TransformerErrors;
 pub use functions_ref::FunctionsRef;
 use nilang_types::{
     instructions::Instruction,
-    nodes::{FunctionDeclaration, Parameter, StatementNode, Type},
+    nodes::{
+        statements::{FunctionDeclaration, Parameter, StatementNode},
+        Type,
+    },
 };
 pub use structures_ref::StructuresRef;
 use temporaries::Temporaries;

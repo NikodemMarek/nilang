@@ -1,6 +1,6 @@
 use errors::NilangError;
 use nilang_types::{
-    nodes::StatementNode,
+    nodes::statements::StatementNode,
     tokens::{Keyword, TokenType},
 };
 
@@ -23,7 +23,7 @@ pub fn parse_return<I: PeekableAssumingIterator>(
 #[cfg(test)]
 mod tests {
     use nilang_types::{
-        nodes::{ExpressionNode, StatementNode},
+        nodes::{expressions::ExpressionNode, statements::StatementNode},
         tokens::{Keyword, Token, TokenType},
     };
 

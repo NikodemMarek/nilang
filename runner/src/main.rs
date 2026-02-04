@@ -75,8 +75,8 @@ fn compile(code: &str) -> Box<str> {
 }
 
 fn create_transformer_context(
-    functions: &[nilang_types::nodes::FunctionDeclaration],
-    structures: &[nilang_types::nodes::StructureDeclaration],
+    functions: &[nilang_types::nodes::statements::FunctionDeclaration],
+    structures: &[nilang_types::nodes::statements::StructureDeclaration],
 ) -> Result<(FunctionsRef, StructuresRef), TransformerErrors> {
     structures.try_into().map(|s| (functions.into(), s))
 }

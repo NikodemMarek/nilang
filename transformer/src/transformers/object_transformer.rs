@@ -4,7 +4,7 @@ use std::{
 };
 
 use errors::TransformerErrors;
-use nilang_types::{instructions::Instruction, nodes::ExpressionNode};
+use nilang_types::{instructions::Instruction, nodes::expressions::ExpressionNode};
 
 use crate::{Context, InstructionsIterator, Type};
 

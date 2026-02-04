@@ -1,5 +1,5 @@
 use errors::{CodeLocation, NilangError, ParserErrors};
-use nilang_types::nodes::ExpressionNode;
+use nilang_types::nodes::expressions::ExpressionNode;
 
 use crate::assuming_iterator::PeekableAssumingIterator;
 
@@ -41,7 +41,7 @@ pub fn parse_literal<I: PeekableAssumingIterator>(
 #[cfg(test)]
 mod tests {
     use nilang_types::{
-        nodes::ExpressionNode,
+        nodes::expressions::ExpressionNode,
         tokens::{Token, TokenType},
     };
 

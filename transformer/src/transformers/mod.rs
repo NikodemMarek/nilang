@@ -13,7 +13,10 @@ use std::iter::once;
 
 use field_access_transformator::transform_field_access;
 use function_call_transformer::transform_function_call;
-use nilang_types::nodes::{ExpressionNode, FunctionCall, StatementNode};
+use nilang_types::nodes::{
+    expressions::{ExpressionNode, FunctionCall},
+    statements::StatementNode,
+};
 use object_transformer::transform_object;
 use operation_transformer::transform_operation;
 use return_transformer::transform_return;

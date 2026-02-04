@@ -1,6 +1,6 @@
 use errors::{CodeLocation, NilangError, ParserErrors};
 use nilang_types::{
-    nodes::{Conditional, ExpressionNode},
+    nodes::expressions::{Conditional, ExpressionNode},
     tokens::{Keyword, Token, TokenType},
 };
 
@@ -83,7 +83,7 @@ pub fn parse_else<I: PeekableAssumingIterator>(tokens: &mut I) -> Result<Conditi
 #[cfg(test)]
 mod tests {
     use nilang_types::{
-        nodes::{Conditional, ExpressionNode},
+        nodes::expressions::{Conditional, ExpressionNode},
         tokens::{Keyword, Token, TokenType},
     };
 

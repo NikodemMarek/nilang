@@ -1,6 +1,6 @@
 use errors::NilangError;
 use nilang_types::{
-    nodes::StatementNode,
+    nodes::statements::StatementNode,
     tokens::{Keyword, TokenType},
 };
 
@@ -33,7 +33,7 @@ pub fn parse_variable_declaration<I: PeekableAssumingIterator>(
 #[cfg(test)]
 mod tests {
     use nilang_types::{
-        nodes::{ExpressionNode, StatementNode, Type},
+        nodes::{expressions::ExpressionNode, statements::StatementNode, Type},
         tokens::{Keyword, Token, TokenType},
     };
 

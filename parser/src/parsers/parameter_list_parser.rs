@@ -1,6 +1,6 @@
 use errors::{CodeLocation, NilangError, ParserErrors};
 use nilang_types::{
-    nodes::Parameter,
+    nodes::statements::Parameter,
     tokens::{Token, TokenType},
 };
 

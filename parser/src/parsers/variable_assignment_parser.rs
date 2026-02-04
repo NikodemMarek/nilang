@@ -1,5 +1,5 @@
 use errors::NilangError;
-use nilang_types::{nodes::StatementNode, tokens::TokenType};
+use nilang_types::{nodes::statements::StatementNode, tokens::TokenType};
 
 use crate::assuming_iterator::PeekableAssumingIterator;
 
@@ -25,7 +25,7 @@ pub fn parse_variable_assignment<I: PeekableAssumingIterator>(
 #[cfg(test)]
 mod tests {
     use nilang_types::{
-        nodes::{ExpressionNode, StatementNode},
+        nodes::{expressions::ExpressionNode, statements::StatementNode},
         tokens::{Token, TokenType},
     };
 

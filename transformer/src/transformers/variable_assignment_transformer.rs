@@ -1,7 +1,7 @@
 use std::iter::once;
 
 use errors::TransformerErrors;
-use nilang_types::nodes::ExpressionNode;
+use nilang_types::nodes::expressions::ExpressionNode;
 
 use crate::{Context, InstructionsIterator};
 

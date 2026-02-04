@@ -1,4 +1,4 @@
-use nilang_types::nodes::{ExpressionNode, Operation, Operator};
+use nilang_types::nodes::expressions::{ExpressionNode, Operation, Operator};
 
 pub(super) fn extend_operation(
     prev: Operation,
@@ -32,7 +32,7 @@ pub(super) fn extend_operation(
 
 #[cfg(test)]
 mod tests {
-    use nilang_types::nodes::{ExpressionNode, Operation, Operator};
+    use nilang_types::nodes::expressions::{ExpressionNode, Operation, Operator};
 
     use crate::parsers::operation::operation_extender::extend_operation;
 

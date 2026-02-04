@@ -1,6 +1,6 @@
 use errors::{CodeLocation, NilangError, ParserErrors};
 use nilang_types::{
-    nodes::ExpressionNode,
+    nodes::expressions::ExpressionNode,
     tokens::{Token, TokenType},
 };
 
@@ -36,7 +36,7 @@ pub fn lookup_operation_recursive<I: PeekableAssumingIterator>(
 #[cfg(test)]
 mod tests {
     use nilang_types::{
-        nodes::{ExpressionNode, Operation, Operator},
+        nodes::expressions::{ExpressionNode, Operation, Operator},
         tokens::{Token, TokenType},
     };
 

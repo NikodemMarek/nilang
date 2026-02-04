@@ -1,4 +1,4 @@
-use nilang_types::nodes::ExpressionNode;
+use nilang_types::nodes::expressions::ExpressionNode;
 
 use crate::{structures_ref::copy_all_fields, Context, InstructionsIterator, Type};
 

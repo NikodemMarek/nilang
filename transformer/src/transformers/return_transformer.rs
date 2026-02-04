@@ -1,7 +1,7 @@
 use std::iter::once;
 
 use errors::TransformerErrors;
-use nilang_types::nodes::ExpressionNode;
+use nilang_types::nodes::expressions::ExpressionNode;
 
 use crate::{Context, Instruction, InstructionsIterator, Type};
 
@@ -36,7 +36,7 @@ mod tests {
 
     use nilang_types::{
         instructions::Instruction,
-        nodes::{ExpressionNode, Type},
+        nodes::{expressions::ExpressionNode, Type},
     };
 
     use crate::{

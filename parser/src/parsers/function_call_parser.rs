@@ -1,6 +1,9 @@
 use errors::NilangError;
 use nilang_types::{
-    nodes::{ExpressionNode, FunctionCall, StatementNode},
+    nodes::{
+        expressions::{ExpressionNode, FunctionCall},
+        statements::StatementNode,
+    },
     tokens::TokenType,
 };
 
@@ -55,7 +58,7 @@ fn expand_function_call_if_dot_follows<I: PeekableAssumingIterator>(
 #[cfg(test)]
 mod tests {
     use nilang_types::{
-        nodes::{ExpressionNode, FunctionCall},
+        nodes::expressions::{ExpressionNode, FunctionCall},
         tokens::{Token, TokenType},
     };
 

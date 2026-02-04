@@ -1,5 +1,5 @@
 use errors::NilangError;
-use nilang_types::{nodes::FunctionDeclaration, tokens::Keyword};
+use nilang_types::{nodes::statements::FunctionDeclaration, tokens::Keyword};
 
 use crate::{assuming_iterator::PeekableAssumingIterator, parsers::scope_parser::parse_scope};
 
@@ -28,7 +28,11 @@ pub fn parse_function_definition<I: PeekableAssumingIterator>(
 #[cfg(test)]
 mod tests {
     use nilang_types::{
-        nodes::{ExpressionNode, FunctionDeclaration, StatementNode, Type},
+        nodes::{
+            expressions::ExpressionNode,
+            statements::{FunctionDeclaration, StatementNode},
+            Type,
+        },
         tokens::{Keyword, Token, TokenType},
     };
 

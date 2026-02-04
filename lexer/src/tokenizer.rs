@@ -1,7 +1,10 @@
 use std::iter::Peekable;
 
 use errors::{CodeLocation, LexerErrors, NilangError};
-use nilang_types::tokens::{Keyword, Token, TokenType};
+use nilang_types::{
+    nodes::expressions::Operator,
+    tokens::{Keyword, Token, TokenType},
+};
 
 pub struct Tokenizer<'a> {
     iter: Peekable<std::str::Chars<'a>>,
@@ -219,7 +222,7 @@ impl<'a> Iterator for Tokenizer<'a> {
                     self.loc.1 += 1;
                     self.iter.next();
                     return Some(Ok(Token {
-                        token: TokenType::Operator(nilang_types::nodes::Operator::Add),
+                        token: TokenType::Operator(Operator::Add),
                         start,
                         end: start,
                     }));
@@ -229,7 +232,7 @@ impl<'a> Iterator for Tokenizer<'a> {
                     self.loc.1 += 1;
                     self.iter.next();
                     return Some(Ok(Token {
-                        token: TokenType::Operator(nilang_types::nodes::Operator::Subtract),
+                        token: TokenType::Operator(Operator::Subtract),
                         start,
                         end: start,
                     }));
@@ -239,7 +242,7 @@ impl<'a> Iterator for Tokenizer<'a> {
                     self.loc.1 += 1;
                     self.iter.next();
                     return Some(Ok(Token {
-                        token: TokenType::Operator(nilang_types::nodes::Operator::Multiply),
+                        token: TokenType::Operator(Operator::Multiply),
                         start,
                         end: start,
                     }));
@@ -249,7 +252,7 @@ impl<'a> Iterator for Tokenizer<'a> {
                     self.loc.1 += 1;
                     self.iter.next();
                     return Some(Ok(Token {
-                        token: TokenType::Operator(nilang_types::nodes::Operator::Divide),
+                        token: TokenType::Operator(Operator::Divide),
                         start,
                         end: start,
                     }));
@@ -259,7 +262,7 @@ impl<'a> Iterator for Tokenizer<'a> {
                     self.loc.1 += 1;
                     self.iter.next();
                     return Some(Ok(Token {
-                        token: TokenType::Operator(nilang_types::nodes::Operator::Modulo),
+                        token: TokenType::Operator(Operator::Modulo),
                         start,
                         end: start,
                     }));
@@ -370,7 +373,7 @@ impl Tokenizer<'_> {
 #[cfg(test)]
 mod tests {
     use nilang_types::{
-        nodes::Operator,
+        nodes::expressions::Operator,
         tokens::{Keyword, Token, TokenType},
     };
 

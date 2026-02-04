@@ -1,6 +1,6 @@
 use errors::NilangError;
 use nilang_types::{
-    nodes::ExpressionNode,
+    nodes::expressions::ExpressionNode,
     tokens::{Token, TokenType},
 };
 
@@ -47,7 +47,7 @@ pub fn parse_identifier<I: PeekableAssumingIterator>(
 mod tests {
     use crate::{multi_peekable::MultiPeekable, parsers::identifier_parser::parse_identifier};
     use nilang_types::{
-        nodes::ExpressionNode,
+        nodes::expressions::ExpressionNode,
         tokens::{Token, TokenType},
     };
 

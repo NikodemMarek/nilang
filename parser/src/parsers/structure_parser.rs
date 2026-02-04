@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use errors::{CodeLocation, NilangError, ParserErrors};
 use nilang_types::{
-    nodes::StructureDeclaration,
+    nodes::statements::StructureDeclaration,
     tokens::{Keyword, Token, TokenType},
 };
 
@@ -70,7 +70,7 @@ pub fn parse_structure<I: PeekableAssumingIterator>(
 #[cfg(test)]
 mod test {
     use nilang_types::{
-        nodes::{StructureDeclaration, Type},
+        nodes::{statements::StructureDeclaration, Type},
         tokens::{Keyword, Token, TokenType},
     };
 
