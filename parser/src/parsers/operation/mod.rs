@@ -8,6 +8,7 @@ use crate::assuming_iterator::PeekableAssumingIterator;
 
 mod operation_extender;
 mod operation_parser;
+mod precendence;
 
 pub fn lookup_operation_recursive<I: PeekableAssumingIterator>(
     tokens: &mut I,

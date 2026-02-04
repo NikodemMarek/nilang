@@ -5,18 +5,18 @@ use super::{statements::StatementNode, Type};
 #[derive(Debug, Clone, PartialEq)]
 pub enum ExpressionNode {
     Primitive(Primitive),
-    Parenthesis(Box<ExpressionNode>),
     Object {
         r#type: Type,
         fields: HashMap<Box<str>, ExpressionNode>,
     },
-    Operation(Operation),
     VariableReference(Box<str>),
     FieldAccess {
         structure: Box<ExpressionNode>,
         field: Box<str>,
     },
     FunctionCall(FunctionCall),
+    Parenthesis(Box<ExpressionNode>),
+    Operation(Operation),
 }
 
 #[derive(Debug, Clone, PartialEq)]

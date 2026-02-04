@@ -1,17 +1,13 @@
 use nilang_types::nodes::expressions::{ExpressionNode, Operation, Operator};
 
+use super::precendence::is_preceeding;
+
 pub(super) fn extend_operation(
     prev: Operation,
     operator: Operator,
     node: ExpressionNode,
 ) -> Operation {
-    let is_prev_low = matches!(prev.operator, Operator::Add | Operator::Subtract);
-    let is_curr_high = matches!(
-        operator,
-        Operator::Multiply | Operator::Divide | Operator::Modulo
-    );
-
-    if is_prev_low && is_curr_high {
+    if is_preceeding(operator, prev.operator) {
         Operation {
             operator: prev.operator,
             a: prev.a,
