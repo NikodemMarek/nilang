@@ -30,4 +30,11 @@ pub enum Instruction {
     MultiplyVariables(Temporary, Temporary, Temporary),
     DivideVariables(Temporary, Temporary, Temporary),
     ModuloVariables(Temporary, Temporary, Temporary),
+
+    TestEqual(Temporary, Temporary, Temporary),
+    TestNotEqual(Temporary, Temporary, Temporary),
+    TestLess(Temporary, Temporary, Temporary),
+    TestMore(Temporary, Temporary, Temporary),
+    TestLessOrEqual(Temporary, Temporary, Temporary),
+    TestMoreOrEqual(Temporary, Temporary, Temporary),
 }

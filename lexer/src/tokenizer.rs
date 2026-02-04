@@ -2,7 +2,7 @@ use std::iter::Peekable;
 
 use errors::{CodeLocation, LexerErrors, NilangError};
 use nilang_types::{
-    nodes::expressions::Operator,
+    nodes::expressions::{Arithmetic, Boolean, Operator},
     tokens::{Keyword, Token, TokenType},
 };
 
@@ -222,7 +222,7 @@ impl<'a> Iterator for Tokenizer<'a> {
                     self.loc.1 += 1;
                     self.iter.next();
                     return Some(Ok(Token {
-                        token: TokenType::Operator(Operator::Add),
+                        token: TokenType::Operator(Operator::Arithmetic(Arithmetic::Add)),
                         start,
                         end: start,
                     }));
@@ -232,7 +232,7 @@ impl<'a> Iterator for Tokenizer<'a> {
                     self.loc.1 += 1;
                     self.iter.next();
                     return Some(Ok(Token {
-                        token: TokenType::Operator(Operator::Subtract),
+                        token: TokenType::Operator(Operator::Arithmetic(Arithmetic::Subtract)),
                         start,
                         end: start,
                     }));
@@ -242,7 +242,7 @@ impl<'a> Iterator for Tokenizer<'a> {
                     self.loc.1 += 1;
                     self.iter.next();
                     return Some(Ok(Token {
-                        token: TokenType::Operator(Operator::Multiply),
+                        token: TokenType::Operator(Operator::Arithmetic(Arithmetic::Multiply)),
                         start,
                         end: start,
                     }));
@@ -252,7 +252,7 @@ impl<'a> Iterator for Tokenizer<'a> {
                     self.loc.1 += 1;
                     self.iter.next();
                     return Some(Ok(Token {
-                        token: TokenType::Operator(Operator::Divide),
+                        token: TokenType::Operator(Operator::Arithmetic(Arithmetic::Divide)),
                         start,
                         end: start,
                     }));
@@ -262,7 +262,7 @@ impl<'a> Iterator for Tokenizer<'a> {
                     self.loc.1 += 1;
                     self.iter.next();
                     return Some(Ok(Token {
-                        token: TokenType::Operator(Operator::Modulo),
+                        token: TokenType::Operator(Operator::Arithmetic(Arithmetic::Modulo)),
                         start,
                         end: start,
                     }));
@@ -311,10 +311,83 @@ impl<'a> Iterator for Tokenizer<'a> {
                     let start = self.loc;
                     self.loc.1 += 1;
                     self.iter.next();
+
+                    let token = if let Some('=') = self.iter.peek() {
+                        self.loc.1 += 1;
+                        self.iter.next();
+
+                        TokenType::Operator(Operator::Boolean(Boolean::Equal))
+                    } else {
+                        TokenType::Equals
+                    };
+
                     return Some(Ok(Token {
-                        token: TokenType::Equals,
+                        token,
                         start,
-                        end: start,
+                        end: (self.loc.0, self.loc.1 - 1),
+                    }));
+                }
+                '!' => {
+                    let start = self.loc;
+                    self.loc.1 += 1;
+                    self.iter.next();
+
+                    let token = if let Some('=') = self.iter.peek() {
+                        self.loc.1 += 1;
+                        self.iter.next();
+
+                        TokenType::Operator(Operator::Boolean(Boolean::NotEqual))
+                    } else {
+                        return Some(Err(NilangError {
+                            location: CodeLocation::at(self.loc.0, self.loc.1),
+                            error: LexerErrors::UnexpectedCharacter('!').into(),
+                        }));
+                    };
+
+                    return Some(Ok(Token {
+                        token,
+                        start,
+                        end: (self.loc.0, self.loc.1 - 1),
+                    }));
+                }
+                '<' => {
+                    let start = self.loc;
+                    self.loc.1 += 1;
+                    self.iter.next();
+
+                    let token = if let Some('=') = self.iter.peek() {
+                        self.loc.1 += 1;
+                        self.iter.next();
+
+                        TokenType::Operator(Operator::Boolean(Boolean::LessOrEqual))
+                    } else {
+                        TokenType::Operator(Operator::Boolean(Boolean::Less))
+                    };
+
+                    return Some(Ok(Token {
+                        token,
+                        start,
+                        end: (self.loc.0, self.loc.1 - 1),
+                    }));
+                }
+                '>' => {
+                    let start = self.loc;
+                    self.loc.1 += 1;
+                    self.iter.next();
+
+                    let token = if let Some('=') = self.iter.peek() {
+                        self.loc.1 += 1;
+                        self.iter.next();
+
+                        TokenType::Operator(Operator::Boolean(Boolean::MoreOrEqual))
+                    } else {
+                        TokenType::Operator(Operator::Boolean(Boolean::More))
+                    };
+
+                    return Some(Ok(Token {
+                        token,
+                        start,
+                        end: (self.loc.0, self.loc.1 - 1),
                     }));
                 }
                 ';' => {
@@ -373,7 +446,7 @@ impl Tokenizer<'_> {
 #[cfg(test)]
 mod tests {
     use nilang_types::{
-        nodes::expressions::Operator,
+        nodes::expressions::{Arithmetic, Operator},
         tokens::{Keyword, Token, TokenType},
     };
 
@@ -395,7 +468,7 @@ mod tests {
         assert_eq!(
             iter.next().unwrap().unwrap(),
             Token {
-                token: TokenType::Operator(Operator::Add),
+                token: TokenType::Operator(Operator::Arithmetic(Arithmetic::Add)),
                 start: (0, 2),
                 end: (0, 2),
             }
@@ -525,7 +598,7 @@ mod tests {
         assert_eq!(
             iter.next().unwrap().unwrap(),
             Token {
-                token: TokenType::Operator(Operator::Add),
+                token: TokenType::Operator(Operator::Arithmetic(Arithmetic::Add)),
                 start: (1, 11),
                 end: (1, 11),
             }

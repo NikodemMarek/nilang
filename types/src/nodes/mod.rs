@@ -3,8 +3,9 @@ pub mod statements;
 
 use std::fmt::Debug;
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Default, Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Type {
+    #[default]
     Void,
     Bool,
     Int,

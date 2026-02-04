@@ -3,7 +3,7 @@ use std::iter::once;
 use errors::TransformerErrors;
 use nilang_types::{
     instructions::Instruction,
-    nodes::expressions::{Operation, Operator},
+    nodes::expressions::{Arithmetic, Boolean, Operation, Operator},
 };
 
 use crate::{Context, InstructionsIterator, Type};
@@ -41,21 +41,36 @@ pub fn transform_operation<'a>(
         })));
     };
 
+    let a_temporary_declare_copy = a_temporary.clone();
+    let b_temporary_declare_copy = b_temporary.clone();
+
+    let operator_instruction = match operator {
+        Operator::Arithmetic(operator) => match operator {
+            Arithmetic::Add => Instruction::AddVariables(result, a_temporary, b_temporary),
+            Arithmetic::Subtract => {
+                Instruction::SubtractVariables(result, a_temporary, b_temporary)
+            }
+            Arithmetic::Multiply => {
+                Instruction::MultiplyVariables(result, a_temporary, b_temporary)
+            }
+            Arithmetic::Divide => Instruction::DivideVariables(result, a_temporary, b_temporary),
+            Arithmetic::Modulo => Instruction::ModuloVariables(result, a_temporary, b_temporary),
+        },
+        Operator::Boolean(operator) => match operator {
+            Boolean::Equal => Instruction::TestEqual(result, a_temporary, b_temporary),
+            Boolean::NotEqual => Instruction::TestNotEqual(result, a_temporary, b_temporary),
+            Boolean::Less => Instruction::TestLess(result, a_temporary, b_temporary),
+            Boolean::More => Instruction::TestMore(result, a_temporary, b_temporary),
+            Boolean::LessOrEqual => Instruction::TestLessOrEqual(result, a_temporary, b_temporary),
+            Boolean::MoreOrEqual => Instruction::TestMoreOrEqual(result, a_temporary, b_temporary),
+        },
+    };
+
     Box::new(
-        once(Ok(Instruction::Declare(a_temporary.clone())))
+        once(Ok(Instruction::Declare(a_temporary_declare_copy)))
             .chain(a_instructions)
-            .chain(once(Ok(Instruction::Declare(b_temporary.clone()))))
+            .chain(once(Ok(Instruction::Declare(b_temporary_declare_copy))))
             .chain(b_instructions)
-            .chain(once(Ok(match operator {
-                Operator::Add => Instruction::AddVariables(result, a_temporary, b_temporary),
-                Operator::Subtract => {
-                    Instruction::SubtractVariables(result, a_temporary, b_temporary)
-                }
-                Operator::Multiply => {
-                    Instruction::MultiplyVariables(result, a_temporary, b_temporary)
-                }
-                Operator::Divide => Instruction::DivideVariables(result, a_temporary, b_temporary),
-                Operator::Modulo => Instruction::ModuloVariables(result, a_temporary, b_temporary),
-            }))),
+            .chain(once(Ok(operator_instruction))),
     )
 }

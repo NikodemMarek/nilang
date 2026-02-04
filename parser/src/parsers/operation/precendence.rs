@@ -1,4 +1,4 @@
-use nilang_types::nodes::expressions::Operator;
+use nilang_types::nodes::expressions::{Arithmetic, Operator};
 
 pub(super) fn is_preceeding(a: Operator, b: Operator) -> bool {
     precendence_score(a) > precendence_score(b)
@@ -6,30 +6,43 @@ pub(super) fn is_preceeding(a: Operator, b: Operator) -> bool {
 
 fn precendence_score(operator: Operator) -> u8 {
     match operator {
-        Operator::Add | Operator::Subtract => 0,
-        Operator::Multiply | Operator::Divide | Operator::Modulo => 1,
+        Operator::Arithmetic(operator) => match operator {
+            Arithmetic::Add | Arithmetic::Subtract => 0,
+            Arithmetic::Multiply | Arithmetic::Divide | Arithmetic::Modulo => 1,
+        },
+        Operator::Boolean(_) => 2,
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use nilang_types::nodes::expressions::Operator;
-
-    #[test]
-    fn test_precendence_score() {
-        assert_eq!(precendence_score(Operator::Add), 0);
-        assert_eq!(precendence_score(Operator::Subtract), 0);
-        assert_eq!(precendence_score(Operator::Multiply), 1);
-        assert_eq!(precendence_score(Operator::Divide), 1);
-        assert_eq!(precendence_score(Operator::Modulo), 1);
-    }
+    use nilang_types::nodes::expressions::{Boolean, Operator};
 
     #[test]
     fn test_is_preceeding() {
-        // Test basic arithmetic
-        assert!(is_preceeding(Operator::Multiply, Operator::Add));
-        assert!(is_preceeding(Operator::Divide, Operator::Subtract));
-        assert!(is_preceeding(Operator::Modulo, Operator::Add));
+        // arithmetic
+        assert!(is_preceeding(
+            Operator::Arithmetic(Arithmetic::Multiply),
+            Operator::Arithmetic(Arithmetic::Add)
+        ));
+        assert!(is_preceeding(
+            Operator::Arithmetic(Arithmetic::Divide),
+            Operator::Arithmetic(Arithmetic::Subtract)
+        ));
+        assert!(is_preceeding(
+            Operator::Arithmetic(Arithmetic::Modulo),
+            Operator::Arithmetic(Arithmetic::Add)
+        ));
+
+        // arithmetic + booleans
+        assert!(is_preceeding(
+            Operator::Boolean(Boolean::Equal),
+            Operator::Arithmetic(Arithmetic::Add)
+        ));
+        assert!(is_preceeding(
+            Operator::Boolean(Boolean::Equal),
+            Operator::Arithmetic(Arithmetic::Multiply)
+        ));
     }
 }

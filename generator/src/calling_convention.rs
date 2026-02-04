@@ -201,6 +201,7 @@ pub trait CallingConvention: Sized {
                     ),
                 ]
             }
+            _ => todo!(),
         })
     }
 

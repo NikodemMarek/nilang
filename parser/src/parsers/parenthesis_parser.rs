@@ -19,7 +19,7 @@ pub fn parse_parenthesis<I: PeekableAssumingIterator>(
 #[cfg(test)]
 mod tests {
     use nilang_types::{
-        nodes::expressions::{ExpressionNode, Operation, Operator, Primitive},
+        nodes::expressions::{Arithmetic, ExpressionNode, Operation, Operator, Primitive},
         tokens::{Token, TokenType},
     };
 
@@ -41,7 +41,7 @@ mod tests {
                         end: (0, 1),
                     }),
                     Ok(Token {
-                        token: TokenType::Operator(Operator::Add),
+                        token: TokenType::Operator(Operator::Arithmetic(Arithmetic::Add)),
                         start: (0, 2),
                         end: (0, 2),
                     }),
@@ -65,7 +65,7 @@ mod tests {
             ))
             .unwrap(),
             ExpressionNode::Parenthesis(Box::new(ExpressionNode::Operation(Operation {
-                operator: Operator::Add,
+                operator: Operator::Arithmetic(Arithmetic::Add),
                 a: Box::new(ExpressionNode::Primitive(Primitive::Number(6.))),
                 b: Box::new(ExpressionNode::Primitive(Primitive::Number(9.))),
             })))
@@ -85,7 +85,7 @@ mod tests {
                         end: (0, 1),
                     }),
                     Ok(Token {
-                        token: TokenType::Operator(Operator::Multiply),
+                        token: TokenType::Operator(Operator::Arithmetic(Arithmetic::Multiply)),
                         start: (0, 2),
                         end: (0, 2),
                     }),
@@ -100,7 +100,7 @@ mod tests {
                         end: (0, 4),
                     }),
                     Ok(Token {
-                        token: TokenType::Operator(Operator::Add),
+                        token: TokenType::Operator(Operator::Arithmetic(Arithmetic::Add)),
                         start: (0, 5),
                         end: (0, 5),
                     }),
@@ -129,11 +129,11 @@ mod tests {
             ))
             .unwrap(),
             ExpressionNode::Parenthesis(Box::new(ExpressionNode::Operation(Operation {
-                operator: Operator::Multiply,
+                operator: Operator::Arithmetic(Arithmetic::Multiply),
                 a: Box::new(ExpressionNode::Primitive(Primitive::Number(6.))),
                 b: Box::new(ExpressionNode::Parenthesis(Box::new(
                     ExpressionNode::Operation(Operation {
-                        operator: Operator::Add,
+                        operator: Operator::Arithmetic(Arithmetic::Add),
                         a: Box::new(ExpressionNode::Primitive(Primitive::Number(9.))),
                         b: Box::new(ExpressionNode::Primitive(Primitive::Number(5.))),
                     })
@@ -160,7 +160,7 @@ mod tests {
                         end: (0, 2),
                     }),
                     Ok(Token {
-                        token: TokenType::Operator(Operator::Add),
+                        token: TokenType::Operator(Operator::Arithmetic(Arithmetic::Add)),
                         start: (0, 3),
                         end: (0, 3),
                     }),
@@ -175,7 +175,7 @@ mod tests {
                         end: (0, 5),
                     }),
                     Ok(Token {
-                        token: TokenType::Operator(Operator::Multiply),
+                        token: TokenType::Operator(Operator::Arithmetic(Arithmetic::Multiply)),
                         start: (0, 6),
                         end: (0, 6),
                     }),
@@ -199,10 +199,10 @@ mod tests {
             ))
             .unwrap(),
             ExpressionNode::Parenthesis(Box::new(ExpressionNode::Operation(Operation {
-                operator: Operator::Multiply,
+                operator: Operator::Arithmetic(Arithmetic::Multiply),
                 a: Box::new(ExpressionNode::Parenthesis(Box::new(
                     ExpressionNode::Operation(Operation {
-                        operator: Operator::Add,
+                        operator: Operator::Arithmetic(Arithmetic::Add),
                         a: Box::new(ExpressionNode::Primitive(Primitive::Number(4.))),
                         b: Box::new(ExpressionNode::Primitive(Primitive::Number(9.))),
                     })
@@ -230,7 +230,7 @@ mod tests {
                         end: (0, 2),
                     }),
                     Ok(Token {
-                        token: TokenType::Operator(Operator::Add),
+                        token: TokenType::Operator(Operator::Arithmetic(Arithmetic::Add)),
                         start: (0, 3),
                         end: (0, 3),
                     }),
@@ -245,7 +245,7 @@ mod tests {
                         end: (0, 5),
                     }),
                     Ok(Token {
-                        token: TokenType::Operator(Operator::Multiply),
+                        token: TokenType::Operator(Operator::Arithmetic(Arithmetic::Multiply)),
                         start: (0, 6),
                         end: (0, 6),
                     }),
@@ -255,7 +255,7 @@ mod tests {
                         end: (0, 7),
                     }),
                     Ok(Token {
-                        token: TokenType::Operator(Operator::Add),
+                        token: TokenType::Operator(Operator::Arithmetic(Arithmetic::Add)),
                         start: (0, 8),
                         end: (0, 8),
                     }),
@@ -265,7 +265,7 @@ mod tests {
                         end: (0, 9),
                     }),
                     Ok(Token {
-                        token: TokenType::Operator(Operator::Multiply),
+                        token: TokenType::Operator(Operator::Arithmetic(Arithmetic::Multiply)),
                         start: (0, 10),
                         end: (0, 10),
                     }),
@@ -289,12 +289,12 @@ mod tests {
             ))
             .unwrap(),
             ExpressionNode::Parenthesis(Box::new(ExpressionNode::Operation(Operation {
-                operator: Operator::Add,
+                operator: Operator::Arithmetic(Arithmetic::Add),
                 a: Box::new(ExpressionNode::Operation(Operation {
-                    operator: Operator::Multiply,
+                    operator: Operator::Arithmetic(Arithmetic::Multiply),
                     a: Box::new(ExpressionNode::Parenthesis(Box::new(
                         ExpressionNode::Operation(Operation {
-                            operator: Operator::Add,
+                            operator: Operator::Arithmetic(Arithmetic::Add),
                             a: Box::new(ExpressionNode::Primitive(Primitive::Number(4.))),
                             b: Box::new(ExpressionNode::Primitive(Primitive::Number(9.))),
                         })
@@ -302,7 +302,7 @@ mod tests {
                     b: Box::new(ExpressionNode::Primitive(Primitive::Number(1.))),
                 })),
                 b: Box::new(ExpressionNode::Operation(Operation {
-                    operator: Operator::Multiply,
+                    operator: Operator::Arithmetic(Arithmetic::Multiply),
                     a: Box::new(ExpressionNode::Primitive(Primitive::Number(6.))),
                     b: Box::new(ExpressionNode::Primitive(Primitive::Number(2.))),
                 })),

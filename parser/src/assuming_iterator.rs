@@ -114,8 +114,10 @@ impl<I: Iterator<Item = Result<Token, NilangError>>> AssumingIterator for I {
             } => Ok((start, end, operator)),
             Token { start, .. } => Err(NilangError {
                 location: CodeLocation::at(start.0, start.1),
-                error: ParserErrors::ExpectedTokens(Vec::from([TokenType::OpeningParenthesis]))
-                    .into(),
+                error: ParserErrors::ExpectedTokens(Vec::from([TokenType::Operator(
+                    Default::default(),
+                )]))
+                .into(),
             }),
         }
     }

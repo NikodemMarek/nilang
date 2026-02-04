@@ -1,5 +1,5 @@
 use nilang_types::{
-    nodes::expressions::Operator,
+    nodes::expressions::{Arithmetic, Operator},
     tokens::{Token, TokenType},
 };
 
@@ -59,7 +59,7 @@ fn special_character() {
     assert_eq!(
         iter.next().unwrap().unwrap(),
         Token {
-            token: TokenType::Operator(Operator::Add),
+            token: TokenType::Operator(Operator::Arithmetic(Arithmetic::Add)),
             start: (0, 3),
             end: (0, 3),
         },
