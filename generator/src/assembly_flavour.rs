@@ -10,7 +10,7 @@ pub trait AssemblyFlavour<R: Registers> {
         comment: &str,
     ) -> String;
 
-    fn generate_program_scaffold() -> impl Iterator<Item = String> + 'static;
+    fn generate_program_scaffold() -> Vec<String>;
 
     fn generate_function_header(name: &str) -> String;
     fn generate_function_body<'a>(
@@ -67,32 +67,36 @@ impl<R: Registers> AssemblyFlavour<R> for AtAndTFlavour {
                 instruction_with_arguments("imulq", &[&parameters[1], &parameters[0]])
             }
             AssemblyInstruction::Div => instruction_with_arguments("idivq", &[&parameters[0]]),
+
+            AssemblyInstruction::Raw(instruction) => format!("{instruction}").into(),
         };
 
         asm_with_comment(&instruction, comment).into()
     }
 
-    fn generate_program_scaffold() -> impl Iterator<Item = String> + 'static {
-        let data_section = r#"
-.data
-printi_format: .asciz "%d\n"
-printc_format: .asciz "%c\n"
-print_format: .asciz "%s\n"
-"#;
-        let start_fn = r#"
-.text
-.globl _start
-_start:
-    call main
-    movq $60, %rax
-    xorq %rdi, %rdi
-    syscall
-        "#;
-
-        data_section
-            .lines()
-            .chain(start_fn.lines())
-            .map(ToOwned::to_owned)
+    fn generate_program_scaffold() -> Vec<String> {
+        let mpty: [AssemblyInstructionParameter<R>; 0] = [];
+        vec![
+            Self::generate_instruction(&AssemblyInstruction::Raw(".text".into()), &mpty, ""),
+            Self::generate_instruction(
+                &AssemblyInstruction::Raw(".globl _start".into()),
+                &mpty,
+                "",
+            ),
+            Self::generate_instruction(&AssemblyInstruction::Raw("_start:".into()), &mpty, ""),
+            Self::generate_instruction(&AssemblyInstruction::Raw("call main".into()), &mpty, ""),
+            Self::generate_instruction(
+                &AssemblyInstruction::Raw("movq $60, %rax".into()),
+                &mpty,
+                "",
+            ),
+            Self::generate_instruction(
+                &AssemblyInstruction::Raw("xorq %rdi, %rdi".into()),
+                &mpty,
+                "",
+            ),
+            Self::generate_instruction(&AssemblyInstruction::Raw("syscall".into()), &mpty, ""),
+        ]
     }
 
     fn generate_function_header(name: &str) -> String {
@@ -157,6 +161,8 @@ pub enum AssemblyInstruction {
     Sub,   // destination & a, b
     Mul,   // destination & a, b
     Div,   // destination & a
+
+    Raw(Box<str>), //  TODO: Remove
 }
 
 #[derive(Debug, Clone, PartialEq)]

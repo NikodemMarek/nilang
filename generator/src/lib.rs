@@ -24,14 +24,21 @@ pub fn generate_program<A>() -> impl Iterator<Item = String> + 'static
 where
     A: AssemblyFlavour<X86Registers>,
 {
-    A::generate_program_scaffold()
+    A::generate_program_scaffold().into_iter()
 }
 
 pub fn generate_data<A>(data: &[(Box<str>, Box<str>)]) -> impl Iterator<Item = String> + '_
 where
     A: AssemblyFlavour<X86Registers>,
 {
-    data.iter()
+    let builtin = [
+        ("printd_format".into(), "%d\\n".into()),
+        ("print_format".into(), "%s\\n".into()),
+        ("printc_format".into(), "%c\\n".into()),
+    ];
+    [data, &builtin]
+        .concat()
+        .into_iter()
         .map(move |(name, value)| format!("{}: .asciz \"{}\"\n", name, value))
 }
 

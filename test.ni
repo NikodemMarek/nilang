@@ -1,7 +1,7 @@
 fn main(): int {
     vr text: string = "Hello World!";
 
-    if (1 == 1) {
+    if (true) {
         print(text);
     }
 
