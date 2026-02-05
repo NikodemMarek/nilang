@@ -1,5 +1,5 @@
 use nilang_types::{
-    nodes::expressions::{Arithmetic, Operator},
+    nodes::expressions::{Arithmetic, Boolean, Operator},
     tokens::{Token, TokenType},
 };
 
